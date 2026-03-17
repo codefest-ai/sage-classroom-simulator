@@ -326,6 +326,177 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 .prof-action .category.reject { color: var(--red); }
 .prof-action .category.ignore { color: var(--text-dim); }
 .prof-action .category.acknowledge { color: var(--yellow); }
+.prof-action .category.self_initiated { color: var(--purple); }
+
+/* View toggle */
+.view-toggle {
+  display: flex;
+  background: var(--surface2);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.view-btn {
+  padding: 5px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.view-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* Classroom view */
+#classroom-view { display: none; padding: 16px 24px; }
+#classroom-view.active { display: flex; gap: 16px; height: calc(100vh - 120px); }
+
+.zoom-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 4px;
+  background: #000;
+  border-radius: 8px;
+  padding: 4px;
+  overflow: hidden;
+}
+.zoom-tile {
+  background: var(--surface);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+.zoom-tile .avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 6px;
+}
+.zoom-tile .zt-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  background: rgba(0,0,0,0.6);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.zoom-tile .zt-status {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 16px;
+}
+.zoom-tile .zt-engagement {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.6);
+}
+.zoom-tile .zt-speaking {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid var(--green);
+  border-radius: 4px;
+  pointer-events: none;
+  display: none;
+}
+.zoom-tile.speaking .zt-speaking { display: block; }
+.zoom-tile.camera-off .avatar { background: var(--surface2) !important; }
+.zoom-tile.camera-off::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--surface2);
+  z-index: 0;
+}
+.zoom-tile.camera-off .avatar { z-index: 1; }
+.zoom-tile.camera-off .zt-name { z-index: 1; }
+.zoom-tile.camera-off .zt-status { z-index: 1; }
+.zoom-tile.camera-off .zt-engagement { z-index: 1; }
+.zoom-tile .zt-bubble {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: 70%;
+  background: rgba(59,130,246,0.9);
+  color: white;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 2;
+}
+.zoom-tile .zt-bubble.show { opacity: 1; }
+.zoom-tile.confused .zt-bubble { background: rgba(139,92,246,0.9); }
+
+.zoom-sidebar {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.zoom-sidebar .panel { flex: 1; overflow-y: auto; }
+.zoom-chat-input {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 6px;
+}
+.zoom-chat-input input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.zoom-toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 6px;
+}
+.zoom-toolbar button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.zoom-toolbar button:hover { background: var(--accent); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
@@ -336,8 +507,14 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 <body>
 
 <header>
-  <h1>SAGE — Instructor Decision Support Dashboard</h1>
-  <div class="meta">Simulated Agent-Generated Engagement &middot; IST 505 &middot; CGU Spring 2026</div>
+  <h1>SAGE — Simulated Agent-Generated Engagement</h1>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="meta">IST 505 &middot; CGU Spring 2026</div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="btn-dashboard" onclick="setView('dashboard')">Dashboard</button>
+      <button class="view-btn" id="btn-classroom" onclick="setView('classroom')">Classroom</button>
+    </div>
+  </div>
 </header>
 
 <div class="controls">
@@ -357,6 +534,15 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 
   <label>Seed:</label>
   <input type="number" id="seed-input" value="42" style="width:60px">
+
+  <label>Professor:</label>
+  <select id="professor-select">
+    <option value="none">None (manual)</option>
+    <option value="adaptive" selected>Dr. Adaptive</option>
+    <option value="lecture_focused">Dr. Lecturer</option>
+    <option value="discussion_based">Dr. Discussion</option>
+    <option value="hands_off">Dr. Observer</option>
+  </select>
 
   <button id="run-btn" onclick="runSimulation()">Run Simulation</button>
   <button class="secondary" onclick="document.getElementById('file-input').click()">Load JSON</button>
@@ -446,8 +632,33 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 
   <!-- Row 4: Professor Actions (if closed-loop) -->
   <div class="panel full-width" id="professor-panel" style="display:none">
-    <h2>Simulated Professor Actions</h2>
+    <h2 id="professor-title">Simulated Professor Actions</h2>
+    <div id="professor-summary" style="margin-bottom:12px"></div>
     <div id="professor-actions"></div>
+  </div>
+</div>
+
+<!-- CLASSROOM VIEW -->
+<div id="classroom-view">
+  <div class="zoom-grid" id="zoom-grid"></div>
+  <div class="zoom-sidebar">
+    <div class="zoom-toolbar">
+      <button onclick="togglePlayback()"><span id="zoom-play-icon">&#9654;</span> Play</button>
+      <button onclick="setView('dashboard')">&#128202; Dashboard</button>
+      <span id="zoom-minute" style="color:var(--text-dim);font-size:12px;display:flex;align-items:center">Min: --</span>
+    </div>
+    <div class="panel" style="flex:2">
+      <h2>Chat</h2>
+      <div class="chat-log" id="zoom-chat-log" style="max-height:none;flex:1"></div>
+    </div>
+    <div class="panel" style="flex:1">
+      <h2>Alerts</h2>
+      <div id="zoom-alerts" style="font-size:12px"></div>
+    </div>
+    <div class="panel" id="zoom-prof-panel" style="flex:1;display:none">
+      <h2 id="zoom-prof-name">Professor</h2>
+      <div id="zoom-prof-actions" style="font-size:12px"></div>
+    </div>
   </div>
 </div>
 
@@ -571,12 +782,94 @@ function runSimulation() {
     timeline.push(minuteData);
   }
 
+  // ---- PROFESSOR SIMULATION (closed-loop) ----
+  const profStyle = document.getElementById('professor-select').value;
+  let professorData = null;
+
+  if (profStyle !== 'none') {
+    const prof = createProfessor(profStyle);
+    const profActions = [];
+    let lastInterventionMin = -10;
+
+    // Replay: professor sees recommendations and decides
+    for (let min = 1; min <= duration; min++) {
+      const minRecs = recommendations.filter(r => r.minute === min);
+      const frame = timeline[min - 1];
+
+      for (const rec of minRecs) {
+        const response = prof.decide(rec, rng, min, lastInterventionMin);
+        profActions.push({ ...response, minute: min, recommendation: rec.message });
+
+        // If professor acts, inject intervention into FUTURE minutes
+        if (response.intervention_type && (min - lastInterventionMin) >= 3) {
+          const boostMin = min + response.delay;
+          if (boostMin <= duration) {
+            events.push({
+              minute: boostMin, event_type: 'intervention', student_id: null,
+              data: { type: response.intervention_type, name: response.intervention_type + ' (professor)' }
+            });
+            // Apply boost to student engagement in that future frame
+            if (timeline[boostMin - 1]) {
+              for (const s of students) {
+                const boost = s.responses[response.intervention_type] || s.responses['pace_change'] || 0.1;
+                const stuData = timeline[boostMin - 1].students.find(st => st.student_id === s.id);
+                if (stuData) {
+                  stuData.engagement = Math.min(1.0, stuData.engagement + boost * (0.5 + rng() * 0.5));
+                  stuData.state = stuData.engagement >= 0.65 ? 'engaged' : stuData.engagement >= 0.40 ? 'drifting' : 'disengaged';
+                }
+              }
+              // Recalculate class engagement for that minute
+              const boostFrame = timeline[boostMin - 1];
+              const newMean = boostFrame.students.reduce((s, st) => s + st.engagement, 0) / boostFrame.students.length;
+              boostFrame.class_engagement = Math.round(newMean * 1000) / 1000;
+            }
+            lastInterventionMin = boostMin;
+          }
+        }
+      }
+
+      // Self-initiation check (professor notices low engagement without recommendation)
+      if (frame.class_engagement < prof.selfThreshold && (min - lastInterventionMin) >= 5 && rng() < 0.3) {
+        const selfIv = ['poll', 'pace_change', 'think_pair_share'][Math.floor(rng() * 3)];
+        profActions.push({
+          minute: min, response_category: 'self_initiated', intervention_type: selfIv,
+          rationale: `Noticed low engagement (${(frame.class_engagement * 100).toFixed(0)}%) — trying ${selfIv}`,
+          delay: 0, recommendation: null
+        });
+        lastInterventionMin = min;
+      }
+    }
+
+    // Compute professor summary
+    const catCounts = {};
+    const ivCounts = {};
+    for (const a of profActions) {
+      catCounts[a.response_category] = (catCounts[a.response_category] || 0) + 1;
+      if (a.intervention_type) ivCounts[a.intervention_type] = (ivCounts[a.intervention_type] || 0) + 1;
+    }
+
+    professorData = {
+      style: profStyle,
+      style_name: prof.name,
+      style_description: prof.description,
+      actions: profActions,
+      summary: {
+        total_actions: profActions.length,
+        category_distribution: catCounts,
+        interventions_used: ivCounts,
+        interventions_total: Object.values(ivCounts).reduce((a, b) => a + b, 0),
+        acceptance_rate: Math.round(((catCounts['accept'] || 0) + (catCounts['modify'] || 0)) / Math.max(1, profActions.length) * 100),
+      }
+    };
+  }
+
   sessionData = {
-    metadata: { duration_minutes: duration, scenario, student_count: students.length, timestamp: new Date().toISOString() },
+    metadata: { duration_minutes: duration, scenario, student_count: students.length, professor_style: profStyle, timestamp: new Date().toISOString() },
     students: students.map(s => ({ student_id: s.id, name: s.name, engagement_baseline: s.baseline, demographic: s.demographic })),
     timeline,
     events,
     recommendations,
+    professor: professorData,
     summary: {}
   };
 
@@ -663,6 +956,103 @@ function computeGini(values) {
   for (let i = 0; i < n; i++) sum += (2 * (i + 1) - n - 1) * sorted[i];
   const total = sorted.reduce((a, b) => a + b, 0);
   return total > 0 ? sum / (n * total) : 0;
+}
+
+// ============================================================
+// PROFESSOR AGENTS
+// ============================================================
+
+const PROFESSOR_STYLES = {
+  adaptive: {
+    name: 'Dr. Adaptive',
+    description: 'Responsive — engages deeply with recommendations, often modifies for context',
+    high:   { ignore: 0.05, acknowledge: 0.10, accept: 0.30, modify: 0.45, reject: 0.10 },
+    medium: { ignore: 0.10, acknowledge: 0.20, accept: 0.25, modify: 0.35, reject: 0.10 },
+    low:    { ignore: 0.25, acknowledge: 0.30, accept: 0.15, modify: 0.20, reject: 0.10 },
+    selfThreshold: 0.4,
+    delayRange: [0, 2],
+    ivPrefs: { breakout: 0.8, poll: 0.7, cold_call: 0.5, pace_change: 0.9, think_pair_share: 0.85, clarification: 0.9, equity_intervention: 0.7 },
+  },
+  lecture_focused: {
+    name: 'Dr. Lecturer',
+    description: 'Content-driven — prioritizes coverage, rarely deviates from plan',
+    high:   { ignore: 0.15, acknowledge: 0.30, accept: 0.15, modify: 0.15, reject: 0.25 },
+    medium: { ignore: 0.30, acknowledge: 0.30, accept: 0.10, modify: 0.10, reject: 0.20 },
+    low:    { ignore: 0.50, acknowledge: 0.25, accept: 0.05, modify: 0.05, reject: 0.15 },
+    selfThreshold: 0.6,
+    delayRange: [2, 5],
+    ivPrefs: { breakout: 0.2, poll: 0.4, cold_call: 0.6, pace_change: 0.3, think_pair_share: 0.3, clarification: 0.7, equity_intervention: 0.3 },
+  },
+  discussion_based: {
+    name: 'Dr. Discussion',
+    description: 'Socratic — emphasizes student voice, loves breakout rooms and group dialogue',
+    high:   { ignore: 0.05, acknowledge: 0.10, accept: 0.35, modify: 0.40, reject: 0.10 },
+    medium: { ignore: 0.10, acknowledge: 0.15, accept: 0.30, modify: 0.35, reject: 0.10 },
+    low:    { ignore: 0.20, acknowledge: 0.25, accept: 0.20, modify: 0.25, reject: 0.10 },
+    selfThreshold: 0.35,
+    delayRange: [0, 1],
+    ivPrefs: { breakout: 0.9, poll: 0.5, cold_call: 0.7, pace_change: 0.6, think_pair_share: 0.95, clarification: 0.8, equity_intervention: 0.9 },
+  },
+  hands_off: {
+    name: 'Dr. Observer',
+    description: 'Minimal intervention — wait-and-see posture (Wise & Jung 2019)',
+    high:   { ignore: 0.20, acknowledge: 0.35, accept: 0.15, modify: 0.15, reject: 0.15 },
+    medium: { ignore: 0.40, acknowledge: 0.30, accept: 0.10, modify: 0.10, reject: 0.10 },
+    low:    { ignore: 0.60, acknowledge: 0.25, accept: 0.05, modify: 0.05, reject: 0.05 },
+    selfThreshold: 0.7,
+    delayRange: [3, 8],
+    ivPrefs: { breakout: 0.3, poll: 0.3, cold_call: 0.2, pace_change: 0.4, think_pair_share: 0.3, clarification: 0.5, equity_intervention: 0.3 },
+  },
+};
+
+function createProfessor(style) {
+  const p = PROFESSOR_STYLES[style];
+  return {
+    ...p,
+    decide(rec, rng, minute, lastIvMin) {
+      const dist = p[rec.priority] || p.medium;
+      // Weighted random selection
+      const r = rng();
+      let cumulative = 0;
+      let category = 'ignore';
+      for (const [cat, weight] of Object.entries(dist)) {
+        cumulative += weight;
+        if (r <= cumulative) { category = cat; break; }
+      }
+
+      let intervention_type = null;
+      if (category === 'accept' || category === 'modify') {
+        if (category === 'accept') {
+          intervention_type = rec.action;
+        } else {
+          // Modify: pick preferred intervention
+          const prefs = Object.entries(p.ivPrefs).sort((a, b) => b[1] - a[1]);
+          for (const [iv, pref] of prefs) {
+            if (rng() < pref) { intervention_type = iv; break; }
+          }
+          if (!intervention_type) intervention_type = rec.action;
+        }
+        // Don't stack interventions
+        if (minute - lastIvMin < 3) {
+          category = 'acknowledge';
+          intervention_type = null;
+        }
+      }
+
+      const delay = p.delayRange[0] + Math.floor(rng() * (p.delayRange[1] - p.delayRange[0] + 1));
+
+      const rationales = {
+        ignore: ['Monitoring — not ready to intervene', 'Students may self-correct', 'Maintaining lecture flow'],
+        acknowledge: ['Noted. Will keep watching.', 'Aware of the pattern — considering options.', 'Acknowledged. Holding for now.'],
+        accept: [`Implementing ${intervention_type}`, `Good call — running ${intervention_type}`, `Agreed. Launching ${intervention_type}.`],
+        modify: [`Adapting: using ${intervention_type} instead`, `Modified approach — ${intervention_type} fits better`, `Building on suggestion with ${intervention_type}`],
+        reject: ['Students need to push through this', 'Current approach is working for my goals', 'Disagree — continuing as planned'],
+      };
+      const rationale = (rationales[category] || [''])[Math.floor(rng() * 3)];
+
+      return { response_category: category, intervention_type, rationale, delay };
+    }
+  };
 }
 
 function mulberry32(a) {
@@ -776,15 +1166,44 @@ function showMinute(min) {
   if (sessionData.professor) {
     const profPanel = document.getElementById('professor-panel');
     profPanel.style.display = 'block';
-    const profActions = sessionData.professor.actions.filter(a => a.minute <= min);
-    document.getElementById('professor-actions').innerHTML = profActions.slice(-8).reverse().map(a => `
+    const prof = sessionData.professor;
+
+    // Title with professor name
+    document.getElementById('professor-title').textContent =
+      `${prof.style_name || prof.style} — ${prof.style_description || 'Simulated Professor'}`;
+
+    // Summary stats
+    const s = prof.summary;
+    const cats = s.category_distribution || {};
+    document.getElementById('professor-summary').innerHTML = `
+      <div class="overview-stats">
+        <div class="stat-card"><div class="value">${s.total_actions || 0}</div><div class="label">Total Decisions</div></div>
+        <div class="stat-card green"><div class="value">${s.acceptance_rate || 0}%</div><div class="label">Acceptance Rate</div></div>
+        <div class="stat-card"><div class="value">${s.interventions_total || 0}</div><div class="label">Interventions Used</div></div>
+        <div class="stat-card yellow"><div class="value">${cats.ignore || 0}</div><div class="label">Ignored</div></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px">
+        ${Object.entries(cats).map(([cat, count]) => {
+          const colors = { accept: 'var(--green)', modify: 'var(--accent)', reject: 'var(--red)', ignore: 'var(--text-dim)', acknowledge: 'var(--yellow)', self_initiated: 'var(--purple)' };
+          return `<span style="color:${colors[cat] || 'var(--text)'}">${cat}: ${count}</span>`;
+        }).join(' · ')}
+        ${Object.entries(s.interventions_used || {}).length ? ' | Interventions: ' + Object.entries(s.interventions_used).map(([iv, c]) => `${iv} (${c})`).join(', ') : ''}
+      </div>
+    `;
+
+    // Action log
+    const profActions = prof.actions.filter(a => a.minute <= min);
+    document.getElementById('professor-actions').innerHTML = profActions.slice(-10).reverse().map(a => `
       <div class="prof-action">
         <span class="category ${a.response_category}">${a.response_category}</span>
-        ${a.intervention_type ? `<span> &middot; ${a.intervention_type}</span>` : ''}
-        <span class="minute-tag"> &middot; Min ${a.minute}</span>
+        ${a.intervention_type ? `<span> &middot; <strong>${a.intervention_type}</strong></span>` : ''}
+        <span class="minute-tag"> &middot; Min ${a.minute}${a.delay ? ` (+${a.delay}m delay)` : ''}</span>
         <div style="font-size:12px;color:var(--text-dim);margin-top:4px">${a.rationale}</div>
+        ${a.recommendation ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic">Re: ${a.recommendation}</div>` : ''}
       </div>
     `).join('');
+  } else {
+    document.getElementById('professor-panel').style.display = 'none';
   }
 }
 
@@ -950,6 +1369,121 @@ function loadFile(event) {
   };
   reader.readAsText(file);
 }
+
+// ============================================================
+// VIEW TOGGLE
+// ============================================================
+
+let currentView = 'dashboard';
+
+function setView(view) {
+  currentView = view;
+  document.getElementById('btn-dashboard').classList.toggle('active', view === 'dashboard');
+  document.getElementById('btn-classroom').classList.toggle('active', view === 'classroom');
+
+  document.querySelector('.controls').style.display = view === 'dashboard' ? 'flex' : 'none';
+  document.querySelector('.grid').style.display = view === 'dashboard' ? 'grid' : 'none';
+  document.getElementById('classroom-view').classList.toggle('active', view === 'classroom');
+
+  if (view === 'classroom' && sessionData) {
+    renderClassroom(currentMinute || 1);
+  }
+}
+
+// ============================================================
+// CLASSROOM VIEW RENDERING
+// ============================================================
+
+const AVATAR_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9','#c0392b','#27ae60','#8e44ad','#d35400','#16a085','#c0392b','#2c3e50'];
+
+function renderClassroom(min) {
+  if (!sessionData || !sessionData.timeline[min - 1]) return;
+  const frame = sessionData.timeline[min - 1];
+
+  document.getElementById('zoom-minute').textContent = `Min: ${min}`;
+
+  // Build zoom grid
+  const grid = document.getElementById('zoom-grid');
+  grid.innerHTML = frame.students.map((s, i) => {
+    const stu = sessionData.students.find(st => st.student_id === s.student_id);
+    const name = stu ? stu.name : s.student_id;
+    const initials = name.split(/[\s()]+/).filter(w => w.length > 0).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const cameraOn = s.engagement > 0.3 && !s.student_id.match(/S09|S11/); // Derek + Alex usually off
+    const isSpeaking = s.signals && s.signals.includes('speaking');
+    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+
+    // Find chat message for this minute
+    const chat = sessionData.events.find(e => e.event_type === 'chat' && e.student_id === s.student_id && e.minute === min);
+    const bubbleText = chat ? chat.data.text : '';
+    const isConfused = s.is_confused;
+
+    let statusIcon = '';
+    if (isConfused) statusIcon = '&#10067;';  // red question
+    else if (s.state === 'disengaged') statusIcon = '&#128564;';  // sleeping
+    else if (isSpeaking) statusIcon = '&#127908;';  // mic
+    else if (s.state === 'engaged') statusIcon = '';
+
+    const engColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
+
+    return `<div class="zoom-tile ${cameraOn ? '' : 'camera-off'} ${isSpeaking ? 'speaking' : ''} ${isConfused ? 'confused' : ''}">
+      <div class="avatar" style="background:${cameraOn ? color : 'var(--surface2)'}">${initials}</div>
+      <div class="zt-name">${name.split(' ')[0]} ${name.split(' ').slice(-1)[0]?.[0] || ''}.</div>
+      <div class="zt-status">${statusIcon}</div>
+      <div class="zt-engagement" style="color:${engColor}">${(s.engagement * 100).toFixed(0)}%</div>
+      <div class="zt-speaking"></div>
+      ${bubbleText ? `<div class="zt-bubble show">${bubbleText}</div>` : '<div class="zt-bubble"></div>'}
+    </div>`;
+  }).join('');
+
+  // Sidebar chat
+  const chats = sessionData.events.filter(e => e.event_type === 'chat' && e.minute <= min);
+  const chatLog = document.getElementById('zoom-chat-log');
+  chatLog.innerHTML = chats.slice(-20).reverse().map(e => {
+    const stu = sessionData.students.find(s => s.student_id === e.student_id);
+    const name = stu ? stu.name.split(' ')[0] : e.student_id;
+    const cls = e.data.confusion_score > 0.5 ? 'confused' : '';
+    return `<div class="chat-msg ${cls}">
+      <span class="time">${e.minute}m</span>
+      <span class="name">${name}</span>
+      <span class="text">${e.data.text}</span>
+    </div>`;
+  }).join('');
+
+  // Alerts
+  const alerts = document.getElementById('zoom-alerts');
+  const recs = sessionData.recommendations.filter(r => r.minute <= min).slice(-5).reverse();
+  alerts.innerHTML = recs.map(r => `
+    <div class="rec-item ${r.priority}" style="padding:8px;margin-bottom:4px">
+      <div class="priority">${r.priority}</div>
+      <div class="message">${r.message}</div>
+      <div class="minute-tag">Min ${r.minute}</div>
+    </div>
+  `).join('') || '<div style="color:var(--text-dim);padding:12px">No alerts</div>';
+
+  // Professor actions in classroom view
+  if (sessionData.professor) {
+    const profPanel = document.getElementById('zoom-prof-panel');
+    profPanel.style.display = 'block';
+    document.getElementById('zoom-prof-name').textContent = sessionData.professor.style_name || 'Professor';
+    const profActions = sessionData.professor.actions.filter(a => a.minute <= min).slice(-4).reverse();
+    document.getElementById('zoom-prof-actions').innerHTML = profActions.map(a => `
+      <div class="prof-action" style="padding:6px;margin-bottom:4px">
+        <span class="category ${a.response_category}">${a.response_category}</span>
+        ${a.intervention_type ? ` · <strong>${a.intervention_type}</strong>` : ''}
+        <span class="minute-tag"> · Min ${a.minute}</span>
+      </div>
+    `).join('') || '<div style="color:var(--text-dim)">No actions yet</div>';
+  }
+}
+
+// Hook into showMinute to also update classroom
+const _originalShowMinute = showMinute;
+showMinute = function(min) {
+  _originalShowMinute(min);
+  if (currentView === 'classroom') {
+    renderClassroom(min);
+  }
+};
 
 // Auto-run on load
 window.addEventListener('DOMContentLoaded', () => {
