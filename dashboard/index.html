@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAGE — Instructor Decision Support Dashboard</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface2: #334155;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --accent: #3b82f6;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --border: #475569;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+header h1 { font-size: 18px; font-weight: 600; }
+header .meta { color: var(--text-dim); font-size: 13px; }
+.controls {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.controls label { font-size: 13px; color: var(--text-dim); }
+.controls select, .controls input, .controls button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.controls button {
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 6px 16px;
+}
+.controls button:hover { opacity: 0.9; }
+.controls button.secondary { background: var(--surface2); border: 1px solid var(--border); }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  padding: 16px 24px;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.panel h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+.panel.full-width { grid-column: 1 / -1; }
+
+/* Engagement Overview */
+.overview-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.stat-card {
+  flex: 1;
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+}
+.stat-card .value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.stat-card .label { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.stat-card.green .value { color: var(--green); }
+.stat-card.yellow .value { color: var(--yellow); }
+.stat-card.red .value { color: var(--red); }
+
+/* Heatmap */
+#heatmap-container {
+  overflow-x: auto;
+  min-height: 300px;
+}
+#heatmap {
+  display: grid;
+  gap: 2px;
+  min-width: 600px;
+}
+.heatmap-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+.heatmap-cell:hover { outline: 2px solid var(--accent); }
+.heatmap-cell .tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 10;
+}
+.heatmap-cell:hover .tooltip { display: block; }
+.heatmap-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: right;
+  padding-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.heatmap-minute {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* Timeline chart */
+#timeline-chart {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.timeline-bar {
+  position: absolute;
+  bottom: 0;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  transition: height 0.3s ease;
+}
+.timeline-bar.low { background: var(--red); }
+.timeline-bar.mid { background: var(--yellow); }
+.timeline-bar.high { background: var(--green); }
+.timeline-intervention {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--purple);
+  z-index: 5;
+}
+.timeline-intervention::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 10px;
+  color: var(--purple);
+  white-space: nowrap;
+}
+
+/* Recommendations */
+.rec-list { max-height: 400px; overflow-y: auto; }
+.rec-item {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--accent);
+}
+.rec-item.high { border-left-color: var(--red); }
+.rec-item.medium { border-left-color: var(--yellow); }
+.rec-item.low { border-left-color: var(--green); }
+.rec-item .priority {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.rec-item.high .priority { color: var(--red); }
+.rec-item.medium .priority { color: var(--yellow); }
+.rec-item.low .priority { color: var(--green); }
+.rec-item .message { font-size: 13px; margin-bottom: 8px; }
+.rec-item .minute-tag { font-size: 11px; color: var(--text-dim); }
+
+/* Response buttons */
+.response-buttons {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+.response-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.response-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.response-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* Chat log */
+.chat-log {
+  max-height: 350px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+.chat-msg {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--surface2);
+  display: flex;
+  gap: 8px;
+}
+.chat-msg .time { color: var(--text-dim); font-size: 11px; min-width: 40px; }
+.chat-msg .name { font-weight: 600; min-width: 100px; font-size: 12px; }
+.chat-msg .text { flex: 1; }
+.chat-msg.confused { background: rgba(139, 92, 246, 0.1); border-radius: 4px; padding: 6px; }
+.chat-msg.confused .name { color: var(--purple); }
+
+/* Student list */
+.student-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.student-card {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+.student-card.engaged { border-color: var(--green); }
+.student-card.drifting { border-color: var(--yellow); }
+.student-card.disengaged { border-color: var(--red); }
+.student-card.confused { border-color: var(--purple); }
+.student-card .name { font-size: 12px; font-weight: 600; }
+.student-card .score { font-size: 20px; font-weight: 700; margin: 4px 0; }
+.student-card .state { font-size: 10px; text-transform: uppercase; }
+
+/* Patterns */
+.pattern-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px;
+}
+.pattern-badge.mild { background: rgba(245, 158, 11, 0.2); color: var(--yellow); }
+.pattern-badge.moderate { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+.pattern-badge.severe { background: rgba(239, 68, 68, 0.4); color: var(--red); }
+
+/* Gini bar */
+.gini-bar {
+  height: 12px;
+  background: var(--surface2);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.gini-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: var(--text-dim); }
+
+/* Professor panel */
+.prof-action {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.prof-action .category {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.prof-action .category.accept { color: var(--green); }
+.prof-action .category.modify { color: var(--accent); }
+.prof-action .category.reject { color: var(--red); }
+.prof-action .category.ignore { color: var(--text-dim); }
+.prof-action .category.acknowledge { color: var(--yellow); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>SAGE — Instructor Decision Support Dashboard</h1>
+  <div class="meta">Simulated Agent-Generated Engagement &middot; IST 505 &middot; CGU Spring 2026</div>
+</header>
+
+<div class="controls">
+  <label>Scenario:</label>
+  <select id="scenario-select">
+    <option value="baseline">Baseline</option>
+    <option value="energy_decay">Energy Decay</option>
+    <option value="equity_imbalance">Equity Imbalance</option>
+    <option value="confusion_cluster">Confusion Cluster</option>
+    <option value="intervention_test">Intervention Test</option>
+    <option value="full_scenario" selected>Full Scenario</option>
+  </select>
+
+  <label>Duration:</label>
+  <input type="number" id="duration-input" value="45" min="10" max="90" style="width:60px">
+  <label>min</label>
+
+  <label>Seed:</label>
+  <input type="number" id="seed-input" value="42" style="width:60px">
+
+  <button id="run-btn" onclick="runSimulation()">Run Simulation</button>
+  <button class="secondary" onclick="document.getElementById('file-input').click()">Load JSON</button>
+  <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadFile(event)">
+
+  <label style="margin-left:auto">Playback:</label>
+  <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
+  <label>Speed:</label>
+  <select id="speed-select">
+    <option value="500">Fast</option>
+    <option value="1000" selected>Normal</option>
+    <option value="2000">Slow</option>
+  </select>
+  <span id="minute-display" style="font-weight:600;min-width:80px">Min: --</span>
+</div>
+
+<div class="grid">
+  <!-- Row 1: Overview + Students -->
+  <div class="panel">
+    <h2>Class Engagement Overview</h2>
+    <div class="overview-stats">
+      <div class="stat-card green" id="stat-engagement">
+        <div class="value">--</div>
+        <div class="label">Mean Engagement</div>
+      </div>
+      <div class="stat-card" id="stat-speakers">
+        <div class="value">--</div>
+        <div class="label">Active Speakers</div>
+      </div>
+      <div class="stat-card yellow" id="stat-gini">
+        <div class="value">--</div>
+        <div class="label">Speaking Equity</div>
+      </div>
+      <div class="stat-card" id="stat-patterns">
+        <div class="value">--</div>
+        <div class="label">Patterns Detected</div>
+      </div>
+    </div>
+    <div id="patterns-area"></div>
+    <div style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim)">
+        <span>Speaking Equity (Gini)</span>
+        <span id="gini-value">--</span>
+      </div>
+      <div class="gini-bar"><div class="gini-fill" id="gini-fill" style="width:50%;background:var(--green)"></div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Student Status</h2>
+    <div class="student-grid" id="student-grid">
+      <div class="loading">Run a simulation to see student data</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Timeline + Heatmap -->
+  <div class="panel full-width">
+    <h2>Engagement Timeline</h2>
+    <div id="timeline-chart"></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-top:4px">
+      <span>Minute 1</span>
+      <span id="timeline-end">Minute --</span>
+    </div>
+  </div>
+
+  <div class="panel full-width">
+    <h2>Engagement Heatmap (Students x Time)</h2>
+    <div id="heatmap-container">
+      <div id="heatmap" class="loading">Run a simulation to generate heatmap</div>
+    </div>
+  </div>
+
+  <!-- Row 3: Recommendations + Chat -->
+  <div class="panel">
+    <h2>AI Recommendations</h2>
+    <div class="rec-list" id="rec-list">
+      <div class="loading">No recommendations yet</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Chat Activity</h2>
+    <div class="chat-log" id="chat-log">
+      <div class="loading">No chat messages yet</div>
+    </div>
+  </div>
+
+  <!-- Row 4: Professor Actions (if closed-loop) -->
+  <div class="panel full-width" id="professor-panel" style="display:none">
+    <h2>Simulated Professor Actions</h2>
+    <div id="professor-actions"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let sessionData = null;
+let currentMinute = 0;
+let playbackInterval = null;
+let responseLog = [];
+
+// ============================================================
+// SIMULATION (runs in-browser via the scoring logic)
+// ============================================================
+
+// Simplified in-browser simulation for demo purposes.
+// For full fidelity, use the Python simulator and load JSON.
+function runSimulation() {
+  const duration = parseInt(document.getElementById('duration-input').value) || 45;
+  const seed = parseInt(document.getElementById('seed-input').value) || 42;
+  const scenario = document.getElementById('scenario-select').value;
+
+  // Pseudo-random with seed
+  let rng = mulberry32(seed);
+
+  const students = generateStudents();
+  const overrides = getScenarioOverrides(scenario);
+  const interventions = getScenarioInterventions(scenario);
+
+  const timeline = [];
+  const events = [];
+  const recommendations = [];
+
+  for (let min = 1; min <= duration; min++) {
+    const minuteData = { minute: min, students: [] };
+    let classEngSum = 0;
+    let speakers = 0;
+    let speakTotals = {};
+    let confused = [];
+
+    // Check for intervention
+    const activeIntervention = interventions.find(i => i.minute === min);
+    if (activeIntervention) {
+      events.push({
+        minute: min, event_type: 'intervention', student_id: null,
+        data: { type: activeIntervention.type, name: activeIntervention.type }
+      });
+    }
+
+    for (const s of students) {
+      let eng = getEngagement(s, min, rng, overrides);
+
+      // Apply intervention boost
+      if (activeIntervention) {
+        const boost = s.responses[activeIntervention.type] || 0.1;
+        eng = Math.min(1.0, eng + boost * (0.7 + rng() * 0.6));
+      }
+
+      // Confusion spike
+      if (overrides.confusionMinute && min >= overrides.confusionMinute && min < overrides.confusionMinute + 8) {
+        eng -= overrides.confusionStrength * (0.5 + rng() * 0.5);
+        eng = Math.max(0.05, eng);
+      }
+
+      const state = eng >= 0.65 ? 'engaged' : eng >= 0.40 ? 'drifting' : 'disengaged';
+      const isConfused = eng < s.confusionThreshold && rng() < 0.4;
+      const speaking = rng() < s.speakTendency * eng;
+      const chatSent = rng() < s.chatFreq * (0.5 + 0.5 * eng);
+
+      if (speaking) speakers++;
+      speakTotals[s.id] = (speakTotals[s.id] || 0) + (speaking ? rng() * 30 : 0);
+
+      if (chatSent) {
+        const text = generateChat(s, state, isConfused, rng);
+        events.push({
+          minute: min, event_type: 'chat', student_id: s.id,
+          data: { text, confusion_score: isConfused ? 0.8 : 0.1, sentiment: state === 'engaged' ? 'positive' : 'neutral', is_question: text.includes('?') }
+        });
+      }
+
+      if (isConfused) confused.push(s.id);
+
+      minuteData.students.push({
+        student_id: s.id, engagement: Math.round(eng * 1000) / 1000,
+        state, is_confused: isConfused, signals: speaking ? ['speaking'] : chatSent ? ['chat'] : []
+      });
+      classEngSum += eng;
+    }
+
+    const meanEng = classEngSum / students.length;
+    const gini = computeGini(Object.values(speakTotals));
+
+    // Pattern detection
+    const patterns = [];
+    if (timeline.length >= 5) {
+      const earlyMean = timeline.slice(0, 5).reduce((s, t) => s + t.class_engagement, 0) / 5;
+      const decay = earlyMean - meanEng;
+      if (decay > 0.10) patterns.push({ type: 'energy_decay', severity: decay < 0.2 ? 'mild' : decay < 0.3 ? 'moderate' : 'severe', value: Math.round(decay * 100) / 100, message: `Class engagement dropped ${Math.round(decay * 100)}% from session start` });
+    }
+    if (gini > 0.5) patterns.push({ type: 'equity_imbalance', severity: gini < 0.65 ? 'mild' : gini < 0.8 ? 'moderate' : 'severe', value: Math.round(gini * 100) / 100, message: `Speaking time concentrated (Gini=${gini.toFixed(2)})` });
+    if (confused.length >= 3) patterns.push({ type: 'confusion_cluster', severity: confused.length < 4 ? 'mild' : 'moderate', value: confused.length, message: `${confused.length} students signaling confusion`, students: confused });
+
+    // Recommendations
+    for (const p of patterns) {
+      let rec = null;
+      if (p.type === 'energy_decay') {
+        rec = { priority: p.severity === 'severe' ? 'high' : 'medium', action: 'breakout', message: `Participation dropped ${Math.round(p.value * 100)}% since start. Consider breakout activity.`, minute: min };
+      } else if (p.type === 'equity_imbalance') {
+        rec = { priority: p.severity === 'severe' ? 'high' : 'medium', action: 'equity_intervention', message: `Discussion dominated by few voices (Gini=${p.value.toFixed(2)}). Try think-pair-share.`, minute: min };
+      } else if (p.type === 'confusion_cluster') {
+        rec = { priority: 'high', action: 'clarification', message: `${p.value} students confused. Pause for clarification.`, minute: min };
+      }
+      if (rec) recommendations.push(rec);
+    }
+
+    minuteData.class_engagement = Math.round(meanEng * 1000) / 1000;
+    minuteData.speaking_gini = Math.round(gini * 1000) / 1000;
+    minuteData.active_speakers = speakers;
+    minuteData.patterns = patterns;
+    timeline.push(minuteData);
+  }
+
+  sessionData = {
+    metadata: { duration_minutes: duration, scenario, student_count: students.length, timestamp: new Date().toISOString() },
+    students: students.map(s => ({ student_id: s.id, name: s.name, engagement_baseline: s.baseline, demographic: s.demographic })),
+    timeline,
+    events,
+    recommendations,
+    summary: {}
+  };
+
+  currentMinute = 0;
+  renderAll(duration);
+  showMinute(duration);
+}
+
+// ============================================================
+// STUDENT GENERATION (in-browser simplified profiles)
+// ============================================================
+
+function generateStudents() {
+  return [
+    { id: 'S01', name: 'Priya Sharma', baseline: 'high', chatFreq: 0.25, speakTendency: 0.30, cameraRate: 0.95, attentionSpan: 40, driftRate: 0.01, confusionThreshold: 0.2, responses: { breakout: 0.25, poll: 0.15, cold_call: 0.10, pace_change: 0.10 }, demographic: { major: 'EdTech' } },
+    { id: 'S02', name: 'Marcus Chen', baseline: 'high', chatFreq: 0.20, speakTendency: 0.35, cameraRate: 0.90, attentionSpan: 35, driftRate: 0.015, confusionThreshold: 0.25, responses: { breakout: 0.30, poll: 0.20, cold_call: 0.15, pace_change: 0.05 }, demographic: { major: 'IS' } },
+    { id: 'S03', name: 'Amara Okafor', baseline: 'high', chatFreq: 0.18, speakTendency: 0.25, cameraRate: 0.85, attentionSpan: 30, driftRate: 0.02, confusionThreshold: 0.3, responses: { breakout: 0.40, poll: 0.15, cold_call: 0.05, pace_change: 0.15 }, demographic: { major: 'Public Health' } },
+    { id: 'S04', name: 'Tyler Morrison', baseline: 'medium', chatFreq: 0.12, speakTendency: 0.10, cameraRate: 0.40, attentionSpan: 20, driftRate: 0.03, confusionThreshold: 0.25, responses: { breakout: 0.35, poll: 0.25, cold_call: -0.10, pace_change: 0.20 }, demographic: { major: 'CS' } },
+    { id: 'S05', name: 'Sofia Reyes', baseline: 'medium', chatFreq: 0.08, speakTendency: 0.15, cameraRate: 0.70, attentionSpan: 30, driftRate: 0.02, confusionThreshold: 0.35, responses: { breakout: 0.20, poll: 0.10, cold_call: 0.05, pace_change: 0.10 }, demographic: { major: 'Education' } },
+    { id: 'S06', name: 'James Patterson', baseline: 'medium', chatFreq: 0.10, speakTendency: 0.20, cameraRate: 0.60, attentionSpan: 25, driftRate: 0.025, confusionThreshold: 0.3, responses: { breakout: 0.15, poll: 0.20, cold_call: 0.10, pace_change: 0.05 }, demographic: { major: 'MBA/IT' } },
+    { id: 'S07', name: 'Yuki Tanaka', baseline: 'medium', chatFreq: 0.15, speakTendency: 0.08, cameraRate: 0.50, attentionSpan: 28, driftRate: 0.02, confusionThreshold: 0.3, responses: { breakout: 0.25, poll: 0.20, cold_call: -0.15, pace_change: 0.10 }, demographic: { major: 'Data Science' } },
+    { id: 'S08', name: 'Aisha Khalil', baseline: 'medium', chatFreq: 0.14, speakTendency: 0.20, cameraRate: 0.75, attentionSpan: 32, driftRate: 0.018, confusionThreshold: 0.3, responses: { breakout: 0.35, poll: 0.10, cold_call: 0.05, pace_change: 0.10 }, demographic: { major: 'Learning Sciences' } },
+    { id: 'S09', name: 'Derek Williams', baseline: 'low', chatFreq: 0.03, speakTendency: 0.02, cameraRate: 0.20, attentionSpan: 15, driftRate: 0.04, confusionThreshold: 0.25, responses: { breakout: 0.10, poll: 0.15, cold_call: -0.20, pace_change: 0.05 }, demographic: { major: 'IT Mgmt' } },
+    { id: 'S10', name: 'Luna Martinez', baseline: 'low', chatFreq: 0.05, speakTendency: 0.05, cameraRate: 0.30, attentionSpan: 18, driftRate: 0.035, confusionThreshold: 0.3, responses: { breakout: 0.30, poll: 0.20, cold_call: -0.05, pace_change: 0.15 }, demographic: { major: 'UX Design' } },
+    { id: 'S11', name: 'Alex Kim', baseline: 'low', chatFreq: 0.01, speakTendency: 0.01, cameraRate: 0.10, attentionSpan: 45, driftRate: 0.005, confusionThreshold: 0.15, responses: { breakout: 0.20, poll: 0.10, cold_call: 0.15, pace_change: 0.02 }, demographic: { major: 'Info Science' } },
+    { id: 'S12', name: "Chris O'Brien", baseline: 'high', chatFreq: 0.20, speakTendency: 0.15, cameraRate: 0.80, attentionSpan: 15, driftRate: 0.05, confusionThreshold: 0.3, responses: { breakout: 0.35, poll: 0.25, cold_call: 0.10, pace_change: 0.20 }, demographic: { major: 'Health Info' } },
+    { id: 'S13', name: 'Rachel Torres', baseline: 'high', chatFreq: 0.35, speakTendency: 0.45, cameraRate: 0.95, attentionSpan: 50, driftRate: 0.005, confusionThreshold: 0.2, responses: { breakout: 0.15, poll: 0.10, cold_call: 0.20, pace_change: 0.05 }, demographic: { major: 'Ed Leadership' } },
+    { id: 'S14', name: 'Sam Rivera', baseline: 'medium', chatFreq: 0.08, speakTendency: 0.05, cameraRate: 0.55, attentionSpan: 20, driftRate: 0.03, confusionThreshold: 0.45, responses: { breakout: 0.20, poll: 0.15, cold_call: -0.25, pace_change: 0.10 }, demographic: { major: 'Undeclared' } },
+    { id: 'S15', name: 'Jordan Lee', baseline: 'high', chatFreq: 0.18, speakTendency: 0.22, cameraRate: 0.90, attentionSpan: 45, driftRate: 0.01, confusionThreshold: 0.2, responses: { breakout: 0.25, poll: 0.15, cold_call: 0.10, pace_change: 0.10 }, demographic: { major: 'Learning Analytics' } },
+  ];
+}
+
+function getEngagement(s, min, rng, overrides) {
+  const baseMap = { high: 0.85, medium: 0.60, low: 0.35 };
+  let base = baseMap[s.baseline];
+  const driftMult = overrides.driftMultiplier || 1.0;
+  const effectiveMin = min * driftMult;
+  if (effectiveMin > s.attentionSpan) {
+    base = Math.max(0.05, base - (effectiveMin - s.attentionSpan) * s.driftRate);
+  }
+  if (overrides.boostStudents && overrides.boostStudents.includes(s.id)) {
+    base = Math.min(1.0, base + 0.15);
+  }
+  base += (rng() - 0.5) * 0.16;
+  return Math.max(0, Math.min(1, base));
+}
+
+function getScenarioOverrides(scenario) {
+  const o = {};
+  if (scenario === 'energy_decay') o.driftMultiplier = 1.5;
+  if (scenario === 'equity_imbalance') { o.boostStudents = ['S13', 'S02']; }
+  if (scenario === 'confusion_cluster') { o.confusionMinute = 20; o.confusionStrength = 0.4; }
+  if (scenario === 'full_scenario') { o.driftMultiplier = 1.3; o.confusionMinute = 18; o.confusionStrength = 0.3; }
+  return o;
+}
+
+function getScenarioInterventions(scenario) {
+  if (scenario === 'intervention_test') return [{ minute: 20, type: 'breakout' }, { minute: 35, type: 'poll' }];
+  if (scenario === 'full_scenario') return [{ minute: 25, type: 'breakout' }, { minute: 40, type: 'poll' }];
+  return [];
+}
+
+function generateChat(s, state, confused, rng) {
+  if (confused) {
+    const confMsgs = ["I'm confused", "Can you repeat that?", "I'm lost", "What does that mean?", "Help?", "Wait, I don't follow"];
+    return confMsgs[Math.floor(rng() * confMsgs.length)];
+  }
+  if (state === 'engaged') {
+    const msgs = ["Great point!", "This connects to the reading", "I have a question", "Building on that...", "Interesting approach", "Agree with that perspective"];
+    return msgs[Math.floor(rng() * msgs.length)];
+  }
+  if (state === 'drifting') {
+    const msgs = ["ok", "+1", "interesting", "noted", ""];
+    return msgs[Math.floor(rng() * msgs.length)];
+  }
+  return "";
+}
+
+function computeGini(values) {
+  if (!values.length || values.every(v => v === 0)) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += (2 * (i + 1) - n - 1) * sorted[i];
+  const total = sorted.reduce((a, b) => a + b, 0);
+  return total > 0 ? sum / (n * total) : 0;
+}
+
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+function renderAll(duration) {
+  if (!sessionData) return;
+  document.getElementById('timeline-end').textContent = `Minute ${duration}`;
+  renderTimeline(duration);
+  renderHeatmap(duration);
+}
+
+function showMinute(min) {
+  if (!sessionData || !sessionData.timeline[min - 1]) return;
+  currentMinute = min;
+  document.getElementById('minute-display').textContent = `Min: ${min}`;
+
+  const frame = sessionData.timeline[min - 1];
+
+  // Overview stats
+  const engEl = document.getElementById('stat-engagement');
+  engEl.querySelector('.value').textContent = (frame.class_engagement * 100).toFixed(0) + '%';
+  engEl.className = 'stat-card ' + (frame.class_engagement >= 0.65 ? 'green' : frame.class_engagement >= 0.4 ? 'yellow' : 'red');
+
+  document.querySelector('#stat-speakers .value').textContent = frame.active_speakers;
+  document.querySelector('#stat-gini .value').textContent = (1 - frame.speaking_gini).toFixed(2);
+  document.querySelector('#stat-patterns .value').textContent = frame.patterns.length;
+
+  // Gini bar
+  const giniPct = frame.speaking_gini * 100;
+  const giniFill = document.getElementById('gini-fill');
+  giniFill.style.width = giniPct + '%';
+  giniFill.style.background = giniPct < 50 ? 'var(--green)' : giniPct < 65 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('gini-value').textContent = frame.speaking_gini.toFixed(2);
+
+  // Patterns
+  const patternsArea = document.getElementById('patterns-area');
+  patternsArea.innerHTML = frame.patterns.map(p =>
+    `<span class="pattern-badge ${p.severity}">${p.type.replace(/_/g, ' ')}</span>`
+  ).join('');
+
+  // Student grid
+  const grid = document.getElementById('student-grid');
+  grid.innerHTML = frame.students.map(s => {
+    const stu = sessionData.students.find(st => st.student_id === s.student_id);
+    const name = stu ? stu.name.split(' ')[0] : s.student_id;
+    const cls = s.is_confused ? 'confused' : s.state;
+    return `<div class="student-card ${cls}">
+      <div class="name">${name}</div>
+      <div class="score" style="color:${engColor(s.engagement)}">${(s.engagement * 100).toFixed(0)}%</div>
+      <div class="state">${s.is_confused ? 'CONFUSED' : s.state}</div>
+    </div>`;
+  }).join('');
+
+  // Recommendations up to this minute
+  const recs = sessionData.recommendations.filter(r => r.minute <= min);
+  const recList = document.getElementById('rec-list');
+  if (recs.length === 0) {
+    recList.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">No recommendations generated yet</div>';
+  } else {
+    recList.innerHTML = recs.slice(-10).reverse().map((r, i) => `
+      <div class="rec-item ${r.priority}">
+        <div class="priority">${r.priority} priority</div>
+        <div class="message">${r.message}</div>
+        <div class="minute-tag">Minute ${r.minute} &middot; Suggested: ${r.action}</div>
+        <div class="response-buttons" data-rec="${i}">
+          <button class="response-btn" onclick="logResponse(${i},'ignore')">Ignore</button>
+          <button class="response-btn" onclick="logResponse(${i},'acknowledge')">Acknowledge</button>
+          <button class="response-btn" onclick="logResponse(${i},'accept')">Accept</button>
+          <button class="response-btn" onclick="logResponse(${i},'modify')">Modify</button>
+          <button class="response-btn" onclick="logResponse(${i},'reject')">Reject</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Chat log up to this minute
+  const chats = sessionData.events.filter(e => e.event_type === 'chat' && e.minute <= min);
+  const chatLog = document.getElementById('chat-log');
+  if (chats.length === 0) {
+    chatLog.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">No chat messages yet</div>';
+  } else {
+    chatLog.innerHTML = chats.slice(-30).reverse().map(e => {
+      const stu = sessionData.students.find(s => s.student_id === e.student_id);
+      const name = stu ? stu.name : e.student_id;
+      const cls = e.data.confusion_score > 0.5 ? 'confused' : '';
+      return `<div class="chat-msg ${cls}">
+        <span class="time">${e.minute}m</span>
+        <span class="name">${name}</span>
+        <span class="text">${e.data.text}${e.data.is_question ? ' ❓' : ''}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Highlight current minute in timeline
+  document.querySelectorAll('.timeline-bar').forEach(bar => {
+    bar.style.opacity = parseInt(bar.dataset.minute) === min ? '1' : '0.7';
+  });
+
+  // Professor actions
+  if (sessionData.professor) {
+    const profPanel = document.getElementById('professor-panel');
+    profPanel.style.display = 'block';
+    const profActions = sessionData.professor.actions.filter(a => a.minute <= min);
+    document.getElementById('professor-actions').innerHTML = profActions.slice(-8).reverse().map(a => `
+      <div class="prof-action">
+        <span class="category ${a.response_category}">${a.response_category}</span>
+        ${a.intervention_type ? `<span> &middot; ${a.intervention_type}</span>` : ''}
+        <span class="minute-tag"> &middot; Min ${a.minute}</span>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:4px">${a.rationale}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderTimeline(duration) {
+  const container = document.getElementById('timeline-chart');
+  const width = container.offsetWidth;
+  const height = 200;
+  container.innerHTML = '';
+
+  if (!sessionData) return;
+
+  const barWidth = Math.max(2, (width / duration) - 1);
+
+  // Intervention markers
+  const interventions = sessionData.events.filter(e => e.event_type === 'intervention');
+  for (const iv of interventions) {
+    const x = ((iv.minute - 1) / duration) * width;
+    const marker = document.createElement('div');
+    marker.className = 'timeline-intervention';
+    marker.style.left = x + 'px';
+    marker.dataset.label = iv.data.type;
+    container.appendChild(marker);
+  }
+
+  // Bars
+  for (let i = 0; i < sessionData.timeline.length; i++) {
+    const frame = sessionData.timeline[i];
+    const bar = document.createElement('div');
+    bar.className = 'timeline-bar';
+    const eng = frame.class_engagement;
+    bar.classList.add(eng >= 0.65 ? 'high' : eng >= 0.4 ? 'mid' : 'low');
+    bar.style.left = ((i / duration) * width) + 'px';
+    bar.style.width = barWidth + 'px';
+    bar.style.height = (eng * height) + 'px';
+    bar.dataset.minute = frame.minute;
+    bar.title = `Min ${frame.minute}: ${(eng * 100).toFixed(0)}%`;
+    bar.onclick = () => showMinute(frame.minute);
+    bar.style.cursor = 'pointer';
+    container.appendChild(bar);
+  }
+}
+
+function renderHeatmap(duration) {
+  const container = document.getElementById('heatmap');
+  if (!sessionData) return;
+
+  const students = sessionData.students;
+  const cols = Math.min(duration, sessionData.timeline.length);
+
+  // Grid: label column + data columns, with minute header row
+  container.style.gridTemplateColumns = `100px repeat(${cols}, 1fr)`;
+  container.style.gridTemplateRows = `20px repeat(${students.length}, 1fr)`;
+  container.innerHTML = '';
+  container.classList.remove('loading');
+
+  // Header row: minute labels (every 5)
+  container.appendChild(Object.assign(document.createElement('div'), { className: 'heatmap-minute' }));
+  for (let m = 0; m < cols; m++) {
+    const label = document.createElement('div');
+    label.className = 'heatmap-minute';
+    label.textContent = (m + 1) % 5 === 0 ? (m + 1) : '';
+    container.appendChild(label);
+  }
+
+  // Student rows
+  for (const stu of students) {
+    const label = document.createElement('div');
+    label.className = 'heatmap-label';
+    label.textContent = stu.name.split(' ')[0];
+    label.title = stu.name;
+    container.appendChild(label);
+
+    for (let m = 0; m < cols; m++) {
+      const frame = sessionData.timeline[m];
+      const sData = frame.students.find(s => s.student_id === stu.student_id);
+      const eng = sData ? sData.engagement : 0;
+      const cell = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      cell.style.background = engColor(eng);
+      cell.onclick = () => showMinute(m + 1);
+
+      const tooltip = document.createElement('div');
+      tooltip.className = 'tooltip';
+      tooltip.textContent = `${stu.name} · Min ${m + 1} · ${(eng * 100).toFixed(0)}% ${sData?.is_confused ? '(confused)' : ''}`;
+      cell.appendChild(tooltip);
+
+      container.appendChild(cell);
+    }
+  }
+}
+
+function engColor(value) {
+  if (value >= 0.65) return `rgba(34, 197, 94, ${0.4 + value * 0.6})`;
+  if (value >= 0.40) return `rgba(245, 158, 11, ${0.4 + value * 0.6})`;
+  return `rgba(239, 68, 68, ${0.3 + value * 0.7})`;
+}
+
+// ============================================================
+// PLAYBACK
+// ============================================================
+
+function togglePlayback() {
+  if (playbackInterval) {
+    clearInterval(playbackInterval);
+    playbackInterval = null;
+    document.getElementById('play-btn').textContent = 'Play';
+  } else {
+    if (!sessionData) { runSimulation(); }
+    const speed = parseInt(document.getElementById('speed-select').value);
+    let min = currentMinute < sessionData.timeline.length ? currentMinute + 1 : 1;
+    document.getElementById('play-btn').textContent = 'Pause';
+    playbackInterval = setInterval(() => {
+      if (min > sessionData.timeline.length) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+        document.getElementById('play-btn').textContent = 'Play';
+        return;
+      }
+      showMinute(min);
+      min++;
+    }, speed);
+  }
+}
+
+// ============================================================
+// RESPONSE LOGGING (Instructor Response Taxonomy)
+// ============================================================
+
+function logResponse(recIndex, category) {
+  responseLog.push({
+    recommendation_index: recIndex,
+    response: category,
+    minute: currentMinute,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Visual feedback
+  const buttons = document.querySelectorAll(`[data-rec="${recIndex}"] .response-btn`);
+  buttons.forEach(btn => {
+    btn.classList.remove('selected');
+    if (btn.textContent.toLowerCase() === category) btn.classList.add('selected');
+  });
+}
+
+// ============================================================
+// FILE LOADING
+// ============================================================
+
+function loadFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      sessionData = JSON.parse(e.target.result);
+      const duration = sessionData.metadata?.duration_minutes || sessionData.timeline?.length || 45;
+      currentMinute = 0;
+      renderAll(duration);
+      showMinute(1);
+    } catch (err) {
+      alert('Invalid JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Auto-run on load
+window.addEventListener('DOMContentLoaded', () => {
+  runSimulation();
+  showMinute(1);
+});
+</script>
+</body>
+</html>

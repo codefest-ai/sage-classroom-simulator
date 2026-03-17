@@ -1,0 +1,2895 @@
+{
+  "metadata": {
+    "duration_minutes": 15,
+    "scenario": "Energy decay + confusion + intervention responses",
+    "student_count": 15,
+    "interventions_planned": 2,
+    "timestamp": "2026-03-17T00:37:07"
+  },
+  "students": [
+    {
+      "student_id": "S01",
+      "name": "Priya Sharma",
+      "engagement_baseline": "high",
+      "demographic": {
+        "age": 24,
+        "major": "Education Technology",
+        "learning_style": "visual-verbal",
+        "tech_comfort": "high"
+      }
+    },
+    {
+      "student_id": "S02",
+      "name": "Marcus Chen",
+      "engagement_baseline": "high",
+      "demographic": {
+        "age": 28,
+        "major": "Information Systems",
+        "learning_style": "analytical",
+        "tech_comfort": "high"
+      }
+    },
+    {
+      "student_id": "S03",
+      "name": "Amara Okafor",
+      "engagement_baseline": "high",
+      "demographic": {
+        "age": 26,
+        "major": "Public Health Informatics",
+        "learning_style": "collaborative",
+        "tech_comfort": "medium"
+      }
+    },
+    {
+      "student_id": "S04",
+      "name": "Tyler Morrison",
+      "engagement_baseline": "medium",
+      "demographic": {
+        "age": 22,
+        "major": "Computer Science",
+        "learning_style": "hands-on",
+        "tech_comfort": "very_high"
+      }
+    },
+    {
+      "student_id": "S05",
+      "name": "Sofia Reyes",
+      "engagement_baseline": "medium",
+      "demographic": {
+        "age": 30,
+        "major": "Education",
+        "learning_style": "reflective",
+        "tech_comfort": "medium"
+      }
+    },
+    {
+      "student_id": "S06",
+      "name": "James Patterson",
+      "engagement_baseline": "medium",
+      "demographic": {
+        "age": 35,
+        "major": "MBA/IT Management",
+        "learning_style": "pragmatic",
+        "tech_comfort": "medium"
+      }
+    },
+    {
+      "student_id": "S07",
+      "name": "Yuki Tanaka",
+      "engagement_baseline": "medium",
+      "demographic": {
+        "age": 23,
+        "major": "Data Science",
+        "learning_style": "visual",
+        "tech_comfort": "high"
+      }
+    },
+    {
+      "student_id": "S08",
+      "name": "Aisha Khalil",
+      "engagement_baseline": "medium",
+      "demographic": {
+        "age": 27,
+        "major": "Learning Sciences",
+        "learning_style": "verbal-social",
+        "tech_comfort": "medium"
+      }
+    },
+    {
+      "student_id": "S09",
+      "name": "Derek Williams",
+      "engagement_baseline": "low",
+      "demographic": {
+        "age": 33,
+        "major": "IT Management",
+        "learning_style": "independent",
+        "tech_comfort": "low"
+      }
+    },
+    {
+      "student_id": "S10",
+      "name": "Luna Martinez",
+      "engagement_baseline": "low",
+      "demographic": {
+        "age": 21,
+        "major": "UX Design",
+        "learning_style": "creative",
+        "tech_comfort": "high"
+      }
+    },
+    {
+      "student_id": "S11",
+      "name": "The Lurker (Alex Kim)",
+      "engagement_baseline": "low",
+      "demographic": {
+        "age": 25,
+        "major": "Information Science",
+        "learning_style": "observational",
+        "tech_comfort": "high"
+      }
+    },
+    {
+      "student_id": "S12",
+      "name": "The Fader (Chris O'Brien)",
+      "engagement_baseline": "high",
+      "demographic": {
+        "age": 29,
+        "major": "Health Informatics",
+        "learning_style": "mixed",
+        "tech_comfort": "medium"
+      }
+    },
+    {
+      "student_id": "S13",
+      "name": "The Dominator (Rachel Torres)",
+      "engagement_baseline": "high",
+      "demographic": {
+        "age": 31,
+        "major": "Education Leadership",
+        "learning_style": "verbal-dominant",
+        "tech_comfort": "high"
+      }
+    },
+    {
+      "student_id": "S14",
+      "name": "The Confused (Sam Rivera)",
+      "engagement_baseline": "medium",
+      "demographic": {
+        "age": 22,
+        "major": "Undeclared/Exploring",
+        "learning_style": "struggling",
+        "tech_comfort": "low"
+      }
+    },
+    {
+      "student_id": "S15",
+      "name": "The Ideal (Jordan Lee)",
+      "engagement_baseline": "high",
+      "demographic": {
+        "age": 26,
+        "major": "Learning Analytics",
+        "learning_style": "balanced",
+        "tech_comfort": "high"
+      }
+    }
+  ],
+  "timeline": [
+    {
+      "minute": 1,
+      "class_engagement": 0.5,
+      "engagement_std": 0.174,
+      "speaking_gini": 0.0,
+      "active_speakers": 1,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.694,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.605,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.695,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.523,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.493,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.512,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.352,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.599,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.183,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.249,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.201,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.569,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.689,
+          "state": "engaged",
+          "is_confused": true,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.438,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.695,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 2,
+      "class_engagement": 0.47,
+      "engagement_std": 0.162,
+      "speaking_gini": 0.195,
+      "active_speakers": 1,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.665,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.671,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.67,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.445,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.501,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.404,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.422,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.329,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.244,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.195,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.271,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.647,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.618,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.371,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.594,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 3,
+      "class_engagement": 0.477,
+      "engagement_std": 0.19,
+      "speaking_gini": 0.218,
+      "active_speakers": 3,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.624,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.645,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.738,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.335,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.518,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.63,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.332,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "reaction"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.421,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.203,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.184,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.201,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.684,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.714,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.364,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.557,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 4,
+      "class_engagement": 0.471,
+      "engagement_std": 0.157,
+      "speaking_gini": 0.247,
+      "active_speakers": 1,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.726,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.623,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.667,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.407,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.335,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.391,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.485,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.384,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.242,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.181,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.374,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.608,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.621,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.423,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.599,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 5,
+      "class_engagement": 0.479,
+      "engagement_std": 0.158,
+      "speaking_gini": 0.405,
+      "active_speakers": 2,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.675,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.554,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.725,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.382,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.528,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.559,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "reaction"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.514,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.486,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.354,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.107,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.243,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.554,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.5,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.367,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.63,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 6,
+      "class_engagement": 0.479,
+      "engagement_std": 0.175,
+      "speaking_gini": 0.376,
+      "active_speakers": 1,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.685,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.672,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.746,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "chat",
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.375,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.404,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.47,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.544,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.312,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.139,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.324,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.229,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.615,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.627,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.436,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.613,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 7,
+      "class_engagement": 0.502,
+      "engagement_std": 0.145,
+      "speaking_gini": 0.39,
+      "active_speakers": 4,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.665,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.761,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.7,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.354,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.397,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.572,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.497,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.422,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.313,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.309,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.351,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.547,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.632,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.4,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.617,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 8,
+      "class_engagement": 0.486,
+      "engagement_std": 0.154,
+      "speaking_gini": 0.394,
+      "active_speakers": 2,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.792,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.592,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.525,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.378,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.713,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.412,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.413,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.494,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.225,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.273,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.329,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.494,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.597,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.424,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.629,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 9,
+      "class_engagement": 0.537,
+      "engagement_std": 0.196,
+      "speaking_gini": 0.398,
+      "active_speakers": 3,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.669,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.658,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.822,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.458,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.493,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.506,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.6,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.475,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.126,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.283,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.31,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.569,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.784,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.468,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.84,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "chat",
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 10,
+      "class_engagement": 0.532,
+      "engagement_std": 0.183,
+      "speaking_gini": 0.36,
+      "active_speakers": 2,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.624,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.777,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.728,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.488,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.473,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.455,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.48,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.506,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.222,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.335,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.308,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.717,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.756,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.317,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.79,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 11,
+      "class_engagement": 0.491,
+      "engagement_std": 0.189,
+      "speaking_gini": 0.345,
+      "active_speakers": 3,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.777,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.555,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.653,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.436,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.439,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.404,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.371,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.435,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.166,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.217,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.321,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.657,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.751,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.409,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.773,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 12,
+      "class_engagement": 0.474,
+      "engagement_std": 0.151,
+      "speaking_gini": 0.338,
+      "active_speakers": 2,
+      "patterns": [
+        {
+          "type": "fade_cascade",
+          "severity": "moderate",
+          "value": 6,
+          "message": "Rapid disengagement: 6 students now disengaged"
+        }
+      ],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.684,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.6,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.621,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.374,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.515,
+          "state": "drifting",
+          "is_confused": true,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.502,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.313,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.489,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.331,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.349,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.187,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.616,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.665,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.287,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.576,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 13,
+      "class_engagement": 0.474,
+      "engagement_std": 0.141,
+      "speaking_gini": 0.336,
+      "active_speakers": 1,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.481,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.733,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.569,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.372,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.529,
+          "state": "drifting",
+          "is_confused": true,
+          "signals": [
+            "chat",
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.45,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.568,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.533,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.189,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.324,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.225,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.501,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.602,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.449,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.589,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 14,
+      "class_engagement": 0.492,
+      "engagement_std": 0.156,
+      "speaking_gini": 0.332,
+      "active_speakers": 1,
+      "patterns": [],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.683,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "speaking",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.671,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.574,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.334,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.49,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.526,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.489,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.489,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "reaction",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.219,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.288,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.346,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.488,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.775,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "chat",
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.346,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.656,
+          "state": "engaged",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    },
+    {
+      "minute": 15,
+      "class_engagement": 0.416,
+      "engagement_std": 0.149,
+      "speaking_gini": 0.332,
+      "active_speakers": 0,
+      "patterns": [
+        {
+          "type": "fade_cascade",
+          "severity": "moderate",
+          "value": 7,
+          "message": "Rapid disengagement: 7 students now disengaged"
+        }
+      ],
+      "students": [
+        {
+          "student_id": "S01",
+          "engagement": 0.561,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S02",
+          "engagement": 0.54,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S03",
+          "engagement": 0.546,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S04",
+          "engagement": 0.267,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S05",
+          "engagement": 0.347,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S06",
+          "engagement": 0.488,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S07",
+          "engagement": 0.487,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S08",
+          "engagement": 0.342,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S09",
+          "engagement": 0.244,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "poll"
+          ]
+        },
+        {
+          "student_id": "S10",
+          "engagement": 0.19,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": [
+            "reaction"
+          ]
+        },
+        {
+          "student_id": "S11",
+          "engagement": 0.135,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S12",
+          "engagement": 0.524,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S13",
+          "engagement": 0.593,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        },
+        {
+          "student_id": "S14",
+          "engagement": 0.383,
+          "state": "disengaged",
+          "is_confused": false,
+          "signals": []
+        },
+        {
+          "student_id": "S15",
+          "engagement": 0.594,
+          "state": "drifting",
+          "is_confused": false,
+          "signals": [
+            "poll",
+            "camera"
+          ]
+        }
+      ]
+    }
+  ],
+  "class_snapshots": [],
+  "events": [
+    {
+      "minute": 1,
+      "event_type": "chat",
+      "student_id": "S01",
+      "data": {
+        "text": "Great point about the dashboard design!",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 1,
+      "event_type": "chat",
+      "student_id": "S03",
+      "data": {
+        "text": "This is really relevant to data science",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 1,
+      "event_type": "chat",
+      "student_id": "S13",
+      "data": {
+        "text": "This is exactly what I've been saying about engagement metrics",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 2,
+      "event_type": "chat",
+      "student_id": "S01",
+      "data": {
+        "text": "This connects to the reading on learning analytics",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 3,
+      "event_type": "chat",
+      "student_id": "S02",
+      "data": {
+        "text": "The data suggests the engagement data shows decay",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 4,
+      "event_type": "chat",
+      "student_id": "S01",
+      "data": {
+        "text": "This connects to the reading on learning analytics",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 6,
+      "event_type": "chat",
+      "student_id": "S01",
+      "data": {
+        "text": "This connects to the reading on the scoring model",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 6,
+      "event_type": "chat",
+      "student_id": "S02",
+      "data": {
+        "text": "The data suggests this validates the hypothesis",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 6,
+      "event_type": "chat",
+      "student_id": "S03",
+      "data": {
+        "text": "I agree with Sofia and want to add...",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 6,
+      "event_type": "chat",
+      "student_id": "S06",
+      "data": {
+        "text": "Makes sense",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 6,
+      "event_type": "chat",
+      "student_id": "S07",
+      "data": {
+        "text": "thumbs up emoji",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 6,
+      "event_type": "chat",
+      "student_id": "S12",
+      "data": {
+        "text": "I have thoughts on this",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 8,
+      "event_type": "chat",
+      "student_id": "S01",
+      "data": {
+        "text": "I have a question about the evaluation method",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 8,
+      "event_type": "chat",
+      "student_id": "S08",
+      "data": {
+        "text": "I see",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 8,
+      "event_type": "chat",
+      "student_id": "S15",
+      "data": {
+        "text": "The implications for practice are nonlinear decay",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 9,
+      "event_type": "chat",
+      "student_id": "S03",
+      "data": {
+        "text": "I agree with Sofia and want to add...",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 9,
+      "event_type": "chat",
+      "student_id": "S07",
+      "data": {
+        "text": "The data pattern suggests group dynamics",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 9,
+      "event_type": "chat",
+      "student_id": "S13",
+      "data": {
+        "text": "In my experience leading a school district...",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 9,
+      "event_type": "chat",
+      "student_id": "S15",
+      "data": {
+        "text": "This connects to UDL from the reading",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 10,
+      "event_type": "chat",
+      "student_id": "S03",
+      "data": {
+        "text": "This is really relevant to my program",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 10,
+      "event_type": "chat",
+      "student_id": "S04",
+      "data": {
+        "text": "...",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 10,
+      "event_type": "chat",
+      "student_id": "S12",
+      "data": {
+        "text": "I have thoughts on this",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 10,
+      "event_type": "chat",
+      "student_id": "S13",
+      "data": {
+        "text": "In my experience leading a school district...",
+        "confusion_score": 0.0,
+        "sentiment": "positive",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 12,
+      "event_type": "chat",
+      "student_id": "S05",
+      "data": {
+        "text": "I want to make sure I understand \u2014 is the main idea instructors need comprehension support?",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": true
+      }
+    },
+    {
+      "minute": 12,
+      "event_type": "chat",
+      "student_id": "S13",
+      "data": {
+        "text": "Let me add three points...",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    },
+    {
+      "minute": 13,
+      "event_type": "chat",
+      "student_id": "S05",
+      "data": {
+        "text": "I want to make sure I understand \u2014 is the main idea instructors need comprehension support?",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": true
+      }
+    },
+    {
+      "minute": 14,
+      "event_type": "chat",
+      "student_id": "S13",
+      "data": {
+        "text": "I want to respond to that \u2014 ",
+        "confusion_score": 0.0,
+        "sentiment": "neutral",
+        "is_question": false
+      }
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "breakout",
+      "message": "Multiple students disengaging rapidly. A breakout or activity shift is strongly recommended.",
+      "evidence": {
+        "type": "fade_cascade",
+        "severity": "moderate",
+        "value": 6,
+        "message": "Rapid disengagement: 6 students now disengaged"
+      },
+      "minute": 12
+    },
+    {
+      "priority": "high",
+      "action": "breakout",
+      "message": "Multiple students disengaging rapidly. A breakout or activity shift is strongly recommended.",
+      "evidence": {
+        "type": "fade_cascade",
+        "severity": "moderate",
+        "value": 7,
+        "message": "Rapid disengagement: 7 students now disengaged"
+      },
+      "minute": 15
+    }
+  ],
+  "summary": {
+    "overall_mean_engagement": 0.485,
+    "peak_minute": 9,
+    "peak_engagement": 0.537,
+    "trough_minute": 15,
+    "trough_engagement": 0.416,
+    "engagement_range": 0.121,
+    "pattern_frequency": {
+      "fade_cascade": 2
+    },
+    "student_summaries": {
+      "S01": {
+        "name": "Priya Sharma",
+        "mean_engagement": 0.667,
+        "min_engagement": 0.481,
+        "max_engagement": 0.792
+      },
+      "S02": {
+        "name": "Marcus Chen",
+        "mean_engagement": 0.644,
+        "min_engagement": 0.54,
+        "max_engagement": 0.777
+      },
+      "S03": {
+        "name": "Amara Okafor",
+        "mean_engagement": 0.665,
+        "min_engagement": 0.525,
+        "max_engagement": 0.822
+      },
+      "S04": {
+        "name": "Tyler Morrison",
+        "mean_engagement": 0.395,
+        "min_engagement": 0.267,
+        "max_engagement": 0.523
+      },
+      "S05": {
+        "name": "Sofia Reyes",
+        "mean_engagement": 0.478,
+        "min_engagement": 0.335,
+        "max_engagement": 0.713
+      },
+      "S06": {
+        "name": "James Patterson",
+        "mean_engagement": 0.485,
+        "min_engagement": 0.391,
+        "max_engagement": 0.63
+      },
+      "S07": {
+        "name": "Yuki Tanaka",
+        "mean_engagement": 0.458,
+        "min_engagement": 0.313,
+        "max_engagement": 0.6
+      },
+      "S08": {
+        "name": "Aisha Khalil",
+        "mean_engagement": 0.448,
+        "min_engagement": 0.312,
+        "max_engagement": 0.599
+      },
+      "S09": {
+        "name": "Derek Williams",
+        "mean_engagement": 0.227,
+        "min_engagement": 0.126,
+        "max_engagement": 0.354
+      },
+      "S10": {
+        "name": "Luna Martinez",
+        "mean_engagement": 0.254,
+        "min_engagement": 0.107,
+        "max_engagement": 0.349
+      },
+      "S11": {
+        "name": "The Lurker (Alex Kim)",
+        "mean_engagement": 0.269,
+        "min_engagement": 0.135,
+        "max_engagement": 0.374
+      },
+      "S12": {
+        "name": "The Fader (Chris O'Brien)",
+        "mean_engagement": 0.586,
+        "min_engagement": 0.488,
+        "max_engagement": 0.717
+      },
+      "S13": {
+        "name": "The Dominator (Rachel Torres)",
+        "mean_engagement": 0.662,
+        "min_engagement": 0.5,
+        "max_engagement": 0.784
+      },
+      "S14": {
+        "name": "The Confused (Sam Rivera)",
+        "mean_engagement": 0.392,
+        "min_engagement": 0.287,
+        "max_engagement": 0.468
+      },
+      "S15": {
+        "name": "The Ideal (Jordan Lee)",
+        "mean_engagement": 0.65,
+        "min_engagement": 0.557,
+        "max_engagement": 0.84
+      }
+    },
+    "total_interventions": 2,
+    "total_recommendations": 0,
+    "confusion_timeline": []
+  }
+}
