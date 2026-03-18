@@ -707,6 +707,17 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   </div>
 </div>
 
+<!-- ABOUT THIS ARTIFACT -->
+<div class="panel full-width" style="margin:16px 24px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;font-size:12px;line-height:1.7;color:var(--text-dim)">
+  <h2 style="color:var(--purple)">About This Artifact</h2>
+  <p><strong>SAGE</strong> (Simulated Agent-Generated Engagement) is a DSR evaluation sandbox for an Instructional Decision Support System (IDSS). It is the Stage 1 artifact for IST 505 Design Research Methods at Claremont Graduate University, Spring 2026.</p>
+  <p style="margin-top:8px"><strong>What it does:</strong> 15 student agents with distinct behavioral profiles (engagement baselines, attention spans, drift rates, confusion thresholds) generate engagement data in a simulated 45-minute class. The IDSS detects patterns (energy decay, confusion clusters, equity imbalance, silent majority, fade cascades) and generates prioritized recommendations. A simulated professor responds using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.</p>
+  <p style="margin-top:8px"><strong>What it tests:</strong> Whether the IDSS dashboard supports instructor decision-making at SA Level 2 (comprehension — pattern detection) and Level 3 (projection — actionable recommendations). The evaluation suite compares outcomes across scenarios and professor styles to isolate the IDSS contribution from instructor variation.</p>
+  <p style="margin-top:8px"><strong>What is real:</strong> All engagement scores are computed from weighted signal formulas. Pattern detection uses real thresholds (energy decay = 15%+ drop, equity = Gini > 0.5, confusion = 3+ students). Professor responses sample from real probability distributions per style. University presets use IPEDS enrollment data. Each run with a different seed produces genuinely different outcomes.</p>
+  <p style="margin-top:8px"><strong>What is coming:</strong> LLM-powered student chat (local AI, no cloud), professor agent that reads the actual dashboard JSON to make decisions, and live streaming via server-sent events.</p>
+  <p style="margin-top:8px"><strong>Theoretical grounding:</strong> Endsley (1995) Situational Awareness, Hevner et al. (2004) DSR guidelines, Venable et al. (2016) FEDS evaluation framework, Li et al. (2025) instructor analytics heterogeneity, Wise & Jung (2019) instructor intervention patterns.</p>
+</div>
+
 <!-- CLASSROOM VIEW -->
 <div id="classroom-view">
   <div class="zoom-grid" id="zoom-grid"></div>
