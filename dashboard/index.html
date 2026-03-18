@@ -1959,7 +1959,7 @@ async function runGuidedTour() {
 
   function waitForAdvance() {
     if (autoMode) {
-      hint.textContent = 'spacebar to pause';
+      hint.textContent = 'spacebar pause/resume · click skip forward';
       return new Promise(async (resolve) => {
         let waited = 0;
         while (waited < AUTO_DELAY || globalPaused) {
@@ -1969,7 +1969,7 @@ async function runGuidedTour() {
         resolve();
       });
     } else {
-      hint.textContent = 'Tap anywhere to continue · spacebar to pause';
+      hint.textContent = 'Tap to continue · spacebar pause/resume · click skip forward';
       return new Promise(resolve => {
         overlay.addEventListener('click', resolve, { once: true });
       });
@@ -2108,7 +2108,16 @@ async function runGuidedTour() {
   panTo('#heatmap-container');
   for (let min = 9; min <= 10; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700">Minute 10.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Students drifting. IDSS is watching.</div>`);
+  // Dynamic card based on actual data at minute 10
+  const frame10 = sessionData.timeline[9];
+  const drifting10 = frame10 ? frame10.students.filter(s => s.state === 'drifting' || s.state === 'disengaged').length : 0;
+  const confused10 = frame10 ? frame10.students.filter(s => s.is_confused).length : 0;
+  const eng10 = frame10 ? (frame10.class_engagement * 100).toFixed(0) : '?';
+  let min10text = `Class at ${eng10}% engagement.`;
+  if (drifting10 > 0) min10text += ` ${drifting10} student${drifting10>1?'s':''} drifting.`;
+  if (confused10 > 0) min10text += ` ${confused10} confused.`;
+  if (drifting10 === 0 && confused10 === 0) min10text += ' All engaged so far.';
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 10.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">${min10text}</div>`);
 
   // Play to minute 18 — pan to recommendations as patterns fire
   overlay.style.display = 'none';
@@ -2117,7 +2126,17 @@ async function runGuidedTour() {
   panTo('#rec-list');
   for (let min = 15; min <= 18; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--red)">Confusion spike.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">IDSS recommends: pause and clarify.</div>`);
+  // Dynamic card at minute 18
+  const frame18 = sessionData.timeline[17];
+  const confused18 = frame18 ? frame18.students.filter(s => s.is_confused).length : 0;
+  const eng18 = frame18 ? (frame18.class_engagement * 100).toFixed(0) : '?';
+  const recs18 = sessionData.recommendations.filter(r => r.minute <= 18).length;
+  let min18text = `Class at ${eng18}%.`;
+  if (confused18 >= 3) min18text += ` ${confused18} students confused — confusion cluster detected.`;
+  else if (confused18 > 0) min18text += ` ${confused18} student${confused18>1?'s':''} confused.`;
+  if (recs18 > 0) min18text += ` ${recs18} recommendation${recs18>1?'s':''} generated so far.`;
+  const isSpike = confused18 >= 3;
+  await showCard(`<div style="font-size:22px;font-weight:700;${isSpike?'color:var(--red)':''}">Minute 18.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">${min18text}</div>`);
 
   // Switch to classroom — play PRE-breakout (19-24) then breakout (25-29)
   overlay.style.display = 'none';
@@ -2129,7 +2148,11 @@ async function runGuidedTour() {
   for (let min = 25; min <= 29; min++) { if (demoExited) return; showMinute(min); await tick(1500); }
 
   // NOW show the card after they've seen the breakout groups for 7+ seconds
-  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">4 groups. Professor rotating between them. Chat spiked.</div>`);
+  // Dynamic breakout card
+  const frame25 = sessionData.timeline[24];
+  const eng25 = frame25 ? (frame25.class_engagement * 100).toFixed(0) : '?';
+  const chatsInBreakout = sessionData.events.filter(e => e.event_type === 'chat' && e.minute >= 25 && e.minute <= 29).length;
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms active.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement: ${eng25}%. ${chatsInBreakout} chat messages during breakout. Professor rotating between groups.</div>`);
 
   // Post-breakout: back to dashboard, show recovery
   overlay.style.display = 'none';
@@ -2138,21 +2161,33 @@ async function runGuidedTour() {
   panTo('#timeline-chart');
   for (let min = 30; min <= 35; min++) { if (demoExited) return; showMinute(min); await tick(800); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700">Minute 35 — Recovery visible.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Post-breakout engagement boost in timeline. Professor log shows decisions.</div>`);
+  // Dynamic recovery card
+  const frame35 = sessionData.timeline[34];
+  const eng35 = frame35 ? (frame35.class_engagement * 100).toFixed(0) : '?';
+  const profActions = sessionData.professor ? sessionData.professor.actions.filter(a => a.minute <= 35).length : 0;
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 35.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement: ${eng35}%. Professor made ${profActions} decision${profActions!==1?'s':''}. Scroll down to see the full log.</div>`);
 
   // Minutes 36-40: poll intervention
   overlay.style.display = 'none';
   if (demoExited) return;
   for (let min = 36; min <= 40; min++) { if (demoExited) return; showMinute(min); await tick(800); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700">Minute 40 — Poll launched.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Second intervention. Does engagement hold?</div>`);
+  // Dynamic poll card
+  const frame40 = sessionData.timeline[39];
+  const eng40 = frame40 ? (frame40.class_engagement * 100).toFixed(0) : '?';
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 40 — Poll.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement: ${eng40}%. Second intervention launched.</div>`);
 
   // Final stretch
   overlay.style.display = 'none';
   if (demoExited) return;
   for (let min = 41; min <= 45; min++) { if (demoExited) return; showMinute(min); await tick(600); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700">Session complete — 45 minutes.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement arc, patterns, professor decisions, and chat all captured.<br>Click <strong>📄 Export</strong> anytime to download this session's data.</div>`);
+  // Dynamic session complete card
+  const totalRecs = sessionData.recommendations.length;
+  const totalChats = sessionData.events.filter(e => e.event_type === 'chat').length;
+  const finalEng = sessionData.timeline.length ? (sessionData.timeline[sessionData.timeline.length-1].class_engagement * 100).toFixed(0) : '?';
+  const totalProfActions = sessionData.professor ? sessionData.professor.actions.length : 0;
+  await showCard(`<div style="font-size:22px;font-weight:700">Session complete — 45 minutes.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Final engagement: ${finalEng}%. ${totalRecs} recommendations. ${totalProfActions} professor decisions. ${totalChats} chat messages.<br>Click <strong>📄 Export</strong> to download.</div>`);
 
   await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Now: 6 evaluation tests.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Same scenarios, different professors.<br>Summary table + report download at the end.</div>`);
 
