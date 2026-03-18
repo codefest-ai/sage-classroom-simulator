@@ -2028,39 +2028,10 @@ async function runDemoSuite() {
     document.getElementById('seed-input').value = test.seed;
     document.getElementById('professor-select').value = test.professor;
 
-    // Run simulation
+    // Run simulation silently — no visual playback
     runSimulation();
-
     const duration = parseInt(document.getElementById('duration-input').value) || 45;
-    const isFirst = (i === 0);
-    const speed = isFirst ? 200 : 60; // First test runs slow so they can see features
-
-    // First test: show classroom view for the middle section
-    if (isFirst) {
-      setView('dashboard');
-      for (let min = 1; min <= duration; min++) {
-        if (min === 10) {
-          banner.textContent = `${test.label} — Switching to Classroom View`;
-          setView('classroom');
-        }
-        if (min === 25) {
-          banner.textContent = `${test.label} — Back to Dashboard`;
-          setView('dashboard');
-        }
-        showMinute(min);
-        await new Promise(r => setTimeout(r, speed));
-      }
-    } else {
-      setView('dashboard');
-      for (let min = 1; min <= duration; min++) {
-        // Quick flip to classroom at midpoint for 5 minutes
-        if (min === Math.round(duration * 0.4)) setView('classroom');
-        if (min === Math.round(duration * 0.5)) setView('dashboard');
-        showMinute(min);
-        await new Promise(r => setTimeout(r, speed));
-      }
-    }
-    setView('dashboard');
+    showMinute(duration); // Jump to end
 
     // Collect evaluation data
     const prof = sessionData.professor;
@@ -2095,11 +2066,9 @@ async function runDemoSuite() {
       interventionsUsed: profSummary.interventions_used || {},
     });
 
-    // Pause between tests
-    if (i < DEMO_SUITE.length - 1) {
-      banner.textContent = `${test.label} — Complete. Next test in 3s...`;
-      await new Promise(r => setTimeout(r, 3000));
-    }
+    // Brief pause between tests
+    banner.textContent = `Running test ${i+1}/6: ${test.label}`;
+    await new Promise(r => setTimeout(r, 200));
   }
 
   // Show summary
