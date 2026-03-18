@@ -1905,12 +1905,13 @@ function runLive() {
 // ============================================================
 
 const DEMO_SUITE = [
-  { scenario: 'baseline', professor: 'adaptive', seed: 42, label: 'Test 1: Baseline + Adaptive Professor', question: 'Does the IDSS detect natural engagement variation?' },
-  { scenario: 'confusion_cluster', professor: 'adaptive', seed: 42, label: 'Test 2: Confusion Spike + Adaptive Professor', question: 'Does the IDSS detect confusion and recommend clarification?' },
-  { scenario: 'energy_decay', professor: 'lecture_focused', seed: 42, label: 'Test 3: Energy Decay + Lecture-Focused Professor', question: 'Does a content-driven professor ignore energy warnings?' },
-  { scenario: 'equity_imbalance', professor: 'discussion_based', seed: 42, label: 'Test 4: Equity Imbalance + Discussion Professor', question: 'Does a Socratic professor act on speaking equity alerts?' },
-  { scenario: 'full_scenario', professor: 'hands_off', seed: 42, label: 'Test 5: Full Scenario + Hands-Off Professor', question: 'What happens when compound problems meet minimal intervention?' },
-  { scenario: 'full_scenario', professor: 'adaptive', seed: 42, label: 'Test 6: Full Scenario + Adaptive Professor', question: 'Compare: same scenario, different professor — does intervention style change outcomes?' },
+  { scenario: 'baseline', professor: 'adaptive', seed: 0, label: 'Test 1: Baseline (Emergent)', question: 'Do patterns emerge naturally from agent behavior alone — no forced events?' },
+  { scenario: 'baseline', professor: 'hands_off', seed: 0, label: 'Test 2: Baseline + Hands-Off', question: 'What happens when natural drift meets no intervention?' },
+  { scenario: 'confusion_cluster', professor: 'adaptive', seed: 0, label: 'Test 3: Confusion Spike + Adaptive', question: 'Does the IDSS detect forced confusion and recommend clarification?' },
+  { scenario: 'energy_decay', professor: 'lecture_focused', seed: 0, label: 'Test 4: Energy Decay + Lecturer', question: 'Does a content-driven professor ignore energy warnings?' },
+  { scenario: 'equity_imbalance', professor: 'discussion_based', seed: 0, label: 'Test 5: Equity Imbalance + Discussion', question: 'Does a Socratic professor act on speaking equity alerts?' },
+  { scenario: 'full_scenario', professor: 'hands_off', seed: 0, label: 'Test 6: Full Scenario + Hands-Off', question: 'Compound problems + minimal intervention — worst case?' },
+  { scenario: 'full_scenario', professor: 'adaptive', seed: 0, label: 'Test 7: Full Scenario + Adaptive', question: 'Same scenario as Test 6, different professor — do outcomes differ?' },
 ];
 
 let demoRunning = false;
