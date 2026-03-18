@@ -2075,7 +2075,14 @@ async function runGuidedTour() {
     if (!globalPaused) skipRequested = true;
   });
 
+  // Persistent playback hint
+  const playHint = document.createElement('div');
+  playHint.style.cssText = 'position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:200;color:var(--text-dim);font-size:11px;background:var(--surface);padding:5px 14px;border-radius:6px;border:1px solid var(--border);display:none;';
+  playHint.innerHTML = '<strong>spacebar</strong> pause/resume · <strong>click</strong> skip forward';
+  document.body.appendChild(playHint);
+
   async function tick(ms) {
+    playHint.style.display = 'block';
     let waited = 0;
     skipRequested = false;
     while (waited < ms || globalPaused) {
