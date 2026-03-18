@@ -1958,22 +1958,22 @@ async function runGuidedTour() {
   document.addEventListener('keydown', pauseHandler);
 
   function waitForAdvance() {
-    if (autoMode) {
-      hint.textContent = 'spacebar pause/resume · click skip forward';
-      return new Promise(async (resolve) => {
-        let waited = 0;
-        while (waited < AUTO_DELAY || globalPaused) {
-          await new Promise(r => setTimeout(r, 100));
-          if (!globalPaused) waited += 100;
-        }
-        resolve();
-      });
-    } else {
-      hint.textContent = 'Tap to continue · spacebar pause/resume · click skip forward';
-      return new Promise(resolve => {
-        overlay.addEventListener('click', resolve, { once: true });
-      });
-    }
+    hint.textContent = autoMode ? 'spacebar pause · click to skip' : 'click to continue · spacebar pause';
+    return new Promise(resolve => {
+      // Click anywhere on overlay dismisses card (both modes)
+      overlay.addEventListener('click', resolve, { once: true });
+      // Auto mode also advances on timer
+      if (autoMode) {
+        (async () => {
+          let waited = 0;
+          while (waited < AUTO_DELAY || globalPaused) {
+            await new Promise(r => setTimeout(r, 100));
+            if (!globalPaused) waited += 100;
+          }
+          resolve();
+        })();
+      }
+    });
   }
 
   async function showCard(html, opts = {}) {
