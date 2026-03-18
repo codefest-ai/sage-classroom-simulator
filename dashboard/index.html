@@ -1853,78 +1853,154 @@ let demoRunning = false;
 let demoResults = [];
 
 async function runGuidedTour() {
-  // This is now a FULL self-running 90-second presentation
-  // No talking needed. Captions explain everything.
+  // TAP-TO-ADVANCE presentation. Nothing moves until the viewer is ready.
 
-  const caption = document.createElement('div');
-  caption.id = 'demo-caption';
-  caption.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:300;background:rgba(15,23,42,0.92);color:white;padding:16px 32px;font-size:15px;line-height:1.5;text-align:center;transition:opacity 0.3s;border-top:3px solid var(--purple);';
-  document.body.appendChild(caption);
+  const overlay = document.createElement('div');
+  overlay.id = 'tour-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:300;background:rgba(10,15,30,0.88);display:flex;align-items:center;justify-content:center;cursor:pointer;';
+  document.body.appendChild(overlay);
 
-  const dim = document.createElement('div');
-  dim.id = 'demo-dim';
-  dim.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,0);transition:background 0.5s;pointer-events:none;';
-  document.body.appendChild(dim);
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--surface);border:2px solid var(--purple);border-radius:16px;padding:32px 40px;max-width:600px;width:90%;text-align:center;color:var(--text);line-height:1.7;';
+  overlay.appendChild(card);
 
-  async function cap(text, ms, opts = {}) {
-    if (opts.dim) dim.style.background = 'rgba(0,0,0,0.5)';
-    else dim.style.background = 'rgba(0,0,0,0)';
-    caption.innerHTML = text;
-    caption.style.opacity = '1';
-    await new Promise(r => setTimeout(r, ms));
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:301;color:rgba(255,255,255,0.5);font-size:12px;';
+  hint.textContent = 'Tap anywhere to continue';
+  overlay.appendChild(hint);
+
+  function waitForTap() {
+    return new Promise(resolve => {
+      overlay.addEventListener('click', resolve, { once: true });
+    });
   }
 
-  async function fadeOut() {
-    caption.style.opacity = '0';
-    await new Promise(r => setTimeout(r, 300));
+  async function showCard(html, opts = {}) {
+    card.innerHTML = html;
+    if (opts.action) opts.action();
+    overlay.style.display = 'flex';
+    await waitForTap();
+    if (opts.afterTap) opts.afterTap();
   }
 
-  // ---- INTRO (6 sec) ----
+  async function hideOverlay() {
+    overlay.style.display = 'none';
+  }
+
+  async function showAndRun(html, runFn) {
+    card.innerHTML = html;
+    overlay.style.display = 'flex';
+    await waitForTap();
+    overlay.style.display = 'none';
+    if (runFn) await runFn();
+    overlay.style.display = 'flex';
+  }
+
+  // ---- INTRO CARDS ----
   clearSimulation();
-  await cap('<strong style="font-size:20px;color:var(--purple)">SAGE</strong><br>Simulated Agent-Generated Engagement<br><span style="font-size:12px;color:var(--text-dim)">An agent-based classroom simulator with an Instructor Decision Support System (IDSS)<br>IST 505 · CGU Spring 2026</span>', 4000, {dim:true});
 
-  await cap('<strong>The Problem:</strong> Instructors see raw data (participation counts, camera status) but lack tools for <em>comprehension</em> and <em>projection</em>.<br><span style="font-size:12px">Endsley (1995): Most dashboards stop at SA Level 1. The IDSS targets Levels 2 and 3.</span>', 5000, {dim:true});
+  await showCard(`
+    <div style="font-size:28px;font-weight:800;color:var(--purple);margin-bottom:8px">SAGE</div>
+    <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px">Simulated Agent-Generated Engagement</div>
+    <div style="font-size:15px;margin-bottom:12px">An agent-based classroom simulator with an<br><strong>Instructor Decision Support System (IDSS)</strong></div>
+    <div style="font-size:12px;color:var(--text-dim)">IST 505 · Design Research Methods · CGU Spring 2026</div>
+  `);
 
-  // ---- RUN FIRST SIMULATION (show dashboard filling up) ----
-  dim.style.background = 'rgba(0,0,0,0)';
-  document.getElementById('scenario-select').value = 'full_scenario';
-  document.getElementById('seed-input').value = '42';
-  document.getElementById('professor-select').value = 'adaptive';
-  document.getElementById('jitter-check').checked = true;
-  runSimulation();
+  await showCard(`
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px">The Problem</div>
+    <div style="font-size:14px;margin-bottom:16px">Instructors see raw engagement data — participation counts, camera status, chat activity — but lack tools to <strong>comprehend patterns</strong> and <strong>project what's coming</strong>.</div>
+    <div style="font-size:12px;color:var(--text-dim)">Endsley (1995): Most learning analytics dashboards stop at SA Level 1 (perception).<br>The IDSS targets Level 2 (comprehension) and Level 3 (projection).</div>
+  `);
 
-  await cap('<strong>Running:</strong> Full Scenario · 15 students · Dr. Adaptive professor<br><span style="font-size:12px">Confusion spike at minute 18 · Breakout at 25 · Poll at 40 · Energy decay 1.3x</span>', 1500);
+  await showCard(`
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px">What You're About to See</div>
+    <div style="font-size:14px;text-align:left;margin-bottom:12px">
+      <strong>1. A guided simulation</strong> — 15 AI student agents in a 45-minute class.<br>
+      The dashboard detects patterns and recommends interventions in real time.<br><br>
+      <strong>2. Two views</strong> — Dashboard (data/analytics) and Classroom (student tiles).<br><br>
+      <strong>3. A simulated professor</strong> who responds to recommendations using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.<br><br>
+      <strong>4. An automated evaluation suite</strong> — 6 tests comparing scenarios and professor styles. Generates a downloadable report.
+    </div>
+  `);
 
+  // ---- RUN FIRST SIMULATION ----
+  await showCard(`
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px">Starting Simulation</div>
+    <div style="font-size:14px;margin-bottom:8px"><strong>Scenario:</strong> Full (energy decay + confusion spike + interventions)</div>
+    <div style="font-size:14px;margin-bottom:8px"><strong>Professor:</strong> Dr. Adaptive (high recommendation acceptance, modifies for context)</div>
+    <div style="font-size:14px;margin-bottom:8px"><strong>Students:</strong> 15 agents with distinct behavioral profiles</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-top:12px">Tap to start. The simulation will play through with pauses at key moments.</div>
+  `, {
+    action: () => {
+      document.getElementById('scenario-select').value = 'full_scenario';
+      document.getElementById('seed-input').value = '42';
+      document.getElementById('professor-select').value = 'adaptive';
+      document.getElementById('jitter-check').checked = true;
+      runSimulation();
+      setView('dashboard');
+    }
+  });
+
+  // Play minutes 1-10
+  overlay.style.display = 'none';
+  for (let min = 1; min <= 10; min++) { showMinute(min); await new Promise(r => setTimeout(r, 300)); }
+
+  await showCard(`
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Minute 10 — Energy Building</div>
+    <div style="font-size:13px">The heatmap is building. Timeline bars show engagement per minute.<br>Notice <strong>The Fader (S12)</strong> already drifting — attention span is only 15 minutes.<br>The IDSS is watching for patterns.</div>
+  `);
+
+  // Play to minute 18
+  overlay.style.display = 'none';
+  for (let min = 11; min <= 18; min++) { showMinute(min); await new Promise(r => setTimeout(r, 300)); }
+
+  await showCard(`
+    <div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:8px">Minute 18 — Confusion Spike</div>
+    <div style="font-size:13px">A difficult topic hits. Multiple students signal confusion simultaneously.<br>The IDSS detects a <strong>confusion cluster</strong> and generates a high-priority recommendation:<br><em>"Pause for clarification."</em><br><br>Look at the Recommendations panel on the right.</div>
+  `);
+
+  // Switch to classroom, play to 25
+  overlay.style.display = 'none';
+  setView('classroom');
+  for (let min = 19; min <= 25; min++) { showMinute(min); await new Promise(r => setTimeout(r, 400)); }
+
+  await showCard(`
+    <div style="font-size:16px;font-weight:700;color:var(--purple);margin-bottom:8px">Minute 25 — Classroom View + Breakout</div>
+    <div style="font-size:13px">Each tile is a student. Colors show engagement state.<br>The professor <strong>accepted</strong> the recommendation and launched breakout rooms.<br>Watch engagement recover across the tiles.<br><br>Click any student tile after the demo to see their full profile and session history.</div>
+  `);
+
+  // Back to dashboard, play to 45
+  overlay.style.display = 'none';
   setView('dashboard');
-  // Play through with captions
-  const dur = 45;
-  for (let min = 1; min <= dur; min++) {
-    showMinute(min);
+  for (let min = 26; min <= 45; min++) { showMinute(min); await new Promise(r => setTimeout(r, 150)); }
 
-    // Timed captions during playback
-    if (min === 1) caption.innerHTML = '<strong>Minute 1:</strong> Class begins. All 15 students at baseline engagement. Dashboard is listening.';
-    if (min === 5) caption.innerHTML = '<strong>Minute 5:</strong> Engagement data flowing. Heatmap building. Timeline bars appearing minute by minute.';
-    if (min === 10) caption.innerHTML = '<strong>Minute 10:</strong> The Fader (S12) is drifting. Attention span was only 15 minutes. Dashboard detects the pattern.';
-    if (min === 15) caption.innerHTML = '<strong>Minute 15:</strong> Energy decay detected. IDSS recommends pace change. Professor sees the recommendation.';
-    if (min === 18) caption.innerHTML = '<strong style="color:var(--red)">Minute 18: Confusion spike.</strong> Difficult topic hits. Multiple students signaling confusion. IDSS flags a confusion cluster.';
-    if (min === 20) { setView('classroom'); caption.innerHTML = '<strong>Classroom View:</strong> Each tile is a student. Colors show engagement state. Chat bubbles appear in real time.'; }
-    if (min === 25) caption.innerHTML = '<strong style="color:var(--purple)">Minute 25: Breakout rooms.</strong> Professor accepted the recommendation. Watch engagement recover across student tiles.';
-    if (min === 30) { setView('dashboard'); caption.innerHTML = '<strong>Back to Dashboard:</strong> Post-breakout boost visible in timeline. Heatmap shows the recovery. Recommendations update.'; }
-    if (min === 35) caption.innerHTML = '<strong>Minute 35:</strong> Professor panel shows decision log — accept, modify, ignore, reject. This IS the Instructor Response Taxonomy.';
-    if (min === 40) caption.innerHTML = '<strong>Minute 40: Poll.</strong> Second intervention. IDSS tracks whether engagement holds or fades again.';
-    if (min === 45) caption.innerHTML = '<strong>Minute 45:</strong> Session complete. Full engagement arc, pattern log, professor actions, and recommendation history captured.';
+  await showCard(`
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Session Complete</div>
+    <div style="font-size:13px;margin-bottom:12px">45 minutes simulated. The dashboard captured:<br>
+    • Full engagement arc with pattern detection<br>
+    • Professor decision log (accept, modify, ignore, reject)<br>
+    • Chat activity with NLP confusion detection<br>
+    • Per-student engagement histories</div>
+    <div style="font-size:13px;color:var(--text-dim)">The <strong>Professor Panel</strong> at the bottom shows the Instructor Response Taxonomy — our construct artifact.</div>
+  `);
 
-    await new Promise(r => setTimeout(r, 150));
-  }
+  // ---- EXPLAIN THE EVALUATION SUITE ----
+  await showCard(`
+    <div style="font-size:18px;font-weight:700;color:var(--purple);margin-bottom:12px">Automated Evaluation Suite</div>
+    <div style="font-size:14px;text-align:left;margin-bottom:12px">
+      Now running <strong>6 automated tests</strong>:<br><br>
+      1. Baseline + Adaptive — does the IDSS detect natural variation?<br>
+      2. Confusion Spike + Adaptive — does it catch confusion clusters?<br>
+      3. Energy Decay + Lecturer — does a rigid professor ignore warnings?<br>
+      4. Equity Imbalance + Discussion — does a Socratic prof act on equity?<br>
+      5. Full Scenario + Hands-Off — compound problems, minimal intervention<br>
+      6. Full Scenario + Adaptive — <strong>same scenario, different professor</strong><br>
+    </div>
+    <div style="font-size:12px;color:var(--text-dim)">Tests 5 vs 6 are the key comparison: same recommendations, different responses.<br>A downloadable evaluation report generates automatically.</div>
+    <div style="font-size:13px;color:var(--purple);margin-top:12px;font-weight:600">Tap to start the evaluation suite →</div>
+  `);
 
-  await new Promise(r => setTimeout(r, 2000));
-
-  // ---- EVALUATION CONTEXT ----
-  await cap('<strong style="font-size:17px">Now: Automated Evaluation Suite</strong><br>6 tests comparing scenarios × professor styles. Same recommendations, different instructor responses.<br><span style="font-size:12px">This generates the DSR evaluation data. Report auto-downloads when complete.</span>', 4000, {dim:true});
-
-  dim.style.background = 'rgba(0,0,0,0)';
-  caption.remove();
-  dim.remove();
+  overlay.remove();
 }
 
 async function runDemoSuite() {
