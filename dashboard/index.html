@@ -821,7 +821,9 @@ function runSimulation() {
       const state = eng >= 0.65 ? 'engaged' : eng >= 0.40 ? 'drifting' : 'disengaged';
       const isConfused = eng < s.confusionThreshold && rng() < 0.4;
       const speaking = rng() < s.speakTendency * eng;
-      const chatSent = rng() < s.chatFreq * (0.5 + 0.5 * eng);
+      // Breakout rooms boost chat — small groups produce more messages
+      const chatMult = (activeIntervention && activeIntervention.type === 'breakout') ? 2.5 : 1.0;
+      const chatSent = rng() < s.chatFreq * (0.5 + 0.5 * eng) * chatMult;
 
       if (speaking) speakers++;
       speakTotals[s.id] = (speakTotals[s.id] || 0) + (speaking ? rng() * 30 : 0);
