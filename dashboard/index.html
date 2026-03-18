@@ -2069,31 +2069,46 @@ async function runGuidedTour() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  // Play minutes 1-10 (1.2 sec = 1 class minute — comfortable pace)
+  // Play minutes 1-10 — pan through dashboard sections
   overlay.style.display = 'none';
-  for (let min = 1; min <= 10; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  panTo('#stat-engagement');
+  for (let min = 1; min <= 3; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  panTo('#student-grid');
+  for (let min = 4; min <= 6; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  panTo('#timeline-chart');
+  for (let min = 7; min <= 8; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  panTo('#heatmap-container');
+  for (let min = 9; min <= 10; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
 
   await showCard(`<div style="font-size:22px;font-weight:700">Minute 10.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Students drifting. IDSS is watching.</div>`);
 
-  // Play to minute 18
+  // Play to minute 18 — pan to recommendations as patterns fire
   overlay.style.display = 'none';
-  for (let min = 11; min <= 18; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  panTo('#stat-engagement');
+  for (let min = 11; min <= 14; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  panTo('#rec-list');
+  for (let min = 15; min <= 18; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
 
   await showCard(`<div style="font-size:22px;font-weight:700;color:var(--red)">Confusion spike.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">IDSS recommends: pause and clarify.</div>`);
 
-  // Switch to classroom, play to 25
+  // Switch to classroom — play PRE-breakout (19-24) then breakout (25-29)
   overlay.style.display = 'none';
   if (demoExited) return;
   setView('classroom');
-  for (let min = 19; min <= 25; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
+  for (let min = 19; min <= 24; min++) { if (demoExited) return; showMinute(min); await tick(1000); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Professor acted. Watch engagement recover.</div>`);
+  // Breakout fires at 25 — let it play with NO overlay so groups are fully visible
+  for (let min = 25; min <= 29; min++) { if (demoExited) return; showMinute(min); await tick(1500); }
 
-  // Post-breakout: show recovery at readable pace
+  // NOW show the card after they've seen the breakout groups for 7+ seconds
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">4 groups. Professor rotating between them. Chat spiked.</div>`);
+
+  // Post-breakout: back to dashboard, show recovery
   overlay.style.display = 'none';
   if (demoExited) return;
   setView('dashboard');
-  for (let min = 26; min <= 35; min++) { if (demoExited) return; showMinute(min); await tick(800); }
+  panTo('#timeline-chart');
+  for (let min = 30; min <= 35; min++) { if (demoExited) return; showMinute(min); await tick(800); }
 
   await showCard(`<div style="font-size:22px;font-weight:700">Minute 35 — Recovery visible.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Post-breakout engagement boost in timeline. Professor log shows decisions.</div>`);
 
