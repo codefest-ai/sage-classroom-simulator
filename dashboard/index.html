@@ -615,6 +615,7 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   <button class="secondary" id="run-btn" onclick="runSimulation()" title="Manual: run one simulation and explore">Run Manual</button>
   <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py" style="display:none">Run Live</button>
   <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
+  <button class="secondary" onclick="exportCurrentSession()" title="Export current session data as markdown">📄 Export</button>
 
   <label style="margin-left:auto">Playback:</label>
   <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
@@ -2330,6 +2331,76 @@ function showDemoSummary() {
 // ============================================================
 // CLEAR / RESET
 // ============================================================
+
+function exportCurrentSession() {
+  if (!sessionData) { alert('No simulation data. Run a simulation first.'); return; }
+
+  const meta = sessionData.metadata || {};
+  const timeline = sessionData.timeline || [];
+  const recs = sessionData.recommendations || [];
+  const prof = sessionData.professor;
+  const engagements = timeline.map(t => t.class_engagement);
+  const avgEng = engagements.length ? (engagements.reduce((a,b) => a+b,0) / engagements.length) : 0;
+
+  let md = `# SAGE Session Export\n`;
+  md += `**Date:** ${new Date().toLocaleString()}\n`;
+  md += `**Scenario:** ${meta.scenario || 'unknown'}\n`;
+  md += `**Professor:** ${meta.professor_style || prof?.style || 'none'}\n`;
+  md += `**University:** ${meta.university || 'default'}\n`;
+  md += `**Seed:** ${meta.seed || '?'}\n`;
+  md += `**Duration:** ${timeline.length} minutes\n\n`;
+  md += `## Summary\n`;
+  md += `- Avg engagement: ${(avgEng*100).toFixed(0)}%\n`;
+  md += `- Range: ${(Math.min(...engagements)*100).toFixed(0)}% – ${(Math.max(...engagements)*100).toFixed(0)}%\n`;
+  md += `- Recommendations generated: ${recs.length}\n`;
+
+  if (prof) {
+    const s = prof.summary || {};
+    md += `- Professor actions: ${s.total_actions || 0}\n`;
+    md += `- Acceptance rate: ${s.acceptance_rate || 0}%\n`;
+    md += `- Response distribution: ${JSON.stringify(s.category_distribution || {})}\n`;
+    md += `- Interventions used: ${JSON.stringify(s.interventions_used || {})}\n`;
+  }
+
+  // Pattern summary
+  const patternCounts = {};
+  timeline.forEach(t => (t.patterns||[]).forEach(p => { patternCounts[p.type] = (patternCounts[p.type]||0) + 1; }));
+  md += `- Patterns detected: ${JSON.stringify(patternCounts)}\n\n`;
+
+  // Timeline
+  md += `## Engagement Timeline\n`;
+  md += `| Min | Engagement | Speakers | Gini | Patterns |\n|-----|-----------|----------|------|----------|\n`;
+  timeline.forEach(t => {
+    const pats = (t.patterns||[]).map(p => p.type).join(', ') || '-';
+    md += `| ${t.minute} | ${(t.class_engagement*100).toFixed(0)}% | ${t.active_speakers} | ${(t.speaking_gini||0).toFixed(2)} | ${pats} |\n`;
+  });
+
+  // Recommendations
+  if (recs.length) {
+    md += `\n## Recommendations\n`;
+    recs.forEach(r => { md += `- **Min ${r.minute}** [${r.priority}]: ${r.message}\n`; });
+  }
+
+  // Chat
+  const chats = (sessionData.events||[]).filter(e => e.event_type === 'chat');
+  if (chats.length) {
+    md += `\n## Chat Log (${chats.length} messages)\n`;
+    chats.slice(-30).forEach(c => {
+      const stu = (sessionData.students||[]).find(s => s.student_id === c.student_id);
+      md += `- **${c.minute}m** ${stu?.name || c.student_id}: ${c.data?.text || ''}\n`;
+    });
+  }
+
+  md += `\n---\n*SAGE — IST 505 — CGU Spring 2026*\n`;
+
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `SAGE_Session_${meta.scenario||'manual'}_${new Date().toISOString().split('T')[0]}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function clearSimulation() {
   sessionData = null;
