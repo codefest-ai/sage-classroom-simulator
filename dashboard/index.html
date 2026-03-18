@@ -2369,7 +2369,8 @@ RESEARCH QUESTIONS TESTED
     if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = `Lecturer ignored ${ign}/${tot} recommendations (${Math.round(ign/tot*100)}%). Content-driven professors underutilize the IDSS.`; }
     if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = `Discussion professor acted on ${act}/${tot} recommendations (${Math.round(act/tot*100)}%). Equity-focused style aligns with IDSS equity alerts.`; }
     if (i === 4) answer = `Hands-off: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Minimal intervention led to sustained decline.`;
-    if (i === 5) answer = `Adaptive: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Active response to same recommendations improved outcomes.`;
+    if (i === 5) answer = `Hands-off: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Minimal intervention during compound problems.`;
+    if (i === 6) answer = `Adaptive: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Same scenario as Test 6 — professor style changed the outcome.`;
     report += `Test ${i+1}: ${r.question}\n  Scenario: ${r.scenario} | Professor: ${r.professor}\n  Result: ${r.totalRecs} recs, ${r.profActions} actions, ${r.avgEngagement} avg engagement\n  Answer: ${answer}\n\n`;
   });
 
@@ -2473,7 +2474,8 @@ function showDemoSummary() {
     if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = 'Lecturer ignored ' + ign + '/' + tot + ' (' + Math.round(ign/tot*100) + '%). Content-driven professors underutilize IDSS.'; }
     if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = 'Discussion prof acted on ' + act + '/' + tot + ' (' + Math.round(act/tot*100) + '%).'; }
     if (i === 4) answer = 'Hands-off: ' + r.avgEngagement + ' avg engagement, ' + r.acceptRate + ' acceptance. Sustained decline.';
-    if (i === 5) answer = 'Adaptive: ' + r.avgEngagement + ' avg engagement, ' + r.acceptRate + ' acceptance. Better outcomes from same recommendations.';
+    if (i === 5) answer = 'Hands-off: ' + r.avgEngagement + ' avg, ' + r.acceptRate + ' acceptance. Minimal intervention during compound problems.';
+    if (i === 6) answer = 'Adaptive: ' + r.avgEngagement + ' avg, ' + r.acceptRate + ' acceptance. Same scenario as Test 6 — professor style changed outcome.';
     html += '<div style="margin-bottom:8px"><strong>' + (i+1) + '.</strong> ' + r.question + '<br><span style="color:var(--green);margin-left:16px">\u2192 ' + answer + '</span></div>';
   });
   html += '</div>';
