@@ -2248,7 +2248,7 @@ IST 505 Group Project — CGU Spring 2026
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `SAGE_Evaluation_Report_${new Date().toISOString().split('T')[0]}.txt`;
+  a.download = `SAGE_Evaluation_Report_${new Date().toISOString().split('T')[0]}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
