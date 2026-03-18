@@ -801,6 +801,19 @@ function runSimulation() {
         minute: min, event_type: 'intervention', student_id: null,
         data: { type: activeIntervention.type, name: activeIntervention.type }
       });
+      if (activeIntervention.type === 'breakout') _inBreakout = true;
+    }
+    // Breakout lasts ~5 minutes
+    if (_inBreakout && activeIntervention && activeIntervention.type !== 'breakout') _inBreakout = false;
+    if (_inBreakout && min > (interventions.find(i => i.type === 'breakout')?.minute || 0) + 5) _inBreakout = false;
+
+    // Professor drops into breakout rooms when a group's avg engagement dips
+    if (_inBreakout && rng() < 0.3) {
+      const profDropIns = ["How's this group doing?", "Great discussion — keep going", "What's your group's take on this?", "Need any clarification before we regroup?", "Interesting angle — have you considered the other side?", "Two more minutes in breakout"];
+      events.push({
+        minute: min, event_type: 'chat', student_id: 'PROF',
+        data: { text: profDropIns[Math.floor(rng() * profDropIns.length)], confusion_score: 0, sentiment: 'positive', is_question: false }
+      });
     }
 
     for (const s of students) {
@@ -1028,13 +1041,19 @@ function getScenarioInterventions(scenario) {
   return [];
 }
 
+let _inBreakout = false;
+
 function generateChat(s, state, confused, rng) {
   if (confused) {
-    const confMsgs = ["I'm confused", "Can you repeat that?", "I'm lost", "What does that mean?", "Help?", "Wait, I don't follow"];
+    const confMsgs = ["I'm confused", "Can you repeat that?", "I'm lost", "What does that mean?", "Help?", "Wait, I don't follow", "Can someone explain?", "I don't get this part"];
     return confMsgs[Math.floor(rng() * confMsgs.length)];
   }
+  if (_inBreakout) {
+    const msgs = ["What did your group think?", "We said something similar", "Oh interesting, we went a different direction", "Can you explain your approach?", "Yeah that makes sense", "We weren't sure about that part either", "Our group focused on the methodology", "Anyone else get stuck on that?", "Let's compare notes", "Good point — we missed that", "Who wants to present?", "I think we agree on the main idea"];
+    return msgs[Math.floor(rng() * msgs.length)];
+  }
   if (state === 'engaged') {
-    const msgs = ["Great point!", "This connects to the reading", "I have a question", "Building on that...", "Interesting approach", "Agree with that perspective"];
+    const msgs = ["Great point!", "This connects to the reading", "I have a question", "Building on that...", "Interesting approach", "Agree with that perspective", "Can you elaborate?", "That reminds me of last week", "The data supports that"];
     return msgs[Math.floor(rng() * msgs.length)];
   }
   if (state === 'drifting') {
