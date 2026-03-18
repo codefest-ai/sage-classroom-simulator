@@ -611,10 +611,10 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <option value="howard">Howard University</option>
   </select>
 
-  <button id="run-btn" onclick="runSimulation()">Run Simulation</button>
-  <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py running on port 8080">Run Live</button>
-  <button class="secondary" onclick="clearSimulation()" title="Reset to blank state">Clear</button>
-  <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 16px;border-radius:4px;cursor:pointer" onclick="runDemoSuite()" title="Auto-cycles through scenarios with evaluation data">▶ Demo Suite</button>
+  <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Guided demo + evaluation suite">▶ Demo Suite</button>
+  <button class="secondary" id="run-btn" onclick="runSimulation()" title="Manual: run one simulation and explore">Run Manual</button>
+  <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py" style="display:none">Run Live</button>
+  <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
 
   <label style="margin-left:auto">Playback:</label>
   <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
@@ -1948,6 +1948,17 @@ async function runGuidedTour() {
       <strong>Dashboard + Classroom</strong> views<br>
       <strong>A simulated professor</strong> responding to recommendations<br>
       <strong>6 automated tests</strong> with downloadable report
+    </div>
+  `);
+
+  await showCard(`
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px">What's real in this demo:</div>
+    <div style="font-size:14px;text-align:left;line-height:1.9">
+      ✅ <strong>Real computation</strong> — engagement scores, pattern detection, recommendations<br>
+      ✅ <strong>Real variation</strong> — change the seed, get different outcomes<br>
+      ✅ <strong>Real professor logic</strong> — each style has distinct response probabilities<br>
+      ✅ <strong>Real university demographics</strong> — CGU, Georgia Tech, Howard (IPEDS data)<br>
+      ⏳ <strong>Coming next</strong> — LLM-powered student chat (local AI, no cloud)
     </div>
   `);
 
