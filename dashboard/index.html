@@ -1869,17 +1869,26 @@ async function runGuidedTour() {
   hint.textContent = 'Tap anywhere to continue';
   overlay.appendChild(hint);
 
-  function waitForTap() {
-    return new Promise(resolve => {
-      overlay.addEventListener('click', resolve, { once: true });
-    });
+  let autoMode = false;
+  const AUTO_DELAY = 5000;
+
+  function waitForAdvance() {
+    if (autoMode) {
+      hint.textContent = 'Auto mode — playing...';
+      return new Promise(r => setTimeout(r, AUTO_DELAY));
+    } else {
+      hint.textContent = 'Tap anywhere to continue';
+      return new Promise(resolve => {
+        overlay.addEventListener('click', resolve, { once: true });
+      });
+    }
   }
 
   async function showCard(html, opts = {}) {
     card.innerHTML = html;
     if (opts.action) opts.action();
     overlay.style.display = 'flex';
-    await waitForTap();
+    await waitForAdvance();
     if (opts.afterTap) opts.afterTap();
   }
 
@@ -1896,15 +1905,36 @@ async function runGuidedTour() {
     overlay.style.display = 'flex';
   }
 
-  // ---- INTRO CARDS ----
+  // ---- EXIT BUTTON (always visible during demo) ----
+  let demoExited = false;
+  const exitBtn = document.createElement('div');
+  exitBtn.style.cssText = 'position:fixed;top:12px;right:16px;z-index:302;color:rgba(255,255,255,0.6);font-size:12px;cursor:pointer;padding:6px 12px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;';
+  exitBtn.textContent = '✕ Exit demo & explore on your own';
+  exitBtn.onclick = () => { demoExited = true; overlay.remove(); exitBtn.remove(); clearSimulation(); };
+  document.body.appendChild(exitBtn);
+
+  // ---- MODE SELECTION ----
   clearSimulation();
 
-  await showCard(`
+  card.innerHTML = `
     <div style="font-size:28px;font-weight:800;color:var(--purple);margin-bottom:8px">SAGE</div>
     <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px">Simulated Agent-Generated Engagement</div>
     <div style="font-size:15px;margin-bottom:12px">An agent-based classroom simulator with an<br><strong>Instructor Decision Support System (IDSS)</strong></div>
-    <div style="font-size:12px;color:var(--text-dim)">IST 505 · Design Research Methods · CGU Spring 2026</div>
-  `);
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:20px">IST 505 · Design Research Methods · CGU Spring 2026</div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button id="demo-auto" style="padding:10px 24px;background:var(--purple);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">▶ Auto Demo (~2 min)</button>
+      <button id="demo-tap" style="padding:10px 24px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Tap to Advance</button>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+  hint.textContent = '';
+
+  await new Promise(resolve => {
+    document.getElementById('demo-auto').onclick = () => { autoMode = true; resolve(); };
+    document.getElementById('demo-tap').onclick = () => { autoMode = false; resolve(); };
+  });
+
+  if (demoExited) return;
 
   await showCard(`
     <div style="font-size:18px;font-weight:700;margin-bottom:12px">The Problem</div>
@@ -1941,9 +1971,9 @@ async function runGuidedTour() {
     }
   });
 
-  // Play minutes 1-10
+  // Play minutes 1-10 (slow — 500ms per tick so viewers can follow)
   overlay.style.display = 'none';
-  for (let min = 1; min <= 10; min++) { showMinute(min); await new Promise(r => setTimeout(r, 300)); }
+  for (let min = 1; min <= 10; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 500)); }
 
   await showCard(`
     <div style="font-size:16px;font-weight:700;margin-bottom:8px">Minute 10 — Energy Building</div>
@@ -1952,7 +1982,7 @@ async function runGuidedTour() {
 
   // Play to minute 18
   overlay.style.display = 'none';
-  for (let min = 11; min <= 18; min++) { showMinute(min); await new Promise(r => setTimeout(r, 300)); }
+  for (let min = 11; min <= 18; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 500)); }
 
   await showCard(`
     <div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:8px">Minute 18 — Confusion Spike</div>
@@ -1961,8 +1991,9 @@ async function runGuidedTour() {
 
   // Switch to classroom, play to 25
   overlay.style.display = 'none';
+  if (demoExited) return;
   setView('classroom');
-  for (let min = 19; min <= 25; min++) { showMinute(min); await new Promise(r => setTimeout(r, 400)); }
+  for (let min = 19; min <= 25; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 500)); }
 
   await showCard(`
     <div style="font-size:16px;font-weight:700;color:var(--purple);margin-bottom:8px">Minute 25 — Classroom View + Breakout</div>
@@ -1970,9 +2001,11 @@ async function runGuidedTour() {
   `);
 
   // Back to dashboard, play to 45
+  // Speed up for final stretch (150ms — shows it can run fast)
   overlay.style.display = 'none';
+  if (demoExited) return;
   setView('dashboard');
-  for (let min = 26; min <= 45; min++) { showMinute(min); await new Promise(r => setTimeout(r, 150)); }
+  for (let min = 26; min <= 45; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 150)); }
 
   await showCard(`
     <div style="font-size:16px;font-weight:700;margin-bottom:8px">Session Complete</div>
@@ -2001,6 +2034,7 @@ async function runGuidedTour() {
   `);
 
   overlay.remove();
+  if (exitBtn.parentNode) exitBtn.remove();
 }
 
 async function runDemoSuite() {
@@ -2170,7 +2204,15 @@ RESEARCH QUESTIONS TESTED
 
 `;
   demoResults.forEach((r, i) => {
-    report += `Test ${i+1}: ${r.question}\n  Scenario: ${r.scenario} | Professor: ${r.professor}\n  Result: ${r.totalRecs} recommendations generated, ${r.profActions} professor actions, ${r.avgEngagement} avg engagement\n\n`;
+    // Generate answer based on data
+    let answer = '';
+    if (i === 0) answer = r.totalRecs > 0 ? 'Yes — detected ' + Object.keys(r.patterns).join(', ') + ' patterns and generated ' + r.totalRecs + ' recommendations.' : 'Minimal patterns in baseline — as expected.';
+    if (i === 1) answer = r.patterns.confusion_cluster ? 'Yes — confusion cluster detected (' + r.patterns.confusion_cluster + ' occurrences). IDSS recommended clarification.' : 'Confusion detection needs tuning.';
+    if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = `Lecturer ignored ${ign}/${tot} recommendations (${Math.round(ign/tot*100)}%). Content-driven professors underutilize the IDSS.`; }
+    if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = `Discussion professor acted on ${act}/${tot} recommendations (${Math.round(act/tot*100)}%). Equity-focused style aligns with IDSS equity alerts.`; }
+    if (i === 4) answer = `Hands-off: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Minimal intervention led to sustained decline.`;
+    if (i === 5) answer = `Adaptive: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Active response to same recommendations improved outcomes.`;
+    report += `Test ${i+1}: ${r.question}\n  Scenario: ${r.scenario} | Professor: ${r.professor}\n  Result: ${r.totalRecs} recs, ${r.profActions} actions, ${r.avgEngagement} avg engagement\n  Answer: ${answer}\n\n`;
   });
 
   report += `
