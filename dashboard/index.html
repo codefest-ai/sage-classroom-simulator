@@ -1937,29 +1937,24 @@ async function runGuidedTour() {
   if (demoExited) return;
 
   await showCard(`
-    <div style="font-size:18px;font-weight:700;margin-bottom:12px">The Problem</div>
-    <div style="font-size:14px;margin-bottom:16px">Instructors see raw engagement data — participation counts, camera status, chat activity — but lack tools to <strong>comprehend patterns</strong> and <strong>project what's coming</strong>.</div>
-    <div style="font-size:12px;color:var(--text-dim)">Endsley (1995): Most learning analytics dashboards stop at SA Level 1 (perception).<br>The IDSS targets Level 2 (comprehension) and Level 3 (projection).</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:16px">Instructors see data. They need insight.</div>
+    <div style="font-size:14px;color:var(--text-dim)">The IDSS detects patterns and recommends interventions.</div>
   `);
 
   await showCard(`
-    <div style="font-size:18px;font-weight:700;margin-bottom:12px">What You're About to See</div>
-    <div style="font-size:14px;text-align:left;margin-bottom:12px">
-      <strong>1. A guided simulation</strong> — 15 AI student agents in a 45-minute class.<br>
-      The dashboard detects patterns and recommends interventions in real time.<br><br>
-      <strong>2. Two views</strong> — Dashboard (data/analytics) and Classroom (student tiles).<br><br>
-      <strong>3. A simulated professor</strong> who responds to recommendations using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.<br><br>
-      <strong>4. An automated evaluation suite</strong> — 6 tests comparing scenarios and professor styles. Generates a downloadable report.
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px">You'll see:</div>
+    <div style="font-size:16px;text-align:left;line-height:2">
+      <strong>15 AI students</strong> in a 45-minute class<br>
+      <strong>Dashboard + Classroom</strong> views<br>
+      <strong>A simulated professor</strong> responding to recommendations<br>
+      <strong>6 automated tests</strong> with downloadable report
     </div>
   `);
 
   // ---- RUN FIRST SIMULATION ----
   await showCard(`
-    <div style="font-size:18px;font-weight:700;margin-bottom:12px">Starting Simulation</div>
-    <div style="font-size:14px;margin-bottom:8px"><strong>Scenario:</strong> Full (energy decay + confusion spike + interventions)</div>
-    <div style="font-size:14px;margin-bottom:8px"><strong>Professor:</strong> Dr. Adaptive (high recommendation acceptance, modifies for context)</div>
-    <div style="font-size:14px;margin-bottom:8px"><strong>Students:</strong> 15 agents with distinct behavioral profiles</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-top:12px">Tap to start. The simulation will play through with pauses at key moments.</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:12px">Starting simulation.</div>
+    <div style="font-size:14px;color:var(--text-dim)">1 second = 1 class minute. Watch the dashboard fill up.</div>
   `, {
     action: () => {
       document.getElementById('scenario-select').value = 'full_scenario';
@@ -1971,67 +1966,35 @@ async function runGuidedTour() {
     }
   });
 
-  // Play minutes 1-10 (slow — 500ms per tick so viewers can follow)
+  // Play minutes 1-10 (1 second = 1 class minute)
   overlay.style.display = 'none';
-  for (let min = 1; min <= 10; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 500)); }
+  for (let min = 1; min <= 10; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 1000)); }
 
-  await showCard(`
-    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Minute 10 — Energy Building</div>
-    <div style="font-size:13px">The heatmap is building. Timeline bars show engagement per minute.<br>Notice <strong>The Fader (S12)</strong> already drifting — attention span is only 15 minutes.<br>The IDSS is watching for patterns.</div>
-  `);
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 10.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Students drifting. IDSS is watching.</div>`);
 
   // Play to minute 18
   overlay.style.display = 'none';
-  for (let min = 11; min <= 18; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 500)); }
+  for (let min = 11; min <= 18; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 1000)); }
 
-  await showCard(`
-    <div style="font-size:16px;font-weight:700;color:var(--red);margin-bottom:8px">Minute 18 — Confusion Spike</div>
-    <div style="font-size:13px">A difficult topic hits. Multiple students signal confusion simultaneously.<br>The IDSS detects a <strong>confusion cluster</strong> and generates a high-priority recommendation:<br><em>"Pause for clarification."</em><br><br>Look at the Recommendations panel on the right.</div>
-  `);
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--red)">Confusion spike.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">IDSS recommends: pause and clarify.</div>`);
 
   // Switch to classroom, play to 25
   overlay.style.display = 'none';
   if (demoExited) return;
   setView('classroom');
-  for (let min = 19; min <= 25; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 500)); }
+  for (let min = 19; min <= 25; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 1000)); }
 
-  await showCard(`
-    <div style="font-size:16px;font-weight:700;color:var(--purple);margin-bottom:8px">Minute 25 — Classroom View + Breakout</div>
-    <div style="font-size:13px">Each tile is a student. Colors show engagement state.<br>The professor <strong>accepted</strong> the recommendation and launched breakout rooms.<br>Watch engagement recover across the tiles.<br><br>Click any student tile after the demo to see their full profile and session history.</div>
-  `);
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Professor acted. Watch engagement recover.</div>`);
 
-  // Back to dashboard, play to 45
-  // Speed up for final stretch (150ms — shows it can run fast)
+  // Speed up for final stretch (200ms)
   overlay.style.display = 'none';
   if (demoExited) return;
   setView('dashboard');
-  for (let min = 26; min <= 45; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 150)); }
+  for (let min = 26; min <= 45; min++) { if (demoExited) return; showMinute(min); await new Promise(r => setTimeout(r, 200)); }
 
-  await showCard(`
-    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Session Complete</div>
-    <div style="font-size:13px;margin-bottom:12px">45 minutes simulated. The dashboard captured:<br>
-    • Full engagement arc with pattern detection<br>
-    • Professor decision log (accept, modify, ignore, reject)<br>
-    • Chat activity with NLP confusion detection<br>
-    • Per-student engagement histories</div>
-    <div style="font-size:13px;color:var(--text-dim)">The <strong>Professor Panel</strong> at the bottom shows the Instructor Response Taxonomy — our construct artifact.</div>
-  `);
+  await showCard(`<div style="font-size:22px;font-weight:700">Session complete.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Full engagement arc captured. Scroll down to see professor decisions.</div>`);
 
-  // ---- EXPLAIN THE EVALUATION SUITE ----
-  await showCard(`
-    <div style="font-size:18px;font-weight:700;color:var(--purple);margin-bottom:12px">Automated Evaluation Suite</div>
-    <div style="font-size:14px;text-align:left;margin-bottom:12px">
-      Now running <strong>6 automated tests</strong>:<br><br>
-      1. Baseline + Adaptive — does the IDSS detect natural variation?<br>
-      2. Confusion Spike + Adaptive — does it catch confusion clusters?<br>
-      3. Energy Decay + Lecturer — does a rigid professor ignore warnings?<br>
-      4. Equity Imbalance + Discussion — does a Socratic prof act on equity?<br>
-      5. Full Scenario + Hands-Off — compound problems, minimal intervention<br>
-      6. Full Scenario + Adaptive — <strong>same scenario, different professor</strong><br>
-    </div>
-    <div style="font-size:12px;color:var(--text-dim)">Tests 5 vs 6 are the key comparison: same recommendations, different responses.<br>A downloadable evaluation report generates automatically.</div>
-    <div style="font-size:13px;color:var(--purple);margin-top:12px;font-weight:600">Tap to start the evaluation suite →</div>
-  `);
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Running 6 evaluation tests.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Report downloads when complete.</div>`);
 
   overlay.remove();
   if (exitBtn.parentNode) exitBtn.remove();
