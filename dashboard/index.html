@@ -2022,7 +2022,7 @@ async function runGuidedTour() {
   await showCard(`
     <div style="font-size:18px;font-weight:700;margin-bottom:16px">You'll see:</div>
     <div style="font-size:16px;text-align:left;line-height:2">
-      <strong>15 AI students</strong> in a 45-minute class<br>
+      <strong>15 simulated students</strong> in a 45-minute class<br>
       <strong>Dashboard + Classroom</strong> views<br>
       <strong>A simulated professor</strong> responding to recommendations<br>
       <strong>6 automated tests</strong> with downloadable report
@@ -2047,7 +2047,7 @@ async function runGuidedTour() {
   `, {
     action: () => {
       document.getElementById('scenario-select').value = 'full_scenario';
-      document.getElementById('seed-input').value = '42';
+      document.getElementById('seed-input').value = Math.floor(Math.random() * 9999);
       document.getElementById('professor-select').value = 'adaptive';
       document.getElementById('jitter-check').checked = true;
       runSimulation();
@@ -2218,7 +2218,7 @@ This evaluation tests whether:
 2. Different professor response styles produce different outcomes given the same recommendations
 3. The engagement-to-action translation framework generates appropriate interventions
 
-Agent-based simulation: 15 AI student agents with distinct behavioral profiles
+Agent-based simulation: 15 student agents with distinct behavioral profiles
 (engagement baselines, attention spans, drift rates, confusion thresholds).
 Seeded RNG for reproducibility. 6 predefined scenarios test specific IDSS capabilities.
 
