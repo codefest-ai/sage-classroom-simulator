@@ -1679,39 +1679,81 @@ function renderClassroom(min) {
 
   document.getElementById('zoom-minute').textContent = `Min: ${min}`;
 
+  // Check if breakout is active
+  const breakoutIntervention = sessionData.events.find(e => e.event_type === 'intervention' && e.data?.type === 'breakout');
+  const breakoutMin = breakoutIntervention ? breakoutIntervention.minute : -1;
+  const isBreakout = min >= breakoutMin && min < breakoutMin + 5 && breakoutMin > 0;
+
+  // Assign students to breakout groups (consistent by seed)
+  const groups = [[],[],[],[]]; // 4 groups of 3-4
+  frame.students.forEach((s, i) => groups[i % 4].push({...s, idx: i}));
+
   // Build zoom grid
   const grid = document.getElementById('zoom-grid');
-  grid.innerHTML = frame.students.map((s, i) => {
-    const stu = sessionData.students.find(st => st.student_id === s.student_id);
-    const name = stu ? stu.name : s.student_id;
-    const cameraOn = s.engagement > 0.3;
-    const isSpeaking = s.signals && s.signals.includes('speaking');
-    const isConfused = s.is_confused;
-    const stateClass = isConfused ? 'confused-state' : s.state + '-state';
 
-    // Find chat message and reaction for this minute
-    const chat = sessionData.events.find(e => e.event_type === 'chat' && e.student_id === s.student_id && e.minute === min);
-    const bubbleText = chat ? chat.data.text : '';
+  if (isBreakout) {
+    // Breakout layout: 4 colored group boxes
+    const groupColors = ['#1565C0','#2E7D32','#E65100','#6A1B9A'];
+    const groupLabels = ['Group A','Group B','Group C','Group D'];
+    // Professor visiting a group (rotates)
+    const profGroup = (min - breakoutMin) % 4;
 
-    let statusIcon = '';
-    if (isConfused) statusIcon = '&#10067;';
-    else if (s.state === 'disengaged') statusIcon = '&#128564;';
-    else if (isSpeaking) statusIcon = '&#127908;';
+    grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+    grid.style.gridTemplateRows = 'repeat(2, 1fr)';
+    grid.innerHTML = groups.map((group, gi) => {
+      const hasProf = gi === profGroup;
+      return `<div style="background:${groupColors[gi]}22;border:2px solid ${groupColors[gi]}44;border-radius:8px;padding:6px;display:flex;flex-direction:column;gap:4px;position:relative;${hasProf ? 'box-shadow:0 0 12px ' + groupColors[gi] + '88;' : ''}">
+        <div style="font-size:10px;font-weight:700;color:${groupColors[gi]};text-align:center;margin-bottom:2px">${groupLabels[gi]}${hasProf ? ' 🎓 Prof visiting' : ''}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;justify-content:center">
+          ${group.map(s => {
+            const stu = sessionData.students.find(st => st.student_id === s.student_id);
+            const name = stu ? stu.name.split(' ')[0] : s.student_id;
+            const eColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
+            const chat = sessionData.events.find(e => e.event_type === 'chat' && e.student_id === s.student_id && e.minute === min);
+            return `<div onclick="openProfile('${s.student_id}')" style="cursor:pointer;background:var(--surface);border-radius:6px;padding:4px 6px;text-align:center;min-width:60px;border:1px solid var(--border)">
+              <div style="font-size:10px;font-weight:600">${name}</div>
+              <div style="font-size:14px;font-weight:700;color:${eColor}">${(s.engagement * 100).toFixed(0)}%</div>
+              ${chat ? '<div style="font-size:8px;color:var(--accent);margin-top:2px">💬</div>' : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    // Normal grid layout
+    grid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    grid.style.gridTemplateRows = 'repeat(4, 1fr)';
+    grid.innerHTML = frame.students.map((s, i) => {
+      const stu = sessionData.students.find(st => st.student_id === s.student_id);
+      const name = stu ? stu.name : s.student_id;
+      const cameraOn = s.engagement > 0.3;
+      const isSpeaking = s.signals && s.signals.includes('speaking');
+      const isConfused = s.is_confused;
+      const stateClass = isConfused ? 'confused-state' : s.state + '-state';
 
-    const eColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
+      const chat = sessionData.events.find(e => e.event_type === 'chat' && e.student_id === s.student_id && e.minute === min);
+      const bubbleText = chat ? chat.data.text : '';
 
-    const avatarSvg = cameraOn ? generateAvatarSVG(s.student_id) :
-      `<div class="avatar" style="background:var(--surface2)">${name.split(/[\s()]+/).filter(w=>w.length>0).slice(0,2).map(w=>w[0]).join('').toUpperCase()}</div>`;
+      let statusIcon = '';
+      if (isConfused) statusIcon = '&#10067;';
+      else if (s.state === 'disengaged') statusIcon = '&#128564;';
+      else if (isSpeaking) statusIcon = '&#127908;';
 
-    return `<div class="zoom-tile ${cameraOn ? '' : 'camera-off'} ${isSpeaking ? 'speaking' : ''} ${stateClass}" onclick="openProfile('${s.student_id}')" style="cursor:pointer">
-      ${avatarSvg}
-      <div class="zt-name">${name.split(' ')[0]} ${name.split(' ').slice(-1)[0]?.[0] || ''}.</div>
-      <div class="zt-status">${statusIcon}</div>
-      <div class="zt-engagement" style="color:${eColor}">${(s.engagement * 100).toFixed(0)}%</div>
-      <div class="zt-speaking"></div>
-      ${bubbleText ? `<div class="zt-bubble show">${bubbleText}</div>` : '<div class="zt-bubble"></div>'}
-    </div>`;
-  }).join('');
+      const eColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
+
+      const avatarSvg = cameraOn ? generateAvatarSVG(s.student_id) :
+        `<div class="avatar" style="background:var(--surface2)">${name.split(/[\s()]+/).filter(w=>w.length>0).slice(0,2).map(w=>w[0]).join('').toUpperCase()}</div>`;
+
+      return `<div class="zoom-tile ${cameraOn ? '' : 'camera-off'} ${isSpeaking ? 'speaking' : ''} ${stateClass}" onclick="openProfile('${s.student_id}')" style="cursor:pointer">
+        ${avatarSvg}
+        <div class="zt-name">${name.split(' ')[0]} ${name.split(' ').slice(-1)[0]?.[0] || ''}.</div>
+        <div class="zt-status">${statusIcon}</div>
+        <div class="zt-engagement" style="color:${eColor}">${(s.engagement * 100).toFixed(0)}%</div>
+        <div class="zt-speaking"></div>
+        ${bubbleText ? `<div class="zt-bubble show">${bubbleText}</div>` : '<div class="zt-bubble"></div>'}
+      </div>`;
+    }).join('');
+  }
 
   // Sidebar chat
   const chats = sessionData.events.filter(e => e.event_type === 'chat' && e.minute <= min);
@@ -2020,6 +2062,11 @@ async function runGuidedTour() {
       await new Promise(r => setTimeout(r, 50));
       if (!globalPaused) waited += 50;
     }
+  }
+
+  function panTo(selector) {
+    const el = document.querySelector(selector);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   // Play minutes 1-10 (1.2 sec = 1 class minute — comfortable pace)
