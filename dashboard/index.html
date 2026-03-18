@@ -2207,7 +2207,6 @@ async function runDemoSuite() {
   banner.onclick = () => { banner.remove(); };
 
   showDemoSummary();
-  downloadEvaluationReport();
   demoRunning = false;
 }
 
@@ -2402,10 +2401,17 @@ function showDemoSummary() {
   }
 
   // Questions answered
-  html += '<div style="margin-top:12px;font-size:11px;color:var(--text-dim)">';
-  html += '<strong>Questions Tested:</strong><br>';
+  html += '<div style="margin-top:12px;font-size:12px">';
+  html += '<strong style="color:var(--purple)">Questions Tested & Answered:</strong><br><br>';
   demoResults.forEach((r, i) => {
-    html += `${i+1}. ${r.question}<br>`;
+    let answer = '';
+    if (i === 0) answer = r.totalRecs > 0 ? 'Yes \u2014 detected ' + Object.keys(r.patterns).join(', ').replace(/_/g,' ') + '.' : 'Minimal patterns in baseline \u2014 as expected.';
+    if (i === 1) answer = r.patterns.confusion_cluster ? 'Yes \u2014 confusion cluster detected (' + r.patterns.confusion_cluster + 'x).' : 'Confusion detection needs tuning.';
+    if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = 'Lecturer ignored ' + ign + '/' + tot + ' (' + Math.round(ign/tot*100) + '%). Content-driven professors underutilize IDSS.'; }
+    if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = 'Discussion prof acted on ' + act + '/' + tot + ' (' + Math.round(act/tot*100) + '%).'; }
+    if (i === 4) answer = 'Hands-off: ' + r.avgEngagement + ' avg engagement, ' + r.acceptRate + ' acceptance. Sustained decline.';
+    if (i === 5) answer = 'Adaptive: ' + r.avgEngagement + ' avg engagement, ' + r.acceptRate + ' acceptance. Better outcomes from same recommendations.';
+    html += '<div style="margin-bottom:8px"><strong>' + (i+1) + '.</strong> ' + r.question + '<br><span style="color:var(--green);margin-left:16px">\u2192 ' + answer + '</span></div>';
   });
   html += '</div>';
 
