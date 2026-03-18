@@ -611,17 +611,17 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <option value="howard">Howard University</option>
   </select>
 
-  <span id="minute-display" style="font-weight:600;min-width:80px">Min: --</span>
+  <button class="secondary" id="run-btn" onclick="runSimulation()" title="Run one simulation and explore manually">Run</button>
+  <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
+  <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄</button>
+
+  <span id="minute-display" style="margin-left:auto;font-weight:700;font-size:14px;min-width:70px">Min: --</span>
   <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
   <select id="speed-select">
     <option value="500">Fast</option>
     <option value="1000" selected>Normal</option>
     <option value="2000">Slow</option>
   </select>
-  <button class="secondary" id="run-btn" onclick="runSimulation()" title="Run one simulation and explore manually">Run</button>
-  <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
-
-  <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown" style="margin-left:auto">📄 Export</button>
   <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Guided demo + evaluation suite">▶ Demo Suite</button>
   <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py" style="display:none">Run Live</button>
 </div>
