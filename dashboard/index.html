@@ -1871,14 +1871,28 @@ async function runGuidedTour() {
   overlay.appendChild(hint);
 
   let autoMode = false;
-  const AUTO_DELAY = 5000;
+  const AUTO_DELAY = 7000; // 7 sec per card in auto — readable
+
+  // Spacebar pause works EVERYWHERE — cards AND simulation
+  let globalPaused = false;
+  const pauseHandler = (e) => {
+    if (e.code === 'Space') { e.preventDefault(); globalPaused = !globalPaused; }
+  };
+  document.addEventListener('keydown', pauseHandler);
 
   function waitForAdvance() {
     if (autoMode) {
-      hint.textContent = 'Auto mode — playing...';
-      return new Promise(r => setTimeout(r, AUTO_DELAY));
+      hint.textContent = 'spacebar to pause';
+      return new Promise(async (resolve) => {
+        let waited = 0;
+        while (waited < AUTO_DELAY || globalPaused) {
+          await new Promise(r => setTimeout(r, 100));
+          if (!globalPaused) waited += 100;
+        }
+        resolve();
+      });
     } else {
-      hint.textContent = 'Tap anywhere to continue';
+      hint.textContent = 'Tap anywhere to continue · spacebar to pause';
       return new Promise(resolve => {
         overlay.addEventListener('click', resolve, { once: true });
       });
@@ -1978,31 +1992,12 @@ async function runGuidedTour() {
     }
   });
 
-  // Pause/resume on spacebar or click during playback
-  let demoPaused = false;
-  const pauseHint = document.createElement('div');
-  pauseHint.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:200;color:var(--text-dim);font-size:11px;background:var(--surface);padding:4px 12px;border-radius:4px;border:1px solid var(--border);';
-  pauseHint.textContent = 'spacebar or click to pause';
-  document.body.appendChild(pauseHint);
-
-  function togglePause(e) {
-    if (e.type === 'keydown' && e.code !== 'Space') return;
-    if (e.type === 'keydown') e.preventDefault();
-    demoPaused = !demoPaused;
-    pauseHint.textContent = demoPaused ? '⏸ PAUSED — spacebar or click to resume' : 'spacebar or click to pause';
-    pauseHint.style.color = demoPaused ? 'var(--yellow)' : 'var(--text-dim)';
-  }
-  document.addEventListener('keydown', togglePause);
-  document.addEventListener('click', function pauseClick(e) {
-    if (e.target.closest('.controls') || e.target.closest('#tour-overlay') || e.target.closest('#student-profile-panel')) return;
-    togglePause(e);
-  });
-
   async function tick(ms) {
-    const start = Date.now();
-    while (Date.now() - start < ms || demoPaused) {
+    let waited = 0;
+    while (waited < ms || globalPaused) {
       if (demoExited) return;
       await new Promise(r => setTimeout(r, 50));
+      if (!globalPaused) waited += 50;
     }
   }
 
@@ -2026,20 +2021,33 @@ async function runGuidedTour() {
 
   await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Professor acted. Watch engagement recover.</div>`);
 
-  // Speed up for final stretch (300ms — noticeably faster but not nauseating)
+  // Post-breakout: show recovery at readable pace
   overlay.style.display = 'none';
   if (demoExited) return;
   setView('dashboard');
-  for (let min = 26; min <= 45; min++) { if (demoExited) return; showMinute(min); await tick(300); }
+  for (let min = 26; min <= 35; min++) { if (demoExited) return; showMinute(min); await tick(800); }
 
-  await showCard(`<div style="font-size:22px;font-weight:700">Session complete.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Full engagement arc captured. Scroll down to see professor decisions.</div>`);
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 35 — Recovery visible.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Post-breakout engagement boost in timeline. Professor log shows decisions.</div>`);
 
-  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Running 6 evaluation tests.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Report downloads when complete.</div>`);
+  // Minutes 36-40: poll intervention
+  overlay.style.display = 'none';
+  if (demoExited) return;
+  for (let min = 36; min <= 40; min++) { if (demoExited) return; showMinute(min); await tick(800); }
+
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 40 — Poll launched.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Second intervention. Does engagement hold?</div>`);
+
+  // Final stretch
+  overlay.style.display = 'none';
+  if (demoExited) return;
+  for (let min = 41; min <= 45; min++) { if (demoExited) return; showMinute(min); await tick(600); }
+
+  await showCard(`<div style="font-size:22px;font-weight:700">Session complete — 45 minutes.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement arc, patterns, professor decisions, and chat all captured.<br>Click <strong>📄 Export</strong> anytime to download this session's data.</div>`);
+
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Now: 6 evaluation tests.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Same scenarios, different professors.<br>Summary table + report download at the end.</div>`);
 
   overlay.remove();
   if (exitBtn.parentNode) exitBtn.remove();
-  if (pauseHint.parentNode) pauseHint.remove();
-  document.removeEventListener('keydown', togglePause);
+  document.removeEventListener('keydown', pauseHandler);
 }
 
 async function runDemoSuite() {
