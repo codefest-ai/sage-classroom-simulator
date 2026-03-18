@@ -611,21 +611,19 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <option value="howard">Howard University</option>
   </select>
 
-  <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Guided demo + evaluation suite">▶ Demo Suite</button>
-  <button class="secondary" id="run-btn" onclick="runSimulation()" title="Manual: run one simulation and explore">Run Manual</button>
-  <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py" style="display:none">Run Live</button>
+  <button class="secondary" id="run-btn" onclick="runSimulation()" title="Run one simulation and explore manually">Run</button>
   <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
-  <button class="secondary" onclick="exportCurrentSession()" title="Export current session data as markdown">📄 Export</button>
 
-  <label style="margin-left:auto">Playback:</label>
+  <span id="minute-display" style="margin-left:auto;font-weight:600;min-width:80px">Min: --</span>
   <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
-  <label>Speed:</label>
   <select id="speed-select">
     <option value="500">Fast</option>
     <option value="1000" selected>Normal</option>
     <option value="2000">Slow</option>
   </select>
-  <span id="minute-display" style="font-weight:600;min-width:80px">Min: --</span>
+  <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄 Export</button>
+  <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Guided demo + evaluation suite">▶ Demo Suite</button>
+  <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py" style="display:none">Run Live</button>
 </div>
 
 <div class="grid">
@@ -884,8 +882,10 @@ function runSimulation() {
     if (gini > 0.5) patterns.push({ type: 'equity_imbalance', severity: gini < 0.65 ? 'mild' : gini < 0.8 ? 'moderate' : 'severe', value: Math.round(gini * 100) / 100, message: `Speaking time concentrated (Gini=${gini.toFixed(2)})` });
     if (confused.length >= 3) patterns.push({ type: 'confusion_cluster', severity: confused.length < 4 ? 'mild' : 'moderate', value: confused.length, message: `${confused.length} students signaling confusion`, students: confused });
 
-    // Recommendations
+    // Recommendations — throttled: only generate if this pattern type hasn't fired in last 5 minutes
     for (const p of patterns) {
+      const recentSame = recommendations.filter(r => r.action === (p.type === 'energy_decay' ? 'breakout' : p.type === 'equity_imbalance' ? 'equity_intervention' : 'clarification') && min - r.minute < 5);
+      if (recentSame.length > 0) continue; // Don't repeat same recommendation within 5 minutes
       let rec = null;
       if (p.type === 'energy_decay') {
         rec = { priority: p.severity === 'severe' ? 'high' : 'medium', action: 'breakout', message: `Participation dropped ${Math.round(p.value * 100)}% since start. Consider breakout activity.`, minute: min };
@@ -2110,13 +2110,13 @@ async function runGuidedTour() {
 
   // Play minutes 1-10 — pan through dashboard sections
   overlay.style.display = 'none';
-  panTo('#stat-engagement');
+
   for (let min = 1; min <= 3; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
-  panTo('#student-grid');
+
   for (let min = 4; min <= 6; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
-  panTo('#timeline-chart');
+
   for (let min = 7; min <= 8; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
-  panTo('#heatmap-container');
+
   for (let min = 9; min <= 10; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
 
   // Dynamic card based on actual data at minute 10
@@ -2132,9 +2132,9 @@ async function runGuidedTour() {
 
   // Play to minute 18 — pan to recommendations as patterns fire
   overlay.style.display = 'none';
-  panTo('#stat-engagement');
+
   for (let min = 11; min <= 14; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
-  panTo('#rec-list');
+
   for (let min = 15; min <= 18; min++) { if (demoExited) return; showMinute(min); await tick(1200); }
 
   // Dynamic card at minute 18
@@ -2169,7 +2169,7 @@ async function runGuidedTour() {
   overlay.style.display = 'none';
   if (demoExited) return;
   setView('dashboard');
-  panTo('#timeline-chart');
+
   for (let min = 30; min <= 35; min++) { if (demoExited) return; showMinute(min); await tick(800); }
 
   // Dynamic recovery card
