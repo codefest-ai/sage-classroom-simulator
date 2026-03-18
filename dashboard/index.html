@@ -1938,8 +1938,19 @@ async function runGuidedTour() {
 
   // Spacebar pause works EVERYWHERE — cards AND simulation
   let globalPaused = false;
+  const pauseOverlay = document.createElement('div');
+  pauseOverlay.id = 'pause-overlay';
+  pauseOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:250;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px);cursor:pointer;';
+  pauseOverlay.innerHTML = '<div style="color:white;font-size:24px;font-weight:700;text-align:center">⏸ PAUSED<br><span style="font-size:14px;font-weight:400;opacity:0.7">spacebar or click to resume</span></div>';
+  pauseOverlay.onclick = () => { globalPaused = false; pauseOverlay.style.display = 'none'; };
+  document.body.appendChild(pauseOverlay);
+
   const pauseHandler = (e) => {
-    if (e.code === 'Space') { e.preventDefault(); globalPaused = !globalPaused; }
+    if (e.code === 'Space') {
+      e.preventDefault();
+      globalPaused = !globalPaused;
+      pauseOverlay.style.display = globalPaused ? 'flex' : 'none';
+    }
   };
   document.addEventListener('keydown', pauseHandler);
 
