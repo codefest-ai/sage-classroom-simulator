@@ -1,4 +1,9 @@
 __pycache__/
 *.pyc
-data/*.json
+data/
+transcripts/
 .DS_Store
+.env
+.vercel/
+node_modules/
+*.log

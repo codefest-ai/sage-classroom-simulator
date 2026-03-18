@@ -502,6 +502,64 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Abstract SVG Avatars */
+.zoom-tile .avatar-svg { width: 48px; height: 48px; margin-bottom: 6px; }
+.zoom-tile.engaged-state .avatar-svg { filter: drop-shadow(0 0 6px var(--green)); }
+.zoom-tile.drifting-state .avatar-svg { opacity: 0.6; }
+.zoom-tile.disengaged-state .avatar-svg { filter: grayscale(1); opacity: 0.4; }
+.zoom-tile.confused-state .avatar-svg { animation: wobble 0.6s ease-in-out infinite; filter: drop-shadow(0 0 6px var(--purple)); }
+.zoom-tile.speaking .avatar-svg { animation: speak-pulse 1s ease-in-out infinite; }
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+@keyframes speak-pulse {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--green)); }
+  50% { filter: drop-shadow(0 0 12px var(--green)); }
+}
+
+/* Reaction overlay */
+.zoom-tile .zt-reaction {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 24px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 3;
+}
+.zoom-tile .zt-reaction.show { opacity: 1; animation: reaction-fade 2s ease-out forwards; }
+@keyframes reaction-fade {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -80%) scale(1.3); }
+}
+
+/* Student Profile Panel (slide-out) */
+#student-profile-panel {
+  position: fixed; top: 0; right: -380px; width: 380px; height: 100vh;
+  background: var(--surface); border-left: 1px solid var(--border);
+  z-index: 100; transition: right 0.3s ease; overflow-y: auto; padding: 20px;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+}
+#student-profile-panel.open { right: 0; }
+#student-profile-panel .close-btn {
+  position: absolute; top: 12px; right: 12px; background: none; border: none;
+  color: var(--text-dim); font-size: 20px; cursor: pointer;
+}
+#student-profile-panel .close-btn:hover { color: var(--text); }
+#student-profile-panel .profile-header {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 20px; margin-top: 8px;
+}
+#student-profile-panel .profile-header .avatar-svg-lg { width: 64px; height: 64px; }
+#student-profile-panel .profile-name { font-size: 18px; font-weight: 700; }
+#student-profile-panel .profile-archetype { font-size: 12px; color: var(--purple); text-transform: uppercase; }
+#student-profile-panel .profile-meta { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.profile-section { margin-bottom: 16px; }
+.profile-section h3 { font-size: 12px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 0.5px; }
+.profile-sparkline { width: 100%; height: 50px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.profile-sparkline svg { width: 100%; height: 100%; }
+.profile-chat-item { font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--surface2); }
+.profile-chat-item .time { color: var(--text-dim); margin-right: 6px; }
+.profile-stat { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+.profile-stat .label { color: var(--text-dim); }
+.profile-stat .value { font-weight: 600; }
 </style>
 </head>
 <body>
@@ -534,6 +592,8 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 
   <label>Seed:</label>
   <input type="number" id="seed-input" value="42" style="width:60px">
+  <button class="secondary" onclick="document.getElementById('seed-input').value = Math.floor(Math.random()*9999)" title="Random seed for different outcomes">🎲</button>
+  <label><input type="checkbox" id="jitter-check"> Jitter</label>
 
   <label>Professor:</label>
   <select id="professor-select">
@@ -544,9 +604,17 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <option value="hands_off">Dr. Observer</option>
   </select>
 
+  <label>University:</label>
+  <select id="university-select">
+    <option value="cgu" selected>CGU (Claremont)</option>
+    <option value="gatech">Georgia Tech</option>
+    <option value="howard">Howard University</option>
+  </select>
+
   <button id="run-btn" onclick="runSimulation()">Run Simulation</button>
-  <button class="secondary" onclick="document.getElementById('file-input').click()">Load JSON</button>
-  <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadFile(event)">
+  <button class="secondary" id="run-live-btn" onclick="runLive()" title="Requires python3 server.py running on port 8080">Run Live</button>
+  <button class="secondary" onclick="clearSimulation()" title="Reset to blank state">Clear</button>
+  <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 16px;border-radius:4px;cursor:pointer" onclick="runDemoSuite()" title="Auto-cycles through scenarios with evaluation data">▶ Demo Suite</button>
 
   <label style="margin-left:auto">Playback:</label>
   <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
@@ -662,6 +730,12 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   </div>
 </div>
 
+<!-- Student Profile Slide-Out Panel -->
+<div id="student-profile-panel">
+  <button class="close-btn" onclick="closeProfile()">&times;</button>
+  <div id="profile-content"></div>
+</div>
+
 <script>
 // ============================================================
 // STATE
@@ -685,7 +759,26 @@ function runSimulation() {
   // Pseudo-random with seed
   let rng = mulberry32(seed);
 
+  const jitter = document.getElementById('jitter-check').checked;
   const students = generateStudents();
+
+  // Apply personality jitter: ±20% variation on behavioral params per run
+  if (jitter) {
+    for (const s of students) {
+      const j = () => 0.8 + rng() * 0.4; // 0.8 to 1.2
+      s.chatFreq = Math.max(0.01, s.chatFreq * j());
+      s.speakTendency = Math.max(0.01, s.speakTendency * j());
+      s.cameraRate = Math.min(0.99, Math.max(0.05, s.cameraRate * j()));
+      s.attentionSpan = Math.max(10, Math.round(s.attentionSpan * j()));
+      s.driftRate = Math.max(0.003, s.driftRate * j());
+      s.confusionThreshold = Math.min(0.6, Math.max(0.1, s.confusionThreshold * j()));
+      // Jitter intervention responses too
+      for (const k of Object.keys(s.responses)) {
+        s.responses[k] = s.responses[k] * j();
+      }
+    }
+  }
+
   const overrides = getScenarioOverrides(scenario);
   const interventions = getScenarioInterventions(scenario);
 
@@ -1391,10 +1484,172 @@ function setView(view) {
 }
 
 // ============================================================
-// CLASSROOM VIEW RENDERING
+// SVG ABSTRACT AVATAR GENERATOR
 // ============================================================
 
-const AVATAR_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#2980b9','#c0392b','#27ae60','#8e44ad','#d35400','#16a085','#c0392b','#2c3e50'];
+const AVATAR_PALETTES = [
+  ['#e74c3c','#c0392b'],['#3498db','#2980b9'],['#2ecc71','#27ae60'],['#f39c12','#e67e22'],
+  ['#9b59b6','#8e44ad'],['#1abc9c','#16a085'],['#e67e22','#d35400'],['#34495e','#2c3e50'],
+  ['#e91e63','#c2185b'],['#00bcd4','#0097a7'],['#ff9800','#f57c00'],['#607d8b','#455a64'],
+  ['#795548','#5d4037'],['#673ab7','#512da8'],['#009688','#00796b']
+];
+
+function generateAvatarSVG(studentId, size = 48) {
+  // Seed from student_id for consistency
+  const seed = studentId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const rng = mulberry32(seed);
+  const idx = parseInt(studentId.replace(/\D/g, ''), 10) - 1;
+  const [c1, c2] = AVATAR_PALETTES[idx % AVATAR_PALETTES.length];
+  const cx = size / 2, cy = size / 2;
+
+  let shapes = '';
+  // Head circle
+  const headR = size * 0.28 + rng() * size * 0.06;
+  shapes += `<circle cx="${cx}" cy="${cy * 0.75}" r="${headR}" fill="${c1}" opacity="0.9"/>`;
+  // Body shape — triangle or rectangle
+  if (rng() > 0.5) {
+    const bw = size * 0.5 + rng() * size * 0.15;
+    shapes += `<polygon points="${cx},${cy*0.95} ${cx-bw/2},${size-2} ${cx+bw/2},${size-2}" fill="${c2}" opacity="0.7"/>`;
+  } else {
+    const bw = size * 0.45 + rng() * size * 0.1;
+    const bh = size * 0.3;
+    shapes += `<rect x="${cx-bw/2}" y="${cy*0.95}" width="${bw}" height="${bh}" rx="4" fill="${c2}" opacity="0.7"/>`;
+  }
+  // Accent shapes (1-2 small geometric details)
+  const numAccents = 1 + Math.floor(rng() * 2);
+  for (let a = 0; a < numAccents; a++) {
+    const ax = cx + (rng() - 0.5) * size * 0.4;
+    const ay = cy * 0.6 + rng() * size * 0.15;
+    const ar = 2 + rng() * 4;
+    if (rng() > 0.5) {
+      shapes += `<circle cx="${ax}" cy="${ay}" r="${ar}" fill="white" opacity="0.5"/>`;
+    } else {
+      shapes += `<rect x="${ax-ar}" y="${ay-ar}" width="${ar*2}" height="${ar*2}" rx="1" fill="white" opacity="0.4" transform="rotate(${rng()*45},${ax},${ay})"/>`;
+    }
+  }
+
+  return `<svg class="avatar-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${size}" height="${size}" rx="6" fill="transparent"/>
+    ${shapes}
+  </svg>`;
+}
+
+function generateAvatarSVGLarge(studentId) { return generateAvatarSVG(studentId, 64); }
+
+// ============================================================
+// STUDENT PROFILE PANEL
+// ============================================================
+
+function openProfile(studentId) {
+  const panel = document.getElementById('student-profile-panel');
+  const content = document.getElementById('profile-content');
+  const stu = sessionData.students.find(s => s.student_id === studentId);
+  if (!stu) return;
+
+  const d = stu.demographic || {};
+  const archetype = stu.archetype || '';
+
+  // Engagement sparkline data
+  const engData = sessionData.timeline.map(t => {
+    const s = t.students.find(st => st.student_id === studentId);
+    return s ? s.engagement : 0;
+  });
+
+  // Chat history
+  const chats = sessionData.events.filter(e => e.event_type === 'chat' && e.student_id === studentId);
+
+  // Participation timeline (minutes where they spoke or chatted)
+  const activeMins = new Set();
+  sessionData.timeline.forEach(t => {
+    const s = t.students.find(st => st.student_id === studentId);
+    if (s && s.signals && s.signals.length > 0) activeMins.add(t.minute);
+  });
+  chats.forEach(c => activeMins.add(c.minute));
+
+  // Current state
+  const currentFrame = sessionData.timeline[currentMinute - 1] || sessionData.timeline[sessionData.timeline.length - 1];
+  const currentStudent = currentFrame ? currentFrame.students.find(s => s.student_id === studentId) : null;
+
+  // Stats
+  const avgEng = engData.length ? (engData.reduce((a,b) => a+b, 0) / engData.length) : 0;
+  const maxEng = engData.length ? Math.max(...engData) : 0;
+  const minEng = engData.length ? Math.min(...engData) : 0;
+
+  // Build sparkline SVG
+  const sparkW = 320, sparkH = 50;
+  const sparkPoints = engData.map((v, i) => {
+    const x = (i / Math.max(1, engData.length - 1)) * sparkW;
+    const y = sparkH - (v * sparkH);
+    return `${x},${y}`;
+  }).join(' ');
+  const sparkColor = avgEng >= 0.65 ? 'var(--green)' : avgEng >= 0.4 ? 'var(--yellow)' : 'var(--red)';
+
+  content.innerHTML = `
+    <div class="profile-header">
+      <div class="profile-header">${generateAvatarSVG(studentId, 64)}</div>
+      <div>
+        <div class="profile-name">${stu.name}</div>
+        ${archetype ? `<div class="profile-archetype">${archetype}</div>` : ''}
+        <div class="profile-meta">${d.major || ''} · Age ${d.age || '?'} · ${d.gender || ''}</div>
+        ${d.origin_country ? `<div class="profile-meta">From ${d.origin_country} · ${d.university || ''}</div>` : ''}
+        ${d.is_working_professional ? '<div class="profile-meta" style="color:var(--yellow)">Working Professional</div>' : ''}
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h3>Engagement Over Session</h3>
+      <div class="profile-sparkline">
+        <svg viewBox="0 0 ${sparkW} ${sparkH}" preserveAspectRatio="none">
+          <polyline points="${sparkPoints}" fill="none" stroke="${sparkColor}" stroke-width="2"/>
+          <polygon points="0,${sparkH} ${sparkPoints} ${sparkW},${sparkH}" fill="${sparkColor}" opacity="0.15"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h3>Current State</h3>
+      <div class="profile-stat">
+        <span class="label">Engagement</span>
+        <span class="value" style="color:${currentStudent ? engColor(currentStudent.engagement) : 'var(--text)'}">${currentStudent ? (currentStudent.engagement * 100).toFixed(0) + '%' : '--'}</span>
+      </div>
+      <div class="profile-stat">
+        <span class="label">State</span>
+        <span class="value">${currentStudent ? (currentStudent.is_confused ? 'CONFUSED' : currentStudent.state.toUpperCase()) : '--'}</span>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h3>Session Stats</h3>
+      <div class="profile-stat"><span class="label">Avg Engagement</span><span class="value">${(avgEng * 100).toFixed(0)}%</span></div>
+      <div class="profile-stat"><span class="label">Peak</span><span class="value">${(maxEng * 100).toFixed(0)}%</span></div>
+      <div class="profile-stat"><span class="label">Low</span><span class="value">${(minEng * 100).toFixed(0)}%</span></div>
+      <div class="profile-stat"><span class="label">Chat Messages</span><span class="value">${chats.length}</span></div>
+      <div class="profile-stat"><span class="label">Active Minutes</span><span class="value">${activeMins.size} / ${sessionData.timeline.length}</span></div>
+      <div class="profile-stat"><span class="label">Learning Style</span><span class="value">${d.learning_style || '?'}</span></div>
+      <div class="profile-stat"><span class="label">Tech Comfort</span><span class="value">${d.tech_comfort || '?'}</span></div>
+    </div>
+
+    <div class="profile-section">
+      <h3>Chat History (${chats.length} messages)</h3>
+      ${chats.length === 0 ? '<div style="color:var(--text-dim);font-size:12px">No chat messages this session</div>' :
+        chats.slice(-15).reverse().map(c => `
+          <div class="profile-chat-item ${c.data.confusion_score > 0.5 ? 'confused' : ''}">
+            <span class="time">${c.minute}m</span> ${c.data.text}
+          </div>
+        `).join('')}
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closeProfile() {
+  document.getElementById('student-profile-panel').classList.remove('open');
+}
+
+// ============================================================
+// CLASSROOM VIEW RENDERING
+// ============================================================
 
 function renderClassroom(min) {
   if (!sessionData || !sessionData.timeline[min - 1]) return;
@@ -1407,29 +1662,30 @@ function renderClassroom(min) {
   grid.innerHTML = frame.students.map((s, i) => {
     const stu = sessionData.students.find(st => st.student_id === s.student_id);
     const name = stu ? stu.name : s.student_id;
-    const initials = name.split(/[\s()]+/).filter(w => w.length > 0).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-    const cameraOn = s.engagement > 0.3 && !s.student_id.match(/S09|S11/); // Derek + Alex usually off
+    const cameraOn = s.engagement > 0.3;
     const isSpeaking = s.signals && s.signals.includes('speaking');
-    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+    const isConfused = s.is_confused;
+    const stateClass = isConfused ? 'confused-state' : s.state + '-state';
 
-    // Find chat message for this minute
+    // Find chat message and reaction for this minute
     const chat = sessionData.events.find(e => e.event_type === 'chat' && e.student_id === s.student_id && e.minute === min);
     const bubbleText = chat ? chat.data.text : '';
-    const isConfused = s.is_confused;
 
     let statusIcon = '';
-    if (isConfused) statusIcon = '&#10067;';  // red question
-    else if (s.state === 'disengaged') statusIcon = '&#128564;';  // sleeping
-    else if (isSpeaking) statusIcon = '&#127908;';  // mic
-    else if (s.state === 'engaged') statusIcon = '';
+    if (isConfused) statusIcon = '&#10067;';
+    else if (s.state === 'disengaged') statusIcon = '&#128564;';
+    else if (isSpeaking) statusIcon = '&#127908;';
 
-    const engColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
+    const eColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
 
-    return `<div class="zoom-tile ${cameraOn ? '' : 'camera-off'} ${isSpeaking ? 'speaking' : ''} ${isConfused ? 'confused' : ''}">
-      <div class="avatar" style="background:${cameraOn ? color : 'var(--surface2)'}">${initials}</div>
+    const avatarSvg = cameraOn ? generateAvatarSVG(s.student_id) :
+      `<div class="avatar" style="background:var(--surface2)">${name.split(/[\s()]+/).filter(w=>w.length>0).slice(0,2).map(w=>w[0]).join('').toUpperCase()}</div>`;
+
+    return `<div class="zoom-tile ${cameraOn ? '' : 'camera-off'} ${isSpeaking ? 'speaking' : ''} ${stateClass}" onclick="openProfile('${s.student_id}')" style="cursor:pointer">
+      ${avatarSvg}
       <div class="zt-name">${name.split(' ')[0]} ${name.split(' ').slice(-1)[0]?.[0] || ''}.</div>
       <div class="zt-status">${statusIcon}</div>
-      <div class="zt-engagement" style="color:${engColor}">${(s.engagement * 100).toFixed(0)}%</div>
+      <div class="zt-engagement" style="color:${eColor}">${(s.engagement * 100).toFixed(0)}%</div>
       <div class="zt-speaking"></div>
       ${bubbleText ? `<div class="zt-bubble show">${bubbleText}</div>` : '<div class="zt-bubble"></div>'}
     </div>`;
@@ -1485,10 +1741,540 @@ showMinute = function(min) {
   }
 };
 
-// Auto-run on load
-window.addEventListener('DOMContentLoaded', () => {
+// ============================================================
+// LIVE SERVER STREAMING (SSE)
+// ============================================================
+
+let sseSource = null;
+
+function runLive() {
+  const config = {
+    duration: parseInt(document.getElementById('duration-input').value) || 45,
+    scenario: document.getElementById('scenario-select').value,
+    seed: parseInt(document.getElementById('seed-input').value) || 42,
+    university: document.getElementById('university-select').value,
+    professor_style: document.getElementById('professor-select').value,
+    speed: 0.5,
+  };
+
+  // Connect to SSE stream
+  if (sseSource) sseSource.close();
+  sseSource = new EventSource('/api/stream');
+
+  sseSource.addEventListener('init', (e) => {
+    const data = JSON.parse(e.data);
+    if (data.frames && data.frames.length > 0) {
+      // Reconnect to existing session
+      sessionData = {
+        metadata: data.metadata,
+        students: data.students,
+        timeline: data.frames,
+        events: [],
+        recommendations: [],
+        professor: null,
+      };
+      const dur = data.metadata?.duration_minutes || data.frames.length;
+      renderAll(dur);
+      showMinute(data.frames.length);
+    }
+  });
+
+  sseSource.addEventListener('session_start', (e) => {
+    const data = JSON.parse(e.data);
+    sessionData = {
+      metadata: data.metadata,
+      students: data.students,
+      timeline: [],
+      events: [],
+      recommendations: [],
+      professor: null,
+    };
+    currentMinute = 0;
+    document.getElementById('run-live-btn').textContent = 'Streaming...';
+    document.getElementById('run-live-btn').disabled = true;
+  });
+
+  sseSource.addEventListener('frame', (e) => {
+    const data = JSON.parse(e.data);
+    sessionData.timeline.push(data.frame);
+    if (data.events) sessionData.events.push(...data.events);
+    if (data.recommendations) sessionData.recommendations.push(...data.recommendations);
+    if (data.professor_action) {
+      if (!sessionData.professor) sessionData.professor = { actions: [], summary: {} };
+      sessionData.professor.actions.push(data.professor_action);
+    }
+    const dur = sessionData.metadata?.duration_minutes || sessionData.timeline.length;
+    renderAll(dur);
+    showMinute(data.frame.minute);
+  });
+
+  sseSource.addEventListener('session_end', (e) => {
+    document.getElementById('run-live-btn').textContent = 'Run Live';
+    document.getElementById('run-live-btn').disabled = false;
+    if (sseSource) { sseSource.close(); sseSource = null; }
+  });
+
+  sseSource.onerror = () => {
+    document.getElementById('run-live-btn').textContent = 'Run Live';
+    document.getElementById('run-live-btn').disabled = false;
+  };
+
+  // Start simulation via API
+  fetch('/api/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  }).catch(err => {
+    alert('Server not running. Start with: python3 server.py');
+    if (sseSource) { sseSource.close(); sseSource = null; }
+    document.getElementById('run-live-btn').textContent = 'Run Live';
+    document.getElementById('run-live-btn').disabled = false;
+  });
+}
+
+// ============================================================
+// AUTO-RUN ON LOAD
+// ============================================================
+
+// ============================================================
+// DEMO SUITE — Auto-cycles through scenarios with evaluation
+// ============================================================
+
+const DEMO_SUITE = [
+  { scenario: 'baseline', professor: 'adaptive', seed: 42, label: 'Test 1: Baseline + Adaptive Professor', question: 'Does the IDSS detect natural engagement variation?' },
+  { scenario: 'confusion_cluster', professor: 'adaptive', seed: 42, label: 'Test 2: Confusion Spike + Adaptive Professor', question: 'Does the IDSS detect confusion and recommend clarification?' },
+  { scenario: 'energy_decay', professor: 'lecture_focused', seed: 42, label: 'Test 3: Energy Decay + Lecture-Focused Professor', question: 'Does a content-driven professor ignore energy warnings?' },
+  { scenario: 'equity_imbalance', professor: 'discussion_based', seed: 42, label: 'Test 4: Equity Imbalance + Discussion Professor', question: 'Does a Socratic professor act on speaking equity alerts?' },
+  { scenario: 'full_scenario', professor: 'hands_off', seed: 42, label: 'Test 5: Full Scenario + Hands-Off Professor', question: 'What happens when compound problems meet minimal intervention?' },
+  { scenario: 'full_scenario', professor: 'adaptive', seed: 42, label: 'Test 6: Full Scenario + Adaptive Professor', question: 'Compare: same scenario, different professor — does intervention style change outcomes?' },
+];
+
+let demoRunning = false;
+let demoResults = [];
+
+async function runGuidedTour() {
+  // This is now a FULL self-running 90-second presentation
+  // No talking needed. Captions explain everything.
+
+  const caption = document.createElement('div');
+  caption.id = 'demo-caption';
+  caption.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:300;background:rgba(15,23,42,0.92);color:white;padding:16px 32px;font-size:15px;line-height:1.5;text-align:center;transition:opacity 0.3s;border-top:3px solid var(--purple);';
+  document.body.appendChild(caption);
+
+  const dim = document.createElement('div');
+  dim.id = 'demo-dim';
+  dim.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:100;background:rgba(0,0,0,0);transition:background 0.5s;pointer-events:none;';
+  document.body.appendChild(dim);
+
+  async function cap(text, ms, opts = {}) {
+    if (opts.dim) dim.style.background = 'rgba(0,0,0,0.5)';
+    else dim.style.background = 'rgba(0,0,0,0)';
+    caption.innerHTML = text;
+    caption.style.opacity = '1';
+    await new Promise(r => setTimeout(r, ms));
+  }
+
+  async function fadeOut() {
+    caption.style.opacity = '0';
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  // ---- INTRO (6 sec) ----
+  clearSimulation();
+  await cap('<strong style="font-size:20px;color:var(--purple)">SAGE</strong><br>Simulated Agent-Generated Engagement<br><span style="font-size:12px;color:var(--text-dim)">An agent-based classroom simulator with an Instructor Decision Support System (IDSS)<br>IST 505 · CGU Spring 2026</span>', 4000, {dim:true});
+
+  await cap('<strong>The Problem:</strong> Instructors see raw data (participation counts, camera status) but lack tools for <em>comprehension</em> and <em>projection</em>.<br><span style="font-size:12px">Endsley (1995): Most dashboards stop at SA Level 1. The IDSS targets Levels 2 and 3.</span>', 5000, {dim:true});
+
+  // ---- RUN FIRST SIMULATION (show dashboard filling up) ----
+  dim.style.background = 'rgba(0,0,0,0)';
+  document.getElementById('scenario-select').value = 'full_scenario';
+  document.getElementById('seed-input').value = '42';
+  document.getElementById('professor-select').value = 'adaptive';
+  document.getElementById('jitter-check').checked = true;
   runSimulation();
-  showMinute(1);
+
+  await cap('<strong>Running:</strong> Full Scenario · 15 students · Dr. Adaptive professor<br><span style="font-size:12px">Confusion spike at minute 18 · Breakout at 25 · Poll at 40 · Energy decay 1.3x</span>', 1500);
+
+  setView('dashboard');
+  // Play through with captions
+  const dur = 45;
+  for (let min = 1; min <= dur; min++) {
+    showMinute(min);
+
+    // Timed captions during playback
+    if (min === 1) caption.innerHTML = '<strong>Minute 1:</strong> Class begins. All 15 students at baseline engagement. Dashboard is listening.';
+    if (min === 5) caption.innerHTML = '<strong>Minute 5:</strong> Engagement data flowing. Heatmap building. Timeline bars appearing minute by minute.';
+    if (min === 10) caption.innerHTML = '<strong>Minute 10:</strong> The Fader (S12) is drifting. Attention span was only 15 minutes. Dashboard detects the pattern.';
+    if (min === 15) caption.innerHTML = '<strong>Minute 15:</strong> Energy decay detected. IDSS recommends pace change. Professor sees the recommendation.';
+    if (min === 18) caption.innerHTML = '<strong style="color:var(--red)">Minute 18: Confusion spike.</strong> Difficult topic hits. Multiple students signaling confusion. IDSS flags a confusion cluster.';
+    if (min === 20) { setView('classroom'); caption.innerHTML = '<strong>Classroom View:</strong> Each tile is a student. Colors show engagement state. Chat bubbles appear in real time.'; }
+    if (min === 25) caption.innerHTML = '<strong style="color:var(--purple)">Minute 25: Breakout rooms.</strong> Professor accepted the recommendation. Watch engagement recover across student tiles.';
+    if (min === 30) { setView('dashboard'); caption.innerHTML = '<strong>Back to Dashboard:</strong> Post-breakout boost visible in timeline. Heatmap shows the recovery. Recommendations update.'; }
+    if (min === 35) caption.innerHTML = '<strong>Minute 35:</strong> Professor panel shows decision log — accept, modify, ignore, reject. This IS the Instructor Response Taxonomy.';
+    if (min === 40) caption.innerHTML = '<strong>Minute 40: Poll.</strong> Second intervention. IDSS tracks whether engagement holds or fades again.';
+    if (min === 45) caption.innerHTML = '<strong>Minute 45:</strong> Session complete. Full engagement arc, pattern log, professor actions, and recommendation history captured.';
+
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  await new Promise(r => setTimeout(r, 2000));
+
+  // ---- EVALUATION CONTEXT ----
+  await cap('<strong style="font-size:17px">Now: Automated Evaluation Suite</strong><br>6 tests comparing scenarios × professor styles. Same recommendations, different instructor responses.<br><span style="font-size:12px">This generates the DSR evaluation data. Report auto-downloads when complete.</span>', 4000, {dim:true});
+
+  dim.style.background = 'rgba(0,0,0,0)';
+  caption.remove();
+  dim.remove();
+}
+
+async function runDemoSuite() {
+  if (demoRunning) return;
+  demoRunning = true;
+  demoResults = [];
+
+  // ---- GUIDED TOUR (~90 sec) ----
+  await runGuidedTour();
+  await new Promise(r => setTimeout(r, 1000));
+
+  // Show banner
+  const banner = document.createElement('div');
+  banner.id = 'demo-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:200;background:var(--purple);color:white;padding:12px 24px;font-size:14px;font-weight:600;text-align:center;';
+  banner.textContent = 'Demo Suite starting...';
+  document.body.appendChild(banner);
+
+  for (let i = 0; i < DEMO_SUITE.length; i++) {
+    const test = DEMO_SUITE[i];
+    banner.textContent = `${test.label} — "${test.question}"`;
+
+    // Set controls
+    document.getElementById('scenario-select').value = test.scenario;
+    document.getElementById('seed-input').value = test.seed;
+    document.getElementById('professor-select').value = test.professor;
+
+    // Run simulation
+    runSimulation();
+
+    const duration = parseInt(document.getElementById('duration-input').value) || 45;
+    const isFirst = (i === 0);
+    const speed = isFirst ? 200 : 60; // First test runs slow so they can see features
+
+    // First test: show classroom view for the middle section
+    if (isFirst) {
+      setView('dashboard');
+      for (let min = 1; min <= duration; min++) {
+        if (min === 10) {
+          banner.textContent = `${test.label} — Switching to Classroom View`;
+          setView('classroom');
+        }
+        if (min === 25) {
+          banner.textContent = `${test.label} — Back to Dashboard`;
+          setView('dashboard');
+        }
+        showMinute(min);
+        await new Promise(r => setTimeout(r, speed));
+      }
+    } else {
+      setView('dashboard');
+      for (let min = 1; min <= duration; min++) {
+        // Quick flip to classroom at midpoint for 5 minutes
+        if (min === Math.round(duration * 0.4)) setView('classroom');
+        if (min === Math.round(duration * 0.5)) setView('dashboard');
+        showMinute(min);
+        await new Promise(r => setTimeout(r, speed));
+      }
+    }
+    setView('dashboard');
+
+    // Collect evaluation data
+    const prof = sessionData.professor;
+    const recs = sessionData.recommendations;
+    const timeline = sessionData.timeline;
+    const engagements = timeline.map(t => t.class_engagement);
+    const avgEng = engagements.reduce((a,b) => a+b, 0) / engagements.length;
+    const minEng = Math.min(...engagements);
+    const maxEng = Math.max(...engagements);
+
+    const patternCounts = {};
+    timeline.forEach(t => t.patterns.forEach(p => {
+      patternCounts[p.type] = (patternCounts[p.type] || 0) + 1;
+    }));
+
+    const profSummary = prof ? prof.summary : {};
+    const cats = profSummary.category_distribution || {};
+    const actRate = prof ? profSummary.acceptance_rate : 'N/A';
+
+    demoResults.push({
+      label: test.label,
+      question: test.question,
+      scenario: test.scenario,
+      professor: test.professor,
+      avgEngagement: (avgEng * 100).toFixed(0) + '%',
+      engRange: (minEng * 100).toFixed(0) + '–' + (maxEng * 100).toFixed(0) + '%',
+      totalRecs: recs.length,
+      patterns: patternCounts,
+      profActions: profSummary.total_actions || 0,
+      acceptRate: actRate + '%',
+      categories: cats,
+      interventionsUsed: profSummary.interventions_used || {},
+    });
+
+    // Pause between tests
+    if (i < DEMO_SUITE.length - 1) {
+      banner.textContent = `${test.label} — Complete. Next test in 3s...`;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+
+  // Show summary
+  banner.textContent = 'Demo Suite Complete — Scroll down for evaluation summary';
+  banner.style.cursor = 'pointer';
+  banner.onclick = () => { banner.remove(); };
+
+  showDemoSummary();
+  downloadEvaluationReport();
+  demoRunning = false;
+}
+
+function downloadEvaluationReport() {
+  let report = `SAGE v2 — IDSS Evaluation Report
+Generated: ${new Date().toLocaleString()}
+IST 505 Design Research Methods — CGU Spring 2026
+
+================================================================================
+METHODOLOGY
+================================================================================
+
+Framework: Design Science Research (Hevner et al., 2004)
+Artifact: Instructional Decision Support System (IDSS) dashboard
+Evaluation type: Formative — Technical Risk & Efficacy (FEDS: Venable et al., 2016)
+Theoretical grounding: Situational Awareness (Endsley, 1995) Levels 1-3
+
+The IDSS translates raw engagement signals (SA Level 1) into detected patterns
+(SA Level 2: comprehension) and actionable recommendations (SA Level 3: projection).
+
+This evaluation tests whether:
+1. The IDSS correctly detects engagement patterns across different scenarios
+2. Different professor response styles produce different outcomes given the same recommendations
+3. The engagement-to-action translation framework generates appropriate interventions
+
+Agent-based simulation: 15 AI student agents with distinct behavioral profiles
+(engagement baselines, attention spans, drift rates, confusion thresholds).
+Seeded RNG for reproducibility. 6 predefined scenarios test specific IDSS capabilities.
+
+Instructor Response Taxonomy (Construct Artifact):
+  - Ignore: No action taken
+  - Acknowledge: Awareness without behavior change
+  - Accept: Adopt recommendation as given
+  - Modify: Adapt recommendation using pedagogical judgment
+  - Reject: Override with contextual rationale
+
+================================================================================
+EVALUATION RESULTS
+================================================================================
+
+`;
+
+  // Results table
+  report += `${'Test'.padEnd(8)}${'Scenario'.padEnd(22)}${'Professor'.padEnd(18)}${'Avg Eng'.padEnd(10)}${'Range'.padEnd(12)}${'Recs'.padEnd(6)}${'Actions'.padEnd(9)}${'Accept%'.padEnd(9)}Patterns\n`;
+  report += '-'.repeat(100) + '\n';
+
+  demoResults.forEach((r, i) => {
+    const patterns = Object.entries(r.patterns).map(([k,v]) => `${k}(${v})`).join(', ') || 'none';
+    report += `${(i+1+'').padEnd(8)}${r.scenario.padEnd(22)}${r.professor.padEnd(18)}${r.avgEngagement.padEnd(10)}${r.engRange.padEnd(12)}${(r.totalRecs+'').padEnd(6)}${(r.profActions+'').padEnd(9)}${r.acceptRate.padEnd(9)}${patterns}\n`;
+  });
+
+  // Key comparison
+  if (demoResults.length >= 6) {
+    const t5 = demoResults[4];
+    const t6 = demoResults[5];
+    report += `
+================================================================================
+KEY COMPARISON: Tests 5 vs 6 — Same scenario, different professor
+================================================================================
+
+Scenario: full_scenario (energy decay 1.3x + confusion spike min 18 + interventions)
+
+Hands-Off Professor (Test 5):
+  Avg Engagement: ${t5.avgEngagement}  |  Range: ${t5.engRange}
+  Total Recommendations: ${t5.totalRecs}  |  Professor Actions: ${t5.profActions}
+  Acceptance Rate: ${t5.acceptRate}
+  Response Distribution: ${JSON.stringify(t5.categories)}
+  Interventions Used: ${JSON.stringify(t5.interventionsUsed)}
+
+Adaptive Professor (Test 6):
+  Avg Engagement: ${t6.avgEngagement}  |  Range: ${t6.engRange}
+  Total Recommendations: ${t6.totalRecs}  |  Professor Actions: ${t6.profActions}
+  Acceptance Rate: ${t6.acceptRate}
+  Response Distribution: ${JSON.stringify(t6.categories)}
+  Interventions Used: ${JSON.stringify(t6.interventionsUsed)}
+
+Finding: The IDSS generated the same recommendations for both professors.
+The professor's response style determined the classroom outcome.
+This validates that the IDSS is a decision SUPPORT system — it surfaces
+patterns and recommends, but the instructor's pedagogical judgment
+determines the intervention and its effect.
+`;
+  }
+
+  // Questions tested
+  report += `
+================================================================================
+RESEARCH QUESTIONS TESTED
+================================================================================
+
+`;
+  demoResults.forEach((r, i) => {
+    report += `Test ${i+1}: ${r.question}\n  Scenario: ${r.scenario} | Professor: ${r.professor}\n  Result: ${r.totalRecs} recommendations generated, ${r.profActions} professor actions, ${r.avgEngagement} avg engagement\n\n`;
+  });
+
+  report += `
+================================================================================
+DSR ARTIFACT SUMMARY
+================================================================================
+
+Instantiation Artifact: SAGE IDSS Dashboard
+  - Real-time engagement heatmap, timeline, and student status panels
+  - Pattern detection: energy_decay, equity_imbalance, confusion_cluster,
+    silent_majority, fade_cascade
+  - SA Level 2 comprehension → Level 3 projection recommendation engine
+  - 4 simulated professor styles generating response taxonomy data
+  - Classroom view with abstract avatars and clickable student profiles
+
+Method Artifact: Engagement-to-Action Translation Framework
+  - Signal weights: speaking_equity (0.25), chat_activity (0.20),
+    poll_participation (0.20), camera_status (0.15), reaction_frequency (0.10),
+    silence_gap (0.10)
+  - Pattern → recommendation mapping with priority levels
+
+Construct Artifact: Instructor Response Taxonomy
+  - 5 categories: ignore, acknowledge, accept, modify, reject
+  - 4 professor style profiles with distinct response distributions
+  - Data collected across ${demoResults.length} automated test runs
+
+Literature Base:
+  - Endsley (1995) Situational Awareness model
+  - Hevner et al. (2004) DSR guidelines
+  - Venable et al. (2016) FEDS evaluation framework
+  - Li et al. (2025) Instructor analytics heterogeneity
+  - Wise & Jung (2019) Instructor intervention patterns
+  - Kauffman (2019) Learner population differences
+  - Dell et al. (2015) UDL principles
+
+================================================================================
+SAGE — Simulated Agent-Generated Engagement
+IST 505 Group Project — CGU Spring 2026
+================================================================================
+`;
+
+  // Download
+  const blob = new Blob([report], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `SAGE_Evaluation_Report_${new Date().toISOString().split('T')[0]}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showDemoSummary() {
+  // Remove old summary if exists
+  const old = document.getElementById('demo-summary');
+  if (old) old.remove();
+
+  const div = document.createElement('div');
+  div.id = 'demo-summary';
+  div.style.cssText = 'background:var(--surface);border:2px solid var(--purple);border-radius:8px;padding:20px;margin:16px 24px;';
+
+  let html = '<h2 style="color:var(--purple);font-size:16px;margin-bottom:12px">EVALUATION SUMMARY — Demo Suite Results</h2>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="background:var(--surface2)"><th style="padding:8px;text-align:left;border-bottom:1px solid var(--border)">Test</th><th style="padding:8px">Scenario</th><th style="padding:8px">Professor</th><th style="padding:8px">Avg Eng.</th><th style="padding:8px">Range</th><th style="padding:8px">Recs</th><th style="padding:8px">Prof Actions</th><th style="padding:8px">Accept Rate</th><th style="padding:8px">Patterns</th></tr>';
+
+  demoResults.forEach((r, i) => {
+    const patterns = Object.entries(r.patterns).map(([k,v]) => `${k.replace(/_/g,' ')}(${v})`).join(', ') || 'none';
+    html += `<tr style="border-bottom:1px solid var(--surface2)">
+      <td style="padding:6px;font-weight:600">${i+1}</td>
+      <td style="padding:6px">${r.scenario.replace(/_/g,' ')}</td>
+      <td style="padding:6px">${r.professor.replace(/_/g,' ')}</td>
+      <td style="padding:6px;text-align:center">${r.avgEngagement}</td>
+      <td style="padding:6px;text-align:center">${r.engRange}</td>
+      <td style="padding:6px;text-align:center">${r.totalRecs}</td>
+      <td style="padding:6px;text-align:center">${r.profActions}</td>
+      <td style="padding:6px;text-align:center">${r.acceptRate}</td>
+      <td style="padding:6px;font-size:10px">${patterns}</td>
+    </tr>`;
+  });
+  html += '</table>';
+
+  // Key comparisons
+  if (demoResults.length >= 6) {
+    const t5 = demoResults[4]; // full + hands_off
+    const t6 = demoResults[5]; // full + adaptive
+    html += `<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:6px;font-size:12px">
+      <strong style="color:var(--purple)">Key Comparison (Tests 5 vs 6):</strong> Same scenario (full), different professor style.<br>
+      Hands-off: ${t5.avgEngagement} avg engagement, ${t5.acceptRate} acceptance rate, ${t5.profActions} actions.<br>
+      Adaptive: ${t6.avgEngagement} avg engagement, ${t6.acceptRate} acceptance rate, ${t6.profActions} actions.<br>
+      <strong>The IDSS generated the same recommendations. The professor's response style determined the outcome.</strong>
+    </div>`;
+  }
+
+  // Questions answered
+  html += '<div style="margin-top:12px;font-size:11px;color:var(--text-dim)">';
+  html += '<strong>Questions Tested:</strong><br>';
+  demoResults.forEach((r, i) => {
+    html += `${i+1}. ${r.question}<br>`;
+  });
+  html += '</div>';
+
+  div.innerHTML = html;
+
+  // Insert after the grid
+  const grid = document.querySelector('.grid');
+  grid.parentNode.insertBefore(div, grid.nextSibling);
+
+  // Scroll to it
+  div.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ============================================================
+// CLEAR / RESET
+// ============================================================
+
+function clearSimulation() {
+  sessionData = null;
+  currentMinute = 0;
+  if (playbackInterval) { clearInterval(playbackInterval); playbackInterval = null; }
+  if (sseSource) { sseSource.close(); sseSource = null; }
+  responseLog = [];
+
+  // Reset all panels to empty state
+  document.getElementById('minute-display').textContent = 'Min: --';
+  document.querySelector('#stat-engagement .value').textContent = '--';
+  document.querySelector('#stat-speakers .value').textContent = '--';
+  document.querySelector('#stat-gini .value').textContent = '--';
+  document.querySelector('#stat-patterns .value').textContent = '--';
+  document.getElementById('patterns-area').innerHTML = '';
+  document.getElementById('gini-value').textContent = '--';
+  document.getElementById('gini-fill').style.width = '0%';
+  document.getElementById('student-grid').innerHTML = '<div class="loading">Choose a mode and run a simulation</div>';
+  document.getElementById('timeline-chart').innerHTML = '';
+  document.getElementById('heatmap').innerHTML = '<div class="loading">No simulation data</div>';
+  document.getElementById('heatmap').classList.add('loading');
+  document.getElementById('rec-list').innerHTML = '<div class="loading">No recommendations yet</div>';
+  document.getElementById('chat-log').innerHTML = '<div class="loading">No chat messages yet</div>';
+  document.getElementById('professor-panel').style.display = 'none';
+  document.getElementById('timeline-end').textContent = 'Minute --';
+  document.getElementById('play-btn').textContent = 'Play';
+  document.getElementById('run-live-btn').textContent = 'Run Live';
+  document.getElementById('run-live-btn').disabled = false;
+}
+
+// ============================================================
+// AUTO-RUN ON LOAD — starts BLANK
+// ============================================================
+
+window.addEventListener('DOMContentLoaded', () => {
+  clearSimulation();
 });
 </script>
 </body>

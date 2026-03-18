@@ -4,10 +4,13 @@ Classroom Simulator Engine — Runs N-minute class sessions with AI student agen
 Entry point for the simulation. Generates timestamped engagement data streams
 that the instructor dashboard consumes.
 
+v2: Added step() generator for live streaming, university presets, LLM toggle.
+
 Usage:
     python3 -m simulator.engine --duration 45 --output data/session.json
     python3 -m simulator.engine --scenario confusion_cluster --seed 42
     python3 -m simulator.engine --intervention 20:breakout --intervention 35:poll
+    python3 -m simulator.engine --university gatech --llm --live
 """
 
 import argparse
@@ -16,7 +19,7 @@ import random
 import sys
 import time
 from dataclasses import dataclass, asdict
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Generator
 
 from .profiles import STUDENT_PROFILES, StudentProfile, get_profiles
 from .scoring import EngagementScorer, SignalSnapshot, ClassSnapshot
@@ -146,21 +149,71 @@ class SimulationEngine:
     """
 
     def __init__(self, duration: int = 45, seed: Optional[int] = None,
-                 scenario: str = "baseline"):
+                 scenario: str = "baseline", university: str = "",
+                 use_llm: bool = False):
         self.duration = duration
         self.scenario = SCENARIOS.get(scenario, SCENARIOS["baseline"])
-        self.profiles = get_profiles()
         self.scorer = EngagementScorer()
         self.chat_analyzer = ChatAnalyzer()
         self.events: List[SimulationEvent] = []
         self.interventions: List[Intervention] = []
         self._active_interventions: List[Intervention] = []
+        self._last_class_snapshot: Optional[ClassSnapshot] = None
+        self.use_llm = use_llm
 
         # Per-student engagement state (modified by interventions)
         self._engagement_boosts: Dict[str, float] = {}
 
         if seed is not None:
             random.seed(seed)
+
+        # Load profiles — university preset or default
+        if university:
+            from .university_presets import generate_preset_profiles
+            preset_data = generate_preset_profiles(university, seed=seed or 42)
+            self.profiles = []
+            for pd in preset_data:
+                sp = StudentProfile(
+                    name=pd["name"],
+                    student_id=pd["student_id"],
+                    demographic=pd["demographic"],
+                    engagement_baseline=pd["engagement_baseline"],
+                    chat_frequency=pd["chat_frequency"],
+                    camera_on_rate=pd["camera_on_rate"],
+                    speak_tendency=pd["speak_tendency"],
+                    reaction_rate=pd["reaction_rate"],
+                    poll_response_rate=pd["poll_response_rate"],
+                    attention_span_minutes=pd["attention_span_minutes"],
+                    drift_rate=pd["drift_rate"],
+                    recovery_rate=pd["recovery_rate"],
+                    confusion_threshold=pd["confusion_threshold"],
+                    breakout_response=pd["breakout_response"],
+                    poll_response=pd["poll_response"],
+                    cold_call_response=pd["cold_call_response"],
+                    pace_change_response=pd["pace_change_response"],
+                )
+                sp.archetype = pd.get("archetype", "")
+                self.profiles.append(sp)
+        else:
+            self.profiles = get_profiles()
+
+        # LLM student agents (optional)
+        self._student_agents: Dict[str, 'StudentAgent'] = {}
+        self._llm_client = None
+        if use_llm:
+            try:
+                from .llm_client import LLMClient
+                from .student_agent import StudentAgent
+                self._llm_client = LLMClient()
+                for p in self.profiles:
+                    agent = StudentAgent(p, self._llm_client)
+                    agent.set_affinity_peers(self.profiles)
+                    self._student_agents[p.student_id] = agent
+            except ImportError:
+                self.use_llm = False
+
+        # Room context for LLM agents
+        self._room_context: List[Dict] = []
 
         # Load scenario interventions
         for iv in self.scenario.get("interventions", []):
@@ -319,6 +372,145 @@ class SimulationEngine:
         session_data["summary"] = self._generate_summary()
 
         return session_data
+
+    def step(self) -> Generator[Dict, None, None]:
+        """
+        Generator that yields one frame per minute — for live streaming.
+
+        Each frame has the same structure as a timeline entry from run().
+        """
+        overrides = self.scenario.get("overrides", {})
+
+        for minute in range(1, self.duration + 1):
+            # Check for scheduled interventions
+            active_intervention = None
+            for iv in self.interventions:
+                if iv.minute == minute:
+                    self._apply_intervention(iv, minute)
+                    active_intervention = iv.intervention_type
+
+            # Check for confusion spike
+            confusion_active = False
+            if overrides.get("confusion_spike_minute") and minute >= overrides["confusion_spike_minute"]:
+                minutes_since = minute - overrides["confusion_spike_minute"]
+                if minutes_since < 8:
+                    confusion_active = True
+
+            student_scores = []
+            minute_events = []
+            llm_chat_count = 0
+
+            for profile in self.profiles:
+                drift_mult = overrides.get("global_drift_multiplier", 1.0)
+
+                speak_override = None
+                if overrides.get("boost_students") and profile.student_id in overrides["boost_students"]:
+                    speak_override = overrides.get("boost_speak", profile.speak_tendency)
+                elif overrides.get("suppress_others_speak") is not None and \
+                     overrides.get("boost_students") and \
+                     profile.student_id not in overrides["boost_students"]:
+                    speak_override = overrides["suppress_others_speak"]
+
+                engagement = profile.get_engagement_at(minute * drift_mult, noise=0.08)
+
+                if confusion_active:
+                    spike_strength = overrides.get("confusion_spike_strength", 0.3)
+                    engagement -= spike_strength * random.uniform(0.5, 1.0)
+                    engagement = max(0.05, engagement)
+
+                boost = self._engagement_boosts.get(profile.student_id, 0.0)
+                engagement = min(1.0, engagement + boost)
+
+                if profile.student_id in self._engagement_boosts:
+                    self._engagement_boosts[profile.student_id] *= 0.85
+
+                signals = self._generate_signals(profile, minute, engagement, speak_override)
+
+                # LLM chat override (max 5 per tick for speed)
+                if self.use_llm and signals.chat_sent and llm_chat_count < 5:
+                    agent = self._student_agents.get(profile.student_id)
+                    if agent:
+                        is_confused = engagement < profile.confusion_threshold
+                        professor_speech = None
+                        for ev in self.events:
+                            if hasattr(ev, 'minute') and ev.minute == minute and ev.event_type == "intervention":
+                                professor_speech = ev.data.get("name", "")
+                        llm_text = agent.generate_chat(
+                            engagement=engagement,
+                            room_context=self._room_context[-10:],
+                            professor_action=professor_speech,
+                            active_intervention=active_intervention,
+                            is_confused=is_confused,
+                        )
+                        if llm_text:
+                            signals = SignalSnapshot(
+                                student_id=signals.student_id,
+                                minute=signals.minute,
+                                speaking=signals.speaking,
+                                speaking_duration_sec=signals.speaking_duration_sec,
+                                chat_sent=True,
+                                chat_text=llm_text,
+                                poll_responded=signals.poll_responded,
+                                reaction_sent=signals.reaction_sent,
+                                reaction_type=signals.reaction_type,
+                                camera_on=signals.camera_on,
+                                silence_duration_sec=signals.silence_duration_sec,
+                            )
+                            llm_chat_count += 1
+
+                score = self.scorer.score_student(signals, engagement)
+                student_scores.append(score)
+
+                if signals.chat_sent and signals.chat_text:
+                    chat_analysis = self.chat_analyzer.analyze_message(
+                        profile.student_id, minute, signals.chat_text
+                    )
+                    minute_events.append(SimulationEvent(
+                        minute=minute,
+                        event_type="chat",
+                        student_id=profile.student_id,
+                        data={
+                            "text": signals.chat_text,
+                            "confusion_score": chat_analysis.confusion_score,
+                            "sentiment": chat_analysis.sentiment,
+                            "is_question": chat_analysis.is_question,
+                        }
+                    ))
+                    # Update room context for LLM agents
+                    self._room_context.append({
+                        "student_id": profile.student_id,
+                        "name": profile.name,
+                        "text": signals.chat_text,
+                        "minute": minute,
+                    })
+                    # Keep room context bounded
+                    if len(self._room_context) > 30:
+                        self._room_context = self._room_context[-20:]
+
+            class_snapshot = self.scorer.score_class(student_scores, minute)
+            self._last_class_snapshot = class_snapshot
+            self.events.extend(minute_events)
+
+            frame = {
+                "minute": minute,
+                "class_engagement": class_snapshot.mean_engagement,
+                "engagement_std": class_snapshot.std_engagement,
+                "speaking_gini": class_snapshot.speaking_gini,
+                "active_speakers": class_snapshot.active_speakers,
+                "patterns": class_snapshot.patterns_detected,
+                "students": [
+                    {
+                        "student_id": s.student_id,
+                        "engagement": s.weighted_index,
+                        "state": s.state,
+                        "is_confused": s.is_confused,
+                        "signals": s.contributing_signals,
+                    }
+                    for s in student_scores
+                ],
+            }
+
+            yield frame
 
     def _generate_signals(self, profile: StudentProfile, minute: int,
                           engagement: float, speak_override: Optional[float] = None) -> SignalSnapshot:
@@ -511,6 +703,13 @@ def main():
                         help="Intervention as MIN:TYPE (e.g., 20:breakout)")
     parser.add_argument("--pretty", action="store_true",
                         help="Pretty-print JSON output")
+    parser.add_argument("--university", type=str, default="",
+                        choices=["", "cgu", "gatech", "howard"],
+                        help="University demographic preset")
+    parser.add_argument("--llm", action="store_true",
+                        help="Enable LLM-powered student chat (requires MLX server)")
+    parser.add_argument("--live", action="store_true",
+                        help="Stream frames to stdout (for server mode)")
 
     args = parser.parse_args()
 
@@ -519,6 +718,8 @@ def main():
         duration=args.duration,
         seed=args.seed,
         scenario=args.scenario,
+        university=args.university,
+        use_llm=args.llm,
     )
 
     # Parse interventions
@@ -531,8 +732,20 @@ def main():
             engine.add_intervention(minute, itype, target)
 
     # Run simulation
-    print(f"Running {args.duration}-minute simulation ({args.scenario} scenario)...",
+    mode = "live" if args.live else "batch"
+    uni_label = f", {args.university} preset" if args.university else ""
+    llm_label = ", LLM-powered" if args.llm else ""
+    print(f"Running {args.duration}-minute simulation ({args.scenario}{uni_label}{llm_label}, {mode})...",
           file=sys.stderr)
+
+    if args.live:
+        # Stream mode: yield JSON frames to stdout
+        for frame in engine.step():
+            print(json.dumps(frame, default=str))
+            sys.stdout.flush()
+        print("Simulation complete.", file=sys.stderr)
+        return
+
     result = engine.run()
 
     # Output
