@@ -1861,7 +1861,7 @@ async function runSmart(configOverrides) {
   }
 }
 
-function runLive(configOverrides) {
+async function runLive(configOverrides) {
   const config = {
     duration: parseInt(document.getElementById('duration-input').value) || 45,
     scenario: document.getElementById('scenario-select').value,
@@ -1873,87 +1873,65 @@ function runLive(configOverrides) {
     ...configOverrides,
   };
 
-  return new Promise((resolve, reject) => {
-    // Connect to SSE stream
-    if (sseSource) sseSource.close();
-    sseSource = new EventSource('/api/stream');
-
-    sseSource.addEventListener('init', (e) => {
-      const data = JSON.parse(e.data);
-      if (data.frames && data.frames.length > 0) {
-        sessionData = {
-          metadata: data.metadata,
-          students: data.students,
-          timeline: data.frames,
-          events: [],
-          recommendations: [],
-          professor: null,
-        };
-        const dur = data.metadata?.duration_minutes || data.frames.length;
-        renderAll(dur);
-        showMinute(data.frames.length);
-      }
-    });
-
-    sseSource.addEventListener('session_start', (e) => {
-      const data = JSON.parse(e.data);
-      sessionData = {
-        metadata: data.metadata,
-        students: data.students,
-        timeline: [],
-        events: [],
-        recommendations: [],
-        professor: null,
-      };
-      currentMinute = 0;
-      document.getElementById('run-btn').textContent = 'Running...';
-      document.getElementById('run-btn').disabled = true;
-    });
-
-    sseSource.addEventListener('frame', (e) => {
-      const data = JSON.parse(e.data);
-      sessionData.timeline.push(data.frame);
-      if (data.events) sessionData.events.push(...data.events);
-      if (data.recommendations) sessionData.recommendations.push(...data.recommendations);
-      if (data.professor_action) {
-        if (!sessionData.professor) sessionData.professor = { actions: [], summary: {} };
-        sessionData.professor.actions.push(data.professor_action);
-      }
-      const dur = sessionData.metadata?.duration_minutes || sessionData.timeline.length;
-      renderAll(dur);
-      showMinute(data.frame.minute);
-    });
-
-    sseSource.addEventListener('session_end', (e) => {
-      document.getElementById('run-btn').textContent = '▶ Run';
-      document.getElementById('run-btn').disabled = false;
-      if (sseSource) { sseSource.close(); sseSource = null; }
-      resolve();
-    });
-
-    sseSource.onerror = () => {
-      document.getElementById('run-btn').textContent = '▶ Run';
-      document.getElementById('run-btn').disabled = false;
-      if (sseSource) { sseSource.close(); sseSource = null; }
-      reject(new Error('SSE connection failed'));
-    };
-
-    // Start simulation via API
-    fetch('/api/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config),
-    }).then(resp => {
-      if (!resp.ok) {
-        // 409 = already running, or other server error
-        if (sseSource) { sseSource.close(); sseSource = null; }
-        reject(new Error(`Server returned ${resp.status}`));
-      }
-    }).catch(err => {
-      if (sseSource) { sseSource.close(); sseSource = null; }
-      reject(err);
-    });
+  // Start simulation
+  const startResp = await fetch('/api/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
   });
+  if (!startResp.ok) throw new Error(`Server returned ${startResp.status}`);
+
+  document.getElementById('run-btn').textContent = 'Running...';
+  document.getElementById('run-btn').disabled = true;
+
+  // Poll for updates every 2 seconds
+  let lastMinute = -1;
+  while (true) {
+    await new Promise(r => setTimeout(r, 2000));
+
+    try {
+      const [sessionResp, historyResp] = await Promise.all([
+        fetch('/api/session'),
+        fetch('/api/history'),
+      ]);
+      const session = await sessionResp.json();
+      const history = await historyResp.json();
+
+      // Build sessionData from server state
+      sessionData = {
+        metadata: session.metadata || {},
+        students: session.students || [],
+        timeline: history.timeline || [],
+        events: history.events || [],
+        recommendations: history.recommendations || [],
+        professor: history.professor_actions?.length > 0
+          ? { actions: history.professor_actions, summary: {} }
+          : null,
+      };
+
+      const dur = session.metadata?.duration_minutes || history.timeline?.length || config.duration;
+      const currentMin = session.current_minute || 0;
+
+      if (currentMin > lastMinute) {
+        renderAll(dur);
+        showMinute(currentMin);
+        lastMinute = currentMin;
+      }
+
+      // Check if done
+      if (!session.is_running && currentMin > 0) {
+        renderAll(dur);
+        showMinute(currentMin);
+        break;
+      }
+    } catch(e) {
+      // Network glitch — keep trying
+      continue;
+    }
+  }
+
+  document.getElementById('run-btn').textContent = '▶ Run';
+  document.getElementById('run-btn').disabled = false;
 }
 
 // Whether server is available (cached after first check)
