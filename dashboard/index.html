@@ -2320,6 +2320,12 @@ async function runDemoSuite() {
     const cats = profSummary.category_distribution || {};
     const actRate = prof ? profSummary.acceptance_rate : 'N/A';
 
+    // Capture chats for this run
+    const runChats = (sessionData.events||[]).filter(e => e.event_type === 'chat').map(c => {
+      const stu = (sessionData.students||[]).find(s => s.student_id === c.student_id);
+      return { minute: c.minute, name: stu?.name || c.student_id, text: c.data?.text || '' };
+    });
+
     demoResults.push({
       label: test.label,
       question: test.question,
@@ -2333,6 +2339,7 @@ async function runDemoSuite() {
       acceptRate: actRate + '%',
       categories: cats,
       interventionsUsed: profSummary.interventions_used || {},
+      chats: runChats,
     });
 
     // Brief pause between tests
@@ -2484,6 +2491,24 @@ Literature Base:
   - Dell et al. (2015) UDL principles
 
 ================================================================================
+CHAT LOGS — All Test Runs
+================================================================================
+
+`;
+  demoResults.forEach((r, i) => {
+    report += `--- Test ${i+1}: ${r.label} (${r.scenario} / ${r.professor}) ---\n`;
+    if (r.chats && r.chats.length) {
+      r.chats.forEach(c => {
+        report += `  [Min ${c.minute}] ${c.name}: ${c.text}\n`;
+      });
+    } else {
+      report += `  (no chat messages)\n`;
+    }
+    report += `\n`;
+  });
+
+  report += `
+================================================================================
 SAGE — Simulated Agent-Generated Engagement
 IST 505 Group Project — CGU Spring 2026
 ================================================================================
@@ -2623,7 +2648,7 @@ function exportCurrentSession() {
   const chats = (sessionData.events||[]).filter(e => e.event_type === 'chat');
   if (chats.length) {
     md += `\n## Chat Log (${chats.length} messages)\n`;
-    chats.slice(-30).forEach(c => {
+    chats.forEach(c => {
       const stu = (sessionData.students||[]).find(s => s.student_id === c.student_id);
       md += `- **${c.minute}m** ${stu?.name || c.student_id}: ${c.data?.text || ''}\n`;
     });
