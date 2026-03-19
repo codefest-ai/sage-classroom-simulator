@@ -2125,17 +2125,17 @@ async function runGuidedTour() {
   await showCard(`
     <div style="font-size:20px;font-weight:700;margin-bottom:12px">Starting simulation.</div>
     <div style="font-size:14px;color:var(--text-dim)">${modeText}</div>
-    <div style="font-size:13px;color:var(--text-dim);margin-top:8px">Press <strong>spacebar</strong> or <strong>tap</strong> to pause/resume anytime.</div>
-  `, {
-    action: async () => {
-      document.getElementById('scenario-select').value = 'full_scenario';
-      document.getElementById('seed-input').value = Math.floor(Math.random() * 9999);
-      document.getElementById('professor-select').value = 'adaptive';
-      document.getElementById('jitter-check').checked = true;
-      setView('dashboard');
-      await runSmart();
-    }
-  });
+    <div style="font-size:13px;color:var(--text-dim);margin-top:8px">Tap to begin.</div>
+  `);
+
+  // Card dismissed — now start the simulation
+  document.getElementById('scenario-select').value = 'full_scenario';
+  document.getElementById('seed-input').value = Math.floor(Math.random() * 9999);
+  document.getElementById('professor-select').value = 'adaptive';
+  document.getElementById('jitter-check').checked = true;
+  setView('dashboard');
+  overlay.style.display = 'none';
+  await runSmart();
 
   let skipRequested = false;
   document.addEventListener('click', (e) => {
