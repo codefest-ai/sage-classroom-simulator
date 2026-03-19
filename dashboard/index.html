@@ -1943,6 +1943,12 @@ function runLive(configOverrides) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
+    }).then(resp => {
+      if (!resp.ok) {
+        // 409 = already running, or other server error
+        if (sseSource) { sseSource.close(); sseSource = null; }
+        reject(new Error(`Server returned ${resp.status}`));
+      }
     }).catch(err => {
       if (sseSource) { sseSource.close(); sseSource = null; }
       reject(err);
