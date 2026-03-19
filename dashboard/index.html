@@ -642,6 +642,12 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <option value="2000">Slow</option>
   </select>
   <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Guided demo + evaluation suite">▶ Demo Suite</button>
+  <button class="secondary" onclick="document.getElementById('ppt-upload').click()" title="Upload slides (.pptx or .txt outline)">📎 Slides</button>
+  <input type="file" id="ppt-upload" accept=".pptx,.txt,.md" style="display:none" onchange="handleSlideUpload(event)">
+</div>
+
+<!-- Content Timeline Bar -->
+<div id="content-bar" style="background:var(--surface);border-bottom:1px solid var(--border);padding:6px 24px;display:none;align-items:center;gap:2px;overflow-x:auto;position:sticky;top:96px;z-index:98">
 </div>
 
 <div class="grid">
@@ -1225,6 +1231,7 @@ function showMinute(min) {
   if (!sessionData || !sessionData.timeline[min - 1]) return;
   currentMinute = min;
   document.getElementById('minute-display').textContent = `Min: ${min}`;
+  renderContentBar(min);
 
   const frame = sessionData.timeline[min - 1];
 
@@ -2661,6 +2668,227 @@ function clearSimulation() {
   document.getElementById('run-btn').textContent = '▶ Run';
   document.getElementById('run-btn').disabled = false;
   setModeBadge('');
+}
+
+// ============================================================
+// CONTENT TIMELINE BAR
+// ============================================================
+
+const CONTENT_TIMELINES_LOCAL = {
+  sa_theory: [
+    {minute:1,type:"lecture",topic:"Intro: Endsley's SA Model"},{minute:5,type:"lecture",topic:"SA Level 1: Perception"},
+    {minute:10,type:"discussion",topic:"When did you miss the meaning?"},{minute:15,type:"lecture",topic:"SA Level 2: Comprehension"},
+    {minute:20,type:"lecture",topic:"SA Level 3: Projection"},{minute:25,type:"breakout",topic:"Design a 3-level SA dashboard"},
+    {minute:32,type:"presentation",topic:"Group dashboard designs"},{minute:38,type:"discussion",topic:"Data vs. simplicity trade-offs"},
+    {minute:42,type:"lecture",topic:"Cognitive Load Theory"},{minute:45,type:"wrapup",topic:"Takeaways + next week"},
+  ],
+  dsr_methods: [
+    {minute:1,type:"lecture",topic:"What is DSR?"},{minute:6,type:"lecture",topic:"DSR vs. Behavioral"},
+    {minute:12,type:"discussion",topic:"Is your problem DSR?"},{minute:17,type:"lecture",topic:"Artifact Types"},
+    {minute:22,type:"lecture",topic:"FEDS Evaluation"},{minute:27,type:"breakout",topic:"Sketch artifact + eval plan"},
+    {minute:34,type:"presentation",topic:"Share DSR problems"},{minute:40,type:"discussion",topic:"When is eval rigorous enough?"},
+    {minute:45,type:"wrapup",topic:"Next: group project scope"},
+  ],
+  data_ethics: [
+    {minute:1,type:"lecture",topic:"Algorithmic Bias"},{minute:8,type:"discussion",topic:"Witnessed bias?"},
+    {minute:13,type:"lecture",topic:"Fairness Metrics"},{minute:20,type:"lecture",topic:"Impossibility Theorem"},
+    {minute:25,type:"breakout",topic:"Hiring algorithm case"},{minute:33,type:"presentation",topic:"Group solutions"},
+    {minute:38,type:"discussion",topic:"Who's responsible?"},{minute:43,type:"lecture",topic:"EU AI Act"},
+    {minute:45,type:"wrapup",topic:"Your work + these issues"},
+  ],
+  hci_dashboards: [
+    {minute:1,type:"lecture",topic:"InfoVis Principles"},{minute:7,type:"lecture",topic:"Cognitive Load in Dashboards"},
+    {minute:12,type:"discussion",topic:"Worst dashboard ever?"},{minute:17,type:"lecture",topic:"Data-Ink Ratio"},
+    {minute:22,type:"lecture",topic:"Color Theory for Data"},{minute:27,type:"breakout",topic:"Redesign bad dashboards"},
+    {minute:35,type:"presentation",topic:"Before/after redesigns"},{minute:40,type:"discussion",topic:"When does simplification distort?"},
+    {minute:45,type:"wrapup",topic:"Next: user testing"},
+  ],
+  lecture_heavy: [
+    {minute:1,type:"lecture",topic:"Introduction"},{minute:8,type:"lecture",topic:"Core Concepts"},
+    {minute:16,type:"lecture",topic:"Advanced Concepts"},{minute:24,type:"lecture",topic:"Case Studies"},
+    {minute:32,type:"lecture",topic:"Implications"},{minute:40,type:"lecture",topic:"Summary"},
+    {minute:45,type:"wrapup",topic:"Questions?"},
+  ],
+  active_learning: [
+    {minute:1,type:"lecture",topic:"Today's Question"},{minute:5,type:"discussion",topic:"What do you already know?"},
+    {minute:10,type:"lecture",topic:"Concept #1"},{minute:15,type:"breakout",topic:"Apply concept #1"},
+    {minute:20,type:"presentation",topic:"Pairs share"},{minute:24,type:"lecture",topic:"Concept #2"},
+    {minute:29,type:"discussion",topic:"Edge cases?"},{minute:34,type:"breakout",topic:"Design with both concepts"},
+    {minute:40,type:"presentation",topic:"Group showcase"},{minute:44,type:"discussion",topic:"What surprised you?"},
+    {minute:45,type:"wrapup",topic:"One-sentence takeaway"},
+  ],
+};
+
+// Also store custom uploaded timeline
+let customContentTimeline = null;
+
+const CONTENT_TYPE_COLORS = {
+  lecture: '#3b82f6',
+  discussion: '#22c55e',
+  breakout: '#f59e0b',
+  presentation: '#8b5cf6',
+  wrapup: '#94a3b8',
+};
+
+function renderContentBar(minute) {
+  const bar = document.getElementById('content-bar');
+  const key = document.getElementById('content-select').value;
+  const timeline = key === 'custom' ? customContentTimeline : CONTENT_TIMELINES_LOCAL[key];
+  if (!timeline || !timeline.length) { bar.style.display = 'none'; return; }
+
+  const duration = parseInt(document.getElementById('duration-input').value) || 45;
+  bar.style.display = 'flex';
+  bar.innerHTML = '';
+
+  for (let i = 0; i < timeline.length; i++) {
+    const block = timeline[i];
+    const nextMin = i < timeline.length - 1 ? timeline[i + 1].minute : duration + 1;
+    const width = ((nextMin - block.minute) / duration) * 100;
+    const isActive = minute >= block.minute && minute < nextMin;
+
+    const el = document.createElement('div');
+    el.style.cssText = `flex:0 0 ${width}%;height:28px;background:${CONTENT_TYPE_COLORS[block.type] || '#475569'};border-radius:3px;display:flex;align-items:center;padding:0 6px;font-size:10px;font-weight:600;color:white;overflow:hidden;white-space:nowrap;opacity:${isActive ? '1' : '0.4'};transition:opacity 0.3s;cursor:default;border:${isActive ? '2px solid white' : '2px solid transparent'};`;
+    el.textContent = block.topic;
+    el.title = `${block.type.toUpperCase()} (min ${block.minute}): ${block.topic}`;
+    bar.appendChild(el);
+  }
+}
+
+// ============================================================
+// SLIDE UPLOAD → CONTENT TIMELINE
+// ============================================================
+
+async function handleSlideUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  let slides = [];
+
+  if (file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+    // Plain text: one slide per line
+    const text = await file.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    slides = lines.map(l => l.trim());
+  } else if (file.name.endsWith('.pptx')) {
+    // PPTX: unzip and extract slide titles from XML
+    slides = await parsePPTX(file);
+  }
+
+  if (!slides.length) { alert('No slides found.'); return; }
+
+  // Convert slides to content timeline
+  const duration = parseInt(document.getElementById('duration-input').value) || 45;
+  const minsPerSlide = Math.floor(duration / slides.length);
+  customContentTimeline = slides.map((title, i) => ({
+    minute: i * minsPerSlide + 1,
+    type: guessContentType(title),
+    topic: title,
+    complexity: 'medium',
+  }));
+
+  // Add custom option to dropdown
+  const select = document.getElementById('content-select');
+  let customOpt = select.querySelector('option[value="custom"]');
+  if (!customOpt) {
+    customOpt = document.createElement('option');
+    customOpt.value = 'custom';
+    select.appendChild(customOpt);
+  }
+  customOpt.textContent = `📎 ${file.name} (${slides.length} slides)`;
+  select.value = 'custom';
+  renderContentBar(0);
+}
+
+function guessContentType(title) {
+  const t = title.toLowerCase();
+  if (t.includes('discuss') || t.includes('question') || t.includes('share') || t.includes('reflect')) return 'discussion';
+  if (t.includes('breakout') || t.includes('group') || t.includes('activity') || t.includes('exercise')) return 'breakout';
+  if (t.includes('present') || t.includes('demo') || t.includes('showcase')) return 'presentation';
+  if (t.includes('wrap') || t.includes('summary') || t.includes('takeaway') || t.includes('conclusion')) return 'wrapup';
+  return 'lecture';
+}
+
+async function parsePPTX(file) {
+  // PPTX = ZIP containing XML slide files
+  try {
+    const zip = await file.arrayBuffer();
+    const entries = await unzipSlides(zip);
+    return entries;
+  } catch(e) {
+    // Fallback: treat as text
+    const text = await file.text();
+    return text.split('\n').filter(l => l.trim()).map(l => l.trim());
+  }
+}
+
+async function unzipSlides(buffer) {
+  // Minimal PPTX parser — extract slide titles from ppt/slides/slide*.xml
+  // Uses the browser's built-in DecompressionStream (no library needed)
+  const uint8 = new Uint8Array(buffer);
+  const titles = [];
+
+  // Find local file headers in ZIP
+  let offset = 0;
+  while (offset < uint8.length - 4) {
+    // ZIP local file header signature: 0x04034b50
+    if (uint8[offset] === 0x50 && uint8[offset+1] === 0x4b && uint8[offset+2] === 0x03 && uint8[offset+3] === 0x04) {
+      const fnameLen = uint8[offset + 26] | (uint8[offset + 27] << 8);
+      const extraLen = uint8[offset + 28] | (uint8[offset + 29] << 8);
+      const compMethod = uint8[offset + 8] | (uint8[offset + 9] << 8);
+      const compSize = uint8[offset + 18] | (uint8[offset + 19] << 8) | (uint8[offset + 20] << 16) | (uint8[offset + 21] << 24);
+      const fname = new TextDecoder().decode(uint8.slice(offset + 30, offset + 30 + fnameLen));
+      const dataStart = offset + 30 + fnameLen + extraLen;
+
+      if (fname.match(/ppt\/slides\/slide\d+\.xml$/)) {
+        let xmlBytes;
+        if (compMethod === 0) {
+          xmlBytes = uint8.slice(dataStart, dataStart + compSize);
+        } else {
+          // Deflate — use DecompressionStream
+          try {
+            const compressed = uint8.slice(dataStart, dataStart + compSize);
+            const ds = new DecompressionStream('raw');
+            const writer = ds.writable.getWriter();
+            writer.write(compressed);
+            writer.close();
+            const reader = ds.readable.getReader();
+            const chunks = [];
+            while (true) {
+              const {done, value} = await reader.read();
+              if (done) break;
+              chunks.push(value);
+            }
+            xmlBytes = new Uint8Array(chunks.reduce((acc, c) => acc + c.length, 0));
+            let pos = 0;
+            for (const c of chunks) { xmlBytes.set(c, pos); pos += c.length; }
+          } catch(e) {
+            offset = dataStart + compSize;
+            continue;
+          }
+        }
+
+        const xml = new TextDecoder().decode(xmlBytes);
+        // Extract text from <a:t> tags
+        const texts = [];
+        const regex = /<a:t>([^<]+)<\/a:t>/g;
+        let match;
+        while ((match = regex.exec(xml)) !== null) {
+          texts.push(match[1].trim());
+        }
+        if (texts.length) {
+          // First meaningful text is usually the slide title
+          const title = texts.find(t => t.length > 2) || texts[0];
+          titles.push(title);
+        }
+      }
+      offset = dataStart + compSize;
+    } else {
+      offset++;
+    }
+  }
+
+  // Sort by slide number
+  return titles;
 }
 
 // ============================================================
