@@ -213,17 +213,26 @@ class SimulationEngine:
                 self.use_llm = False
 
         # Room context for LLM agents — seed with professor opening
+        # Rotate topics so students don't always discuss SAGE itself
+        _topics = [
+            ("Today we're exploring situational awareness theory — how people perceive, comprehend, and project information in complex environments.", "What's an example from your own experience where situational awareness failed — where someone had the data but missed the meaning?"),
+            ("Let's discuss learning analytics and how institutions use data to understand student behavior.", "When you think about your own learning — what signals would actually tell an observer whether you're engaged or checked out?"),
+            ("Today's topic is design science research methodology — building artifacts that solve real problems and evaluating whether they work.", "What makes an artifact 'good enough' to evaluate? When do you stop building and start testing?"),
+            ("We're looking at cognitive load theory today — how the design of information systems affects what people can actually process.", "Think about a tool you use regularly. Where does it create unnecessary cognitive load, and where does it reduce it?"),
+            ("Let's explore human-computer interaction and dashboard design — how do you present complex data so people can act on it?", "What's the worst dashboard or data display you've ever seen, and what made it bad?"),
+        ]
+        _topic = _topics[random.randint(0, len(_topics) - 1)]
         self._room_context: List[Dict] = [
             {
                 "student_id": "PROF",
                 "name": "Professor",
-                "text": "Welcome everyone. Today we're going to discuss how technology can support instructors in understanding student engagement during live sessions.",
+                "text": f"Welcome everyone. {_topic[0]}",
                 "minute": 0,
             },
             {
                 "student_id": "PROF",
                 "name": "Professor",
-                "text": "Let's start with a question: what does engagement actually look like in an online or hybrid classroom? I'd love to hear your initial thoughts.",
+                "text": _topic[1],
                 "minute": 0,
             },
         ]
@@ -441,9 +450,11 @@ class SimulationEngine:
 
                 # LLM chat override — in LLM mode, give more students a chance
                 # The LLM decides who speaks via [SILENT] responses
+                # Higher base probability + confused students also speak up
+                is_confused = engagement < profile.confusion_threshold
+                chat_chance = 0.35 + (0.15 * engagement) + (0.15 if is_confused else 0)
                 llm_eligible = self.use_llm and llm_chat_count < 8 and (
-                    signals.chat_sent  # Template already decided yes
-                    or random.random() < 0.4 * engagement  # OR give engaged students extra chances
+                    signals.chat_sent or random.random() < chat_chance
                 )
                 if llm_eligible:
                     agent = self._student_agents.get(profile.student_id)
