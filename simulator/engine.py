@@ -61,6 +61,43 @@ INTERVENTION_TYPES = {
 
 
 # ============================================================
+# CLASS CONTENT TIMELINE
+# ============================================================
+
+DEFAULT_CONTENT_TIMELINE = [
+    {"minute": 1, "type": "lecture", "topic": "Introduction to Situational Awareness theory — Endsley's 3-level model", "complexity": "low"},
+    {"minute": 5, "type": "lecture", "topic": "SA Level 1: Perception — what data do we notice and what do we miss?", "complexity": "medium"},
+    {"minute": 10, "type": "discussion", "topic": "Share an example where you had the data but missed the meaning", "complexity": "low"},
+    {"minute": 15, "type": "lecture", "topic": "SA Level 2: Comprehension — pattern recognition and mental models", "complexity": "high"},
+    {"minute": 20, "type": "lecture", "topic": "SA Level 3: Projection — anticipating what happens next from current patterns", "complexity": "high"},
+    {"minute": 25, "type": "breakout", "topic": "In groups: design a dashboard that supports all 3 SA levels for a classroom instructor", "complexity": "medium"},
+    {"minute": 32, "type": "presentation", "topic": "Group presentations: share your dashboard designs", "complexity": "low"},
+    {"minute": 38, "type": "discussion", "topic": "What trade-offs did you make between showing more data vs. keeping it simple?",  "complexity": "medium"},
+    {"minute": 42, "type": "lecture", "topic": "Cognitive load theory — why more information can reduce SA", "complexity": "high"},
+    {"minute": 45, "type": "wrapup", "topic": "Key takeaways and preview of next week: evaluation methods", "complexity": "low"},
+]
+
+# How each content type modifies engagement per archetype tendency
+CONTENT_TYPE_MODIFIERS = {
+    "lecture":       {"engaged": 0.0, "builder": -0.15, "reflective": 0.05, "collaborative": -0.05, "withdrawn": -0.10},
+    "discussion":    {"engaged": 0.10, "builder": 0.05, "reflective": -0.05, "collaborative": 0.15, "withdrawn": -0.15},
+    "breakout":      {"engaged": 0.10, "builder": 0.15, "reflective": 0.0, "collaborative": 0.20, "withdrawn": -0.10},
+    "presentation":  {"engaged": 0.05, "builder": 0.0, "reflective": 0.10, "collaborative": 0.10, "withdrawn": -0.20},
+    "wrapup":        {"engaged": 0.0, "builder": 0.0, "reflective": 0.05, "collaborative": 0.0, "withdrawn": 0.0},
+}
+
+def get_content_at_minute(timeline, minute):
+    """Get the active content block for a given minute."""
+    current = None
+    for block in timeline:
+        if block["minute"] <= minute:
+            current = block
+        else:
+            break
+    return current
+
+
+# ============================================================
 # SCENARIOS
 # ============================================================
 
@@ -150,9 +187,11 @@ class SimulationEngine:
 
     def __init__(self, duration: int = 45, seed: Optional[int] = None,
                  scenario: str = "baseline", university: str = "",
-                 use_llm: bool = False, use_claude: bool = False):
+                 use_llm: bool = False, use_claude: bool = False,
+                 content_timeline: Optional[List[Dict]] = None):
         self.duration = duration
         self.scenario = SCENARIOS.get(scenario, SCENARIOS["baseline"])
+        self.content_timeline = content_timeline or DEFAULT_CONTENT_TIMELINE
         self.scorer = EngagementScorer()
         self.chat_analyzer = ChatAnalyzer()
         self.events: List[SimulationEvent] = []
@@ -411,6 +450,16 @@ class SimulationEngine:
                     self._apply_intervention(iv, minute)
                     active_intervention = iv.intervention_type
 
+            # Inject content transitions into room context
+            content_block = get_content_at_minute(self.content_timeline, minute)
+            if content_block and content_block.get("minute") == minute:
+                self._room_context.append({
+                    "student_id": "PROF",
+                    "name": "Professor",
+                    "text": f"[{content_block['type'].upper()}] {content_block['topic']}",
+                    "minute": minute,
+                })
+
             # Check for confusion spike
             confusion_active = False
             if overrides.get("confusion_spike_minute") and minute >= overrides["confusion_spike_minute"]:
@@ -448,35 +497,36 @@ class SimulationEngine:
 
                 signals = self._generate_signals(profile, minute, engagement, speak_override)
 
-                # LLM chat override — in LLM mode, give more students a chance
-                # The LLM decides who speaks via [SILENT] responses
-                # Higher base probability + confused students also speak up
-                is_confused = engagement < profile.confusion_threshold
-                chat_chance = 0.35 + (0.15 * engagement) + (0.15 if is_confused else 0)
+                # LLM combined call — agent decides BOTH engagement and chat
+                content_block = get_content_at_minute(self.content_timeline, minute)
                 llm_eligible = self.use_llm and llm_chat_count < 8 and (
-                    signals.chat_sent or random.random() < chat_chance
+                    signals.chat_sent or random.random() < 0.45
                 )
                 if llm_eligible:
                     agent = self._student_agents.get(profile.student_id)
                     if agent:
-                        is_confused = engagement < profile.confusion_threshold
-                        # Find most recent professor speech from room context or interventions
                         professor_speech = None
                         for ev in self.events:
                             if hasattr(ev, 'minute') and ev.minute == minute and ev.event_type == "intervention":
                                 professor_speech = ev.data.get("name", "")
-                        # Also check room context for professor messages
                         if not professor_speech:
                             prof_msgs = [m for m in self._room_context if m.get("student_id") == "PROF"]
                             if prof_msgs:
                                 professor_speech = prof_msgs[-1].get("text", "")
-                        llm_text = agent.generate_chat(
-                            engagement=engagement,
+
+                        result = agent.generate_state_and_chat(
+                            current_engagement=engagement,
                             room_context=self._room_context[-10:],
+                            content_block=content_block,
                             professor_action=professor_speech,
                             active_intervention=active_intervention,
-                            is_confused=is_confused,
+                            minutes_elapsed=minute,
                         )
+
+                        # LLM decides engagement — override the formula
+                        engagement = result["engagement"]
+                        llm_text = result["chat"]
+
                         if llm_text:
                             signals = SignalSnapshot(
                                 student_id=signals.student_id,

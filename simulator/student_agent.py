@@ -110,6 +110,102 @@ class StudentAgent:
         candidates.sort(key=lambda x: -x[1])
         self._affinity_peers = [c[0] for c in candidates[:3]]
 
+    def generate_state_and_chat(
+        self,
+        current_engagement: float,
+        room_context: List[Dict],
+        content_block: Optional[Dict] = None,
+        professor_action: Optional[str] = None,
+        active_intervention: Optional[str] = None,
+        minutes_elapsed: int = 0,
+    ) -> Dict:
+        """
+        Combined LLM call — agent decides BOTH engagement level and chat.
+        Returns {"engagement": float 0-1, "chat": str or None}
+        """
+        context_lines = [f"It is minute {minutes_elapsed} of a 45-minute class."]
+
+        # What's being taught right now
+        if content_block:
+            ctype = content_block.get("type", "lecture")
+            topic = content_block.get("topic", "")
+            complexity = content_block.get("complexity", "medium")
+            mins_in = minutes_elapsed - content_block.get("minute", 0)
+            type_desc = {
+                "lecture": f"The professor has been lecturing for {mins_in} minutes",
+                "discussion": "The class is in open discussion",
+                "breakout": "You're in a small breakout group",
+                "presentation": "Students are presenting their group work",
+                "wrapup": "The professor is wrapping up the session",
+            }
+            context_lines.append(f"{type_desc.get(ctype, ctype)} on: {topic}")
+            if complexity == "high":
+                context_lines.append("This material is complex and dense.")
+            elif complexity == "low":
+                context_lines.append("This material is straightforward.")
+
+        # Professor action
+        if professor_action:
+            context_lines.append(f"The professor just said: \"{professor_action}\"")
+        if active_intervention:
+            intervention_desc = {
+                "breakout": "The class just split into breakout rooms.",
+                "poll": "The professor just posted a poll question.",
+                "cold_call": "The professor is calling on students directly.",
+                "pace_change": "The professor just switched the activity format.",
+                "think_pair_share": "Think-pair-share: reflect, discuss with a partner, then share.",
+            }
+            context_lines.append(intervention_desc.get(active_intervention, f"Activity: {active_intervention}"))
+
+        # Room messages
+        if room_context:
+            context_lines.append("\nRecent chat:")
+            affinity_msgs = [m for m in room_context if m.get("student_id") in self._affinity_peers]
+            other_msgs = [m for m in room_context if m.get("student_id") not in self._affinity_peers]
+            shown = (affinity_msgs[-3:] + other_msgs[-2:])[-5:]
+            for msg in shown:
+                name = msg.get("name", "Someone")
+                text = msg.get("text", "")
+                if text:
+                    context_lines.append(f"  {name}: {text}")
+
+        context_lines.append(f"\nYour current engagement: {int(current_engagement * 100)}%")
+        context_lines.append("")
+        context_lines.append("Respond in this EXACT format (two lines):")
+        context_lines.append("ENGAGEMENT: [number 0-100]")
+        context_lines.append("CHAT: [your message or SILENT]")
+
+        user_prompt = "\n".join(context_lines)
+
+        response = self.llm.generate(
+            system_prompt=self._system_prompt,
+            user_prompt=user_prompt,
+            max_tokens=60,
+            temperature=0.85,
+        )
+
+        if response is None:
+            return {"engagement": current_engagement, "chat": None}
+
+        # Parse the two-line response
+        engagement = current_engagement
+        chat = None
+
+        for line in response.split("\n"):
+            line = line.strip()
+            if line.upper().startswith("ENGAGEMENT:"):
+                try:
+                    val = int(''.join(c for c in line.split(":", 1)[1] if c.isdigit()))
+                    engagement = max(0, min(100, val)) / 100.0
+                except (ValueError, IndexError):
+                    pass
+            elif line.upper().startswith("CHAT:"):
+                text = line.split(":", 1)[1].strip() if ":" in line else ""
+                if text and "[SILENT]" not in text.upper() and "SILENT" != text.upper().strip() and len(text) > 1:
+                    chat = text.strip('"').strip("'")
+
+        return {"engagement": engagement, "chat": chat}
+
     def generate_chat(
         self,
         engagement: float,
