@@ -2112,6 +2112,7 @@ async function runGuidedTour() {
       document.getElementById('professor-select').value = 'adaptive';
       document.getElementById('jitter-check').checked = true;
       runSimulation();
+      setModeBadge('rules');
       setView('dashboard');
     }
   });
