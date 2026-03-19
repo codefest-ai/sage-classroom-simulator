@@ -1845,7 +1845,9 @@ function setModeBadge(mode) {
 async function runSmart() {
   // Try server first — if it's running, use LLM mode
   try {
-    const resp = await fetch('/api/session', { signal: AbortSignal.timeout(1000) });
+    // Stop any previous sim first
+    await fetch('/api/stop', { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
+    const resp = await fetch('/api/session', { signal: AbortSignal.timeout(3000) });
     if (resp.ok) {
       setModeBadge('ai');
       runLive();
