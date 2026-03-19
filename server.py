@@ -449,8 +449,8 @@ class SAGEHandler(SimpleHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="SAGE v2 Live Server")
-    parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--host", type=str, default="localhost")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8080)))
+    parser.add_argument("--host", type=str, default="0.0.0.0" if os.environ.get("PORT") else "localhost")
     args = parser.parse_args()
 
     server = HTTPServer((args.host, args.port), SAGEHandler)

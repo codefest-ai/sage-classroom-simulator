@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sage-simulator
+    runtime: python
+    buildCommand: ""
+    startCommand: python3 server.py --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PORT
+        value: 10000
