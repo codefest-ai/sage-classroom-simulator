@@ -617,6 +617,16 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <option value="howard">Howard University</option>
   </select>
 
+  <label>Content:</label>
+  <select id="content-select">
+    <option value="sa_theory" selected>SA Theory</option>
+    <option value="dsr_methods">DSR Methods</option>
+    <option value="data_ethics">Data Ethics</option>
+    <option value="hci_dashboards">HCI & Dashboards</option>
+    <option value="lecture_heavy">Lecture Only (stress test)</option>
+    <option value="active_learning">Active Learning (best practice)</option>
+  </select>
+
   <button style="background:var(--accent);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" id="run-btn" onclick="runSmart()" title="Run simulation — uses AI students if server is running, otherwise rule-based">▶ Run</button>
   <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
   <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄</button>
@@ -1874,6 +1884,7 @@ async function runLive(configOverrides) {
     seed: parseInt(document.getElementById('seed-input').value) || 42,
     university: document.getElementById('university-select').value,
     professor_style: document.getElementById('professor-select').value,
+    content_timeline: document.getElementById('content-select').value,
     speed: 0.3,
     llm: true,
     ...configOverrides,

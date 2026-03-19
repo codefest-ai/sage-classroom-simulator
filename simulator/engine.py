@@ -64,18 +64,95 @@ INTERVENTION_TYPES = {
 # CLASS CONTENT TIMELINE
 # ============================================================
 
-DEFAULT_CONTENT_TIMELINE = [
-    {"minute": 1, "type": "lecture", "topic": "Introduction to Situational Awareness theory — Endsley's 3-level model", "complexity": "low"},
-    {"minute": 5, "type": "lecture", "topic": "SA Level 1: Perception — what data do we notice and what do we miss?", "complexity": "medium"},
-    {"minute": 10, "type": "discussion", "topic": "Share an example where you had the data but missed the meaning", "complexity": "low"},
-    {"minute": 15, "type": "lecture", "topic": "SA Level 2: Comprehension — pattern recognition and mental models", "complexity": "high"},
-    {"minute": 20, "type": "lecture", "topic": "SA Level 3: Projection — anticipating what happens next from current patterns", "complexity": "high"},
-    {"minute": 25, "type": "breakout", "topic": "In groups: design a dashboard that supports all 3 SA levels for a classroom instructor", "complexity": "medium"},
-    {"minute": 32, "type": "presentation", "topic": "Group presentations: share your dashboard designs", "complexity": "low"},
-    {"minute": 38, "type": "discussion", "topic": "What trade-offs did you make between showing more data vs. keeping it simple?",  "complexity": "medium"},
-    {"minute": 42, "type": "lecture", "topic": "Cognitive load theory — why more information can reduce SA", "complexity": "high"},
-    {"minute": 45, "type": "wrapup", "topic": "Key takeaways and preview of next week: evaluation methods", "complexity": "low"},
-]
+CONTENT_TIMELINES = {
+    "sa_theory": {
+        "name": "Situational Awareness Theory (IST 505)",
+        "timeline": [
+            {"minute": 1, "type": "lecture", "topic": "Introduction to Situational Awareness theory — Endsley's 3-level model", "complexity": "low"},
+            {"minute": 5, "type": "lecture", "topic": "SA Level 1: Perception — what data do we notice and what do we miss?", "complexity": "medium"},
+            {"minute": 10, "type": "discussion", "topic": "Share an example where you had the data but missed the meaning", "complexity": "low"},
+            {"minute": 15, "type": "lecture", "topic": "SA Level 2: Comprehension — pattern recognition and mental models", "complexity": "high"},
+            {"minute": 20, "type": "lecture", "topic": "SA Level 3: Projection — anticipating what happens next from current patterns", "complexity": "high"},
+            {"minute": 25, "type": "breakout", "topic": "In groups: design a dashboard that supports all 3 SA levels for a classroom instructor", "complexity": "medium"},
+            {"minute": 32, "type": "presentation", "topic": "Group presentations: share your dashboard designs", "complexity": "low"},
+            {"minute": 38, "type": "discussion", "topic": "What trade-offs did you make between showing more data vs. keeping it simple?", "complexity": "medium"},
+            {"minute": 42, "type": "lecture", "topic": "Cognitive load theory — why more information can reduce SA", "complexity": "high"},
+            {"minute": 45, "type": "wrapup", "topic": "Key takeaways and preview of next week: evaluation methods", "complexity": "low"},
+        ],
+    },
+    "dsr_methods": {
+        "name": "Design Science Research Methods (IST 505)",
+        "timeline": [
+            {"minute": 1, "type": "lecture", "topic": "What is Design Science Research? Hevner's 3-cycle model", "complexity": "low"},
+            {"minute": 6, "type": "lecture", "topic": "DSR vs. behavioral research — when do you build an artifact?", "complexity": "medium"},
+            {"minute": 12, "type": "discussion", "topic": "Think of a problem you've encountered. Is it a DSR problem or a behavioral one?", "complexity": "low"},
+            {"minute": 17, "type": "lecture", "topic": "Artifact types: constructs, models, methods, instantiations", "complexity": "high"},
+            {"minute": 22, "type": "lecture", "topic": "FEDS framework — formative vs. summative evaluation", "complexity": "high"},
+            {"minute": 27, "type": "breakout", "topic": "In pairs: define a DSR problem and sketch an artifact + evaluation plan", "complexity": "medium"},
+            {"minute": 34, "type": "presentation", "topic": "Share your DSR problem + artifact + evaluation approach", "complexity": "low"},
+            {"minute": 40, "type": "discussion", "topic": "What makes an evaluation 'rigorous enough'? When do you stop iterating?", "complexity": "medium"},
+            {"minute": 45, "type": "wrapup", "topic": "Next week: your group projects — scope and artifact definition due", "complexity": "low"},
+        ],
+    },
+    "data_ethics": {
+        "name": "Data Ethics & AI Governance",
+        "timeline": [
+            {"minute": 1, "type": "lecture", "topic": "Algorithmic bias: how training data encodes historical discrimination", "complexity": "medium"},
+            {"minute": 8, "type": "discussion", "topic": "Have you ever experienced or witnessed algorithmic bias? What happened?", "complexity": "low"},
+            {"minute": 13, "type": "lecture", "topic": "Fairness metrics: demographic parity, equalized odds, individual fairness", "complexity": "high"},
+            {"minute": 20, "type": "lecture", "topic": "The impossibility theorem — you can't satisfy all fairness criteria simultaneously", "complexity": "high"},
+            {"minute": 25, "type": "breakout", "topic": "Case study: a hiring algorithm rejects candidates from certain zip codes. What do you do?",  "complexity": "medium"},
+            {"minute": 33, "type": "presentation", "topic": "Group solutions to the hiring algorithm case", "complexity": "low"},
+            {"minute": 38, "type": "discussion", "topic": "Who should be responsible — the developer, the company, or the regulator?", "complexity": "medium"},
+            {"minute": 43, "type": "lecture", "topic": "EU AI Act and emerging governance frameworks", "complexity": "medium"},
+            {"minute": 45, "type": "wrapup", "topic": "Reflection: where does your own work intersect with these issues?", "complexity": "low"},
+        ],
+    },
+    "hci_dashboards": {
+        "name": "HCI & Dashboard Design",
+        "timeline": [
+            {"minute": 1, "type": "lecture", "topic": "Principles of information visualization — Tufte, Few, Munzner", "complexity": "low"},
+            {"minute": 7, "type": "lecture", "topic": "Cognitive load in dashboards — when more data means less understanding", "complexity": "medium"},
+            {"minute": 12, "type": "discussion", "topic": "Show the worst dashboard you've ever used. What made it bad?", "complexity": "low"},
+            {"minute": 17, "type": "lecture", "topic": "The data-ink ratio and principle of proportional ink", "complexity": "medium"},
+            {"minute": 22, "type": "lecture", "topic": "Color theory for data: sequential, diverging, categorical palettes", "complexity": "high"},
+            {"minute": 27, "type": "breakout", "topic": "Redesign the 'bad dashboard' examples using the principles discussed", "complexity": "medium"},
+            {"minute": 35, "type": "presentation", "topic": "Before/after dashboard redesigns — what changed and why", "complexity": "low"},
+            {"minute": 40, "type": "discussion", "topic": "When should a dashboard show less? When does simplification become distortion?", "complexity": "medium"},
+            {"minute": 45, "type": "wrapup", "topic": "Next week: user testing your dashboard prototypes", "complexity": "low"},
+        ],
+    },
+    "lecture_heavy": {
+        "name": "Pure Lecture (Stress Test)",
+        "timeline": [
+            {"minute": 1, "type": "lecture", "topic": "Introduction to the topic", "complexity": "low"},
+            {"minute": 8, "type": "lecture", "topic": "Core concepts and theoretical framework", "complexity": "medium"},
+            {"minute": 16, "type": "lecture", "topic": "Advanced concepts building on the framework", "complexity": "high"},
+            {"minute": 24, "type": "lecture", "topic": "Case studies and applications", "complexity": "high"},
+            {"minute": 32, "type": "lecture", "topic": "Implications and open questions", "complexity": "medium"},
+            {"minute": 40, "type": "lecture", "topic": "Summary and review", "complexity": "low"},
+            {"minute": 45, "type": "wrapup", "topic": "Questions?", "complexity": "low"},
+        ],
+    },
+    "active_learning": {
+        "name": "Active Learning (Best Practice)",
+        "timeline": [
+            {"minute": 1, "type": "lecture", "topic": "Brief framing: today's question and why it matters", "complexity": "low"},
+            {"minute": 5, "type": "discussion", "topic": "Quick round: what do you already know or assume about this topic?", "complexity": "low"},
+            {"minute": 10, "type": "lecture", "topic": "Key concept #1 with worked example", "complexity": "medium"},
+            {"minute": 15, "type": "breakout", "topic": "Apply concept #1 to a new scenario in pairs", "complexity": "medium"},
+            {"minute": 20, "type": "presentation", "topic": "Pairs share their solutions — quick 1-minute each", "complexity": "low"},
+            {"minute": 24, "type": "lecture", "topic": "Key concept #2 — builds on #1", "complexity": "high"},
+            {"minute": 29, "type": "discussion", "topic": "Where does concept #2 break down? What are the edge cases?", "complexity": "medium"},
+            {"minute": 34, "type": "breakout", "topic": "Groups: design something using both concepts", "complexity": "medium"},
+            {"minute": 40, "type": "presentation", "topic": "Group showcase + peer feedback", "complexity": "low"},
+            {"minute": 44, "type": "discussion", "topic": "What surprised you today? What's still unclear?", "complexity": "low"},
+            {"minute": 45, "type": "wrapup", "topic": "One-sentence takeaway from each student", "complexity": "low"},
+        ],
+    },
+}
+
+DEFAULT_CONTENT_TIMELINE = CONTENT_TIMELINES["sa_theory"]["timeline"]
 
 # How each content type modifies engagement per archetype tendency
 CONTENT_TYPE_MODIFIERS = {

@@ -32,7 +32,7 @@ if os.path.isfile(_env_path):
                 _k, _v = _line.split("=", 1)
                 os.environ.setdefault(_k.strip(), _v.strip())
 
-from simulator.engine import SimulationEngine, SCENARIOS
+from simulator.engine import SimulationEngine, SCENARIOS, CONTENT_TIMELINES
 from simulator.university_presets import list_presets, get_university_info
 
 
@@ -110,6 +110,8 @@ def run_simulation_live(state, config):
     use_claude = config.get("claude", False)
     professor_style = config.get("professor_style", "adaptive")
     speed = config.get("speed", 0.5)  # seconds between ticks
+    content_key = config.get("content_timeline", "sa_theory")
+    content_timeline = CONTENT_TIMELINES.get(content_key, {}).get("timeline")
 
     # Create engine
     engine = SimulationEngine(
@@ -119,6 +121,7 @@ def run_simulation_live(state, config):
         university=university,
         use_llm=use_llm,
         use_claude=use_claude,
+        content_timeline=content_timeline,
     )
     state.engine = engine
 
@@ -300,6 +303,12 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             for key in list_presets():
                 presets[key] = get_university_info(key)
             self._json_response(presets)
+
+        elif path == "/api/content-timelines":
+            self._json_response({
+                key: {"name": val["name"], "blocks": len(val["timeline"])}
+                for key, val in CONTENT_TIMELINES.items()
+            })
 
         elif path == "/api/history":
             self._json_response({
