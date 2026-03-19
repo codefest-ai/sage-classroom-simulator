@@ -78,13 +78,15 @@ class LLMProfessor:
         self,
         dashboard_state: Dict,
         minute: int,
+        content_block: Optional[Dict] = None,
     ) -> Optional[Dict]:
         """
-        Make a decision based on the dashboard state.
+        Make a decision based on the dashboard state + teaching plan.
 
         Args:
             dashboard_state: Same JSON the frontend renders
             minute: Current simulation minute
+            content_block: Current content block with optional instructor_note
 
         Returns:
             Decision dict or None
@@ -102,6 +104,15 @@ class LLMProfessor:
             f"  Active speakers: {dashboard_state.get('active_speakers', 0)}",
             f"  Speaking equity (Gini): {dashboard_state.get('speaking_gini', 0):.2f}",
         ]
+
+        # Teaching plan context
+        if content_block:
+            context_lines.append(f"\n  YOUR LESSON PLAN:")
+            context_lines.append(f"    Currently: {content_block.get('type', 'lecture').upper()} — {content_block.get('topic', '')}")
+            note = content_block.get("instructor_note")
+            if note:
+                context_lines.append(f"    Your notes: \"{note}\"")
+            context_lines.append(f"    Complexity: {content_block.get('complexity', 'medium')}")
 
         # Patterns
         patterns = dashboard_state.get("patterns", [])

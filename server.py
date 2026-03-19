@@ -196,9 +196,11 @@ def run_simulation_live(state, config):
             if prof and recs:
                 try:
                     if hasattr(prof, 'decide_from_dashboard'):
-                        # LLM professor
+                        # LLM professor — pass content block with instructor notes
                         dashboard_state = _build_dashboard_state(state)
-                        prof_action = prof.decide_from_dashboard(dashboard_state, frame["minute"])
+                        from simulator.engine import get_content_at_minute
+                        content_block = get_content_at_minute(engine.content_timeline, frame["minute"])
+                        prof_action = prof.decide_from_dashboard(dashboard_state, frame["minute"], content_block=content_block)
                     else:
                         # Rule-based professor
                         actions = prof.process_recommendations(recs, frame["minute"])
