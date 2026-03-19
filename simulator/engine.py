@@ -150,7 +150,7 @@ class SimulationEngine:
 
     def __init__(self, duration: int = 45, seed: Optional[int] = None,
                  scenario: str = "baseline", university: str = "",
-                 use_llm: bool = False):
+                 use_llm: bool = False, use_claude: bool = False):
         self.duration = duration
         self.scenario = SCENARIOS.get(scenario, SCENARIOS["baseline"])
         self.scorer = EngagementScorer()
@@ -204,7 +204,7 @@ class SimulationEngine:
             try:
                 from .llm_client import LLMClient
                 from .student_agent import StudentAgent
-                self._llm_client = LLMClient()
+                self._llm_client = LLMClient(use_claude=use_claude)
                 for p in self.profiles:
                     agent = StudentAgent(p, self._llm_client)
                     agent.set_affinity_peers(self.profiles)
@@ -212,8 +212,21 @@ class SimulationEngine:
             except ImportError:
                 self.use_llm = False
 
-        # Room context for LLM agents
-        self._room_context: List[Dict] = []
+        # Room context for LLM agents — seed with professor opening
+        self._room_context: List[Dict] = [
+            {
+                "student_id": "PROF",
+                "name": "Professor",
+                "text": "Welcome everyone. Today we're going to discuss how technology can support instructors in understanding student engagement during live sessions.",
+                "minute": 0,
+            },
+            {
+                "student_id": "PROF",
+                "name": "Professor",
+                "text": "Let's start with a question: what does engagement actually look like in an online or hybrid classroom? I'd love to hear your initial thoughts.",
+                "minute": 0,
+            },
+        ]
 
         # Load scenario interventions
         for iv in self.scenario.get("interventions", []):
@@ -426,15 +439,26 @@ class SimulationEngine:
 
                 signals = self._generate_signals(profile, minute, engagement, speak_override)
 
-                # LLM chat override (max 5 per tick for speed)
-                if self.use_llm and signals.chat_sent and llm_chat_count < 5:
+                # LLM chat override — in LLM mode, give more students a chance
+                # The LLM decides who speaks via [SILENT] responses
+                llm_eligible = self.use_llm and llm_chat_count < 8 and (
+                    signals.chat_sent  # Template already decided yes
+                    or random.random() < 0.4 * engagement  # OR give engaged students extra chances
+                )
+                if llm_eligible:
                     agent = self._student_agents.get(profile.student_id)
                     if agent:
                         is_confused = engagement < profile.confusion_threshold
+                        # Find most recent professor speech from room context or interventions
                         professor_speech = None
                         for ev in self.events:
                             if hasattr(ev, 'minute') and ev.minute == minute and ev.event_type == "intervention":
                                 professor_speech = ev.data.get("name", "")
+                        # Also check room context for professor messages
+                        if not professor_speech:
+                            prof_msgs = [m for m in self._room_context if m.get("student_id") == "PROF"]
+                            if prof_msgs:
+                                professor_speech = prof_msgs[-1].get("text", "")
                         llm_text = agent.generate_chat(
                             engagement=engagement,
                             room_context=self._room_context[-10:],

@@ -22,6 +22,16 @@ from urllib.parse import urlparse, parse_qs
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Load .env file if present (stdlib only — no dotenv dependency)
+_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+if os.path.isfile(_env_path):
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 from simulator.engine import SimulationEngine, SCENARIOS
 from simulator.university_presets import list_presets, get_university_info
 
@@ -97,6 +107,7 @@ def run_simulation_live(state, config):
     seed = config.get("seed", 42)
     university = config.get("university", "cgu")
     use_llm = config.get("llm", False)
+    use_claude = config.get("claude", False)
     professor_style = config.get("professor_style", "adaptive")
     speed = config.get("speed", 0.5)  # seconds between ticks
 
@@ -107,6 +118,7 @@ def run_simulation_live(state, config):
         scenario=scenario,
         university=university,
         use_llm=use_llm,
+        use_claude=use_claude,
     )
     state.engine = engine
 
@@ -166,6 +178,9 @@ def run_simulation_live(state, config):
 
             # Collect events for this minute
             minute_events = [e for e in engine.events if hasattr(e, 'minute') and e.minute == frame["minute"]]
+            # Also store serialized events in state
+            for e in minute_events:
+                state.events.append({"minute": e.minute, "event_type": e.event_type, "student_id": e.student_id, "data": e.data})
 
             # Get recommendations
             recs = engine.scorer.get_recommendations(engine._last_class_snapshot) if hasattr(engine, '_last_class_snapshot') and engine._last_class_snapshot else []
