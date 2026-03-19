@@ -635,6 +635,7 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 
   <span id="minute-display" style="margin-left:auto;font-weight:700;font-size:14px;min-width:70px">Min: --</span>
   <span id="mode-badge" style="font-size:11px;padding:3px 8px;border-radius:10px;font-weight:600;background:var(--surface2);color:var(--text-dim)"></span>
+  <button class="secondary" id="voice-btn" onclick="toggleVoice()" title="Read student chat aloud">🔇</button>
   <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
   <select id="speed-select">
     <option value="500">Fast</option>
@@ -1232,6 +1233,7 @@ function showMinute(min) {
   currentMinute = min;
   document.getElementById('minute-display').textContent = `Min: ${min}`;
   renderContentBar(min);
+  speakMinuteChats(min);
 
   const frame = sessionData.timeline[min - 1];
 
@@ -2693,7 +2695,78 @@ function clearSimulation() {
   document.getElementById('run-btn').textContent = '▶ Run';
   document.getElementById('run-btn').disabled = false;
   setModeBadge('');
+  lastSpokenMinute = -1;
+  speechSynthesis.cancel();
 }
+
+// ============================================================
+// TEXT-TO-SPEECH ENGINE
+// ============================================================
+
+let voiceEnabled = false;
+let lastSpokenMinute = -1;
+const studentVoiceMap = {}; // student_id → {pitch, rate, voiceIndex}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  const btn = document.getElementById('voice-btn');
+  btn.textContent = voiceEnabled ? '🔊' : '🔇';
+  if (!voiceEnabled) speechSynthesis.cancel();
+}
+
+function getStudentVoice(studentId, name) {
+  if (studentVoiceMap[studentId]) return studentVoiceMap[studentId];
+  // Generate consistent voice params from student ID
+  const hash = studentId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  const voiceIndex = hash % Math.max(1, voices.length);
+  studentVoiceMap[studentId] = {
+    pitch: 0.8 + (hash % 5) * 0.1,    // 0.8 – 1.2
+    rate: 0.9 + (hash % 3) * 0.05,     // 0.9 – 1.0
+    voiceIndex,
+    voice: voices[voiceIndex] || null,
+  };
+  return studentVoiceMap[studentId];
+}
+
+function speakChat(studentId, name, text) {
+  if (!voiceEnabled || !text) return;
+  const params = getStudentVoice(studentId, name);
+  const utter = new SpeechSynthesisUtterance(`${name.split(' ')[0]} says: ${text}`);
+  utter.pitch = params.pitch;
+  utter.rate = params.rate;
+  if (params.voice) utter.voice = params.voice;
+  utter.volume = 0.8;
+  speechSynthesis.speak(utter);
+}
+
+function speakProfessor(text) {
+  if (!voiceEnabled || !text) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.pitch = 0.7;
+  utter.rate = 0.85;
+  utter.volume = 1.0;
+  const voices = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  // Pick a deeper voice if available
+  const deep = voices.find(v => v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('alex'));
+  if (deep) utter.voice = deep;
+  speechSynthesis.speak(utter);
+}
+
+function speakMinuteChats(minute) {
+  if (!voiceEnabled || minute <= lastSpokenMinute) return;
+  lastSpokenMinute = minute;
+  const chats = (sessionData?.events || []).filter(e => e.event_type === 'chat' && e.minute === minute);
+  chats.forEach((c, i) => {
+    const stu = (sessionData?.students || []).find(s => s.student_id === c.student_id);
+    const name = stu?.name || c.student_id;
+    // Stagger slightly so voices don't overlap completely
+    setTimeout(() => speakChat(c.student_id, name, c.data?.text), i * 1500);
+  });
+}
+
+// Load voices (some browsers need this)
+speechSynthesis.onvoiceschanged = () => {};
 
 // ============================================================
 // CONTENT TIMELINE BAR
