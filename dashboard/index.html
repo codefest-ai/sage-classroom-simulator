@@ -630,8 +630,6 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   <button style="background:var(--accent);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" id="run-btn" onclick="runSmart()" title="Run simulation — uses AI students if server is running, otherwise rule-based">▶ Run</button>
   <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
   <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄</button>
-  <button class="secondary" onclick="document.getElementById('zoom-csv-input').click()" title="Import Zoom meeting analytics CSV">📥 Zoom</button>
-  <input type="file" id="zoom-csv-input" accept=".csv" style="display:none" onchange="importZoomCSV(event)">
 
   <span id="minute-display" style="margin-left:auto;font-weight:700;font-size:14px;min-width:70px">Min: --</span>
   <span id="mode-badge" style="font-size:11px;padding:3px 8px;border-radius:10px;font-weight:600;background:var(--surface2);color:var(--text-dim)"></span>
