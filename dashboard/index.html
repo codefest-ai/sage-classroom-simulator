@@ -1842,107 +1842,123 @@ function setModeBadge(mode) {
   }
 }
 
-async function runSmart() {
-  // Try server first — if it's running, use LLM mode
-  try {
+async function runSmart(configOverrides) {
+  const serverUp = await isServerAvailable();
+  if (serverUp) {
     // Stop any previous sim first
-    await fetch('/api/stop', { method: 'POST', signal: AbortSignal.timeout(2000) }).catch(() => {});
-    const resp = await fetch('/api/session', { signal: AbortSignal.timeout(3000) });
-    if (resp.ok) {
-      setModeBadge('ai');
-      runLive();
-      return;
+    await fetch('/api/stop', { method: 'POST' }).catch(() => {});
+    setModeBadge('ai');
+    try {
+      await runLive(configOverrides);
+    } catch(e) {
+      // Server failed mid-run — fall back
+      setModeBadge('rules');
+      runSimulation();
     }
-  } catch(e) {}
-  // Server not running — fall back to browser-only
-  setModeBadge('rules');
-  runSimulation();
+  } else {
+    setModeBadge('rules');
+    runSimulation();
+  }
 }
 
-function runLive() {
+function runLive(configOverrides) {
   const config = {
     duration: parseInt(document.getElementById('duration-input').value) || 45,
     scenario: document.getElementById('scenario-select').value,
     seed: parseInt(document.getElementById('seed-input').value) || 42,
     university: document.getElementById('university-select').value,
     professor_style: document.getElementById('professor-select').value,
-    speed: 0.5,
+    speed: 0.3,
     llm: true,
+    ...configOverrides,
   };
 
-  // Connect to SSE stream
-  if (sseSource) sseSource.close();
-  sseSource = new EventSource('/api/stream');
+  return new Promise((resolve, reject) => {
+    // Connect to SSE stream
+    if (sseSource) sseSource.close();
+    sseSource = new EventSource('/api/stream');
 
-  sseSource.addEventListener('init', (e) => {
-    const data = JSON.parse(e.data);
-    if (data.frames && data.frames.length > 0) {
-      // Reconnect to existing session
+    sseSource.addEventListener('init', (e) => {
+      const data = JSON.parse(e.data);
+      if (data.frames && data.frames.length > 0) {
+        sessionData = {
+          metadata: data.metadata,
+          students: data.students,
+          timeline: data.frames,
+          events: [],
+          recommendations: [],
+          professor: null,
+        };
+        const dur = data.metadata?.duration_minutes || data.frames.length;
+        renderAll(dur);
+        showMinute(data.frames.length);
+      }
+    });
+
+    sseSource.addEventListener('session_start', (e) => {
+      const data = JSON.parse(e.data);
       sessionData = {
         metadata: data.metadata,
         students: data.students,
-        timeline: data.frames,
+        timeline: [],
         events: [],
         recommendations: [],
         professor: null,
       };
-      const dur = data.metadata?.duration_minutes || data.frames.length;
+      currentMinute = 0;
+      document.getElementById('run-btn').textContent = 'Running...';
+      document.getElementById('run-btn').disabled = true;
+    });
+
+    sseSource.addEventListener('frame', (e) => {
+      const data = JSON.parse(e.data);
+      sessionData.timeline.push(data.frame);
+      if (data.events) sessionData.events.push(...data.events);
+      if (data.recommendations) sessionData.recommendations.push(...data.recommendations);
+      if (data.professor_action) {
+        if (!sessionData.professor) sessionData.professor = { actions: [], summary: {} };
+        sessionData.professor.actions.push(data.professor_action);
+      }
+      const dur = sessionData.metadata?.duration_minutes || sessionData.timeline.length;
       renderAll(dur);
-      showMinute(data.frames.length);
-    }
-  });
+      showMinute(data.frame.minute);
+    });
 
-  sseSource.addEventListener('session_start', (e) => {
-    const data = JSON.parse(e.data);
-    sessionData = {
-      metadata: data.metadata,
-      students: data.students,
-      timeline: [],
-      events: [],
-      recommendations: [],
-      professor: null,
+    sseSource.addEventListener('session_end', (e) => {
+      document.getElementById('run-btn').textContent = '▶ Run';
+      document.getElementById('run-btn').disabled = false;
+      if (sseSource) { sseSource.close(); sseSource = null; }
+      resolve();
+    });
+
+    sseSource.onerror = () => {
+      document.getElementById('run-btn').textContent = '▶ Run';
+      document.getElementById('run-btn').disabled = false;
+      if (sseSource) { sseSource.close(); sseSource = null; }
+      reject(new Error('SSE connection failed'));
     };
-    currentMinute = 0;
-    document.getElementById('run-btn').textContent = 'Running...';
-    document.getElementById('run-btn').disabled = true;
-  });
 
-  sseSource.addEventListener('frame', (e) => {
-    const data = JSON.parse(e.data);
-    sessionData.timeline.push(data.frame);
-    if (data.events) sessionData.events.push(...data.events);
-    if (data.recommendations) sessionData.recommendations.push(...data.recommendations);
-    if (data.professor_action) {
-      if (!sessionData.professor) sessionData.professor = { actions: [], summary: {} };
-      sessionData.professor.actions.push(data.professor_action);
-    }
-    const dur = sessionData.metadata?.duration_minutes || sessionData.timeline.length;
-    renderAll(dur);
-    showMinute(data.frame.minute);
+    // Start simulation via API
+    fetch('/api/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    }).catch(err => {
+      if (sseSource) { sseSource.close(); sseSource = null; }
+      reject(err);
+    });
   });
+}
 
-  sseSource.addEventListener('session_end', (e) => {
-    document.getElementById('run-btn').textContent = '▶ Run';
-    document.getElementById('run-btn').disabled = false;
-    if (sseSource) { sseSource.close(); sseSource = null; }
-  });
-
-  sseSource.onerror = () => {
-    document.getElementById('run-btn').textContent = '▶ Run';
-    document.getElementById('run-btn').disabled = false;
-  };
-
-  // Start simulation via API
-  fetch('/api/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config),
-  }).catch(err => {
-    // Server failed — fall back to browser-only mode silently
-    if (sseSource) { sseSource.close(); sseSource = null; }
-    setModeBadge('rules');
-    runSimulation();
-  });
+// Whether server is available (cached after first check)
+let _serverAvailable = null;
+async function isServerAvailable() {
+  if (_serverAvailable !== null) return _serverAvailable;
+  try {
+    const resp = await fetch('/api/session', { signal: AbortSignal.timeout(2000) });
+    _serverAvailable = resp.ok;
+  } catch(e) { _serverAvailable = false; }
+  return _serverAvailable;
 }
 
 // ============================================================
@@ -2102,18 +2118,22 @@ async function runGuidedTour() {
   `);
 
   // ---- RUN FIRST SIMULATION ----
+  const serverUp = await isServerAvailable();
+  const modeText = serverUp
+    ? 'AI students will generate real conversation. This takes ~2-3 minutes.'
+    : 'Running with rule-based students (start server for AI mode).';
   await showCard(`
     <div style="font-size:20px;font-weight:700;margin-bottom:12px">Starting simulation.</div>
-    <div style="font-size:14px;color:var(--text-dim)">Press <strong>spacebar</strong> or <strong>tap</strong> to pause/resume anytime.</div>
+    <div style="font-size:14px;color:var(--text-dim)">${modeText}</div>
+    <div style="font-size:13px;color:var(--text-dim);margin-top:8px">Press <strong>spacebar</strong> or <strong>tap</strong> to pause/resume anytime.</div>
   `, {
-    action: () => {
+    action: async () => {
       document.getElementById('scenario-select').value = 'full_scenario';
       document.getElementById('seed-input').value = Math.floor(Math.random() * 9999);
       document.getElementById('professor-select').value = 'adaptive';
       document.getElementById('jitter-check').checked = true;
-      runSimulation();
-      setModeBadge('rules');
       setView('dashboard');
+      await runSmart();
     }
   });
 
@@ -2269,8 +2289,8 @@ async function runDemoSuite() {
     document.getElementById('seed-input').value = test.seed;
     document.getElementById('professor-select').value = test.professor;
 
-    // Run simulation silently — no visual playback
-    runSimulation();
+    // Run simulation — AI if server available, otherwise rule-based
+    await runSmart();
     const duration = parseInt(document.getElementById('duration-input').value) || 45;
     showMinute(duration); // Jump to end
 
