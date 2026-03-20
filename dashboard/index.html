@@ -720,7 +720,21 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     </div>
   </div>
 
-  <!-- Row 4: Professor Actions (if closed-loop) -->
+  <!-- Row 4: Live Instructor Toolbar -->
+  <div class="panel full-width" id="instructor-toolbar" style="display:none;background:linear-gradient(135deg,var(--surface),var(--surface2));border:2px solid var(--accent)">
+    <h2 style="color:var(--accent);font-size:14px;margin-bottom:10px">Instructor Controls</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button onclick="fireIntervention('breakout')" style="background:var(--green);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">🔀 Breakout Rooms</button>
+      <button onclick="fireIntervention('poll')" style="background:var(--yellow);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">📊 Quick Poll</button>
+      <button onclick="fireIntervention('think_pair_share')" style="background:var(--purple);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">💬 Think-Pair-Share</button>
+      <button onclick="fireIntervention('pace_change')" style="background:var(--accent);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">⚡ Change Pace</button>
+      <button onclick="fireIntervention('cold_call')" style="background:var(--red);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">🎯 Cold Call</button>
+      <button onclick="fireIntervention('clarification')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">❓ Clarification Pause</button>
+    </div>
+    <div id="intervention-log" style="font-size:11px;color:var(--text-dim);max-height:60px;overflow-y:auto"></div>
+  </div>
+
+  <!-- Row 5: Professor Actions (if closed-loop) -->
   <div class="panel full-width" id="professor-panel" style="display:none">
     <h2 id="professor-title">Simulated Professor Actions</h2>
     <div id="professor-summary" style="margin-bottom:12px"></div>
@@ -1232,6 +1246,7 @@ function showMinute(min) {
   document.getElementById('minute-display').textContent = `Min: ${min}`;
   renderContentBar(min);
   speakMinuteChats(min);
+  updateInstructorToolbar();
 
   const frame = sessionData.timeline[min - 1];
 
@@ -2695,6 +2710,46 @@ function clearSimulation() {
   setModeBadge('');
   lastSpokenMinute = -1;
   speechSynthesis.cancel();
+}
+
+// ============================================================
+// LIVE INSTRUCTOR CONTROLS
+// ============================================================
+
+async function fireIntervention(type) {
+  try {
+    const resp = await fetch('/api/intervention', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type }),
+    });
+    const data = await resp.json();
+    const log = document.getElementById('intervention-log');
+    if (data.status === 'intervention_scheduled') {
+      log.innerHTML = `<div>✓ ${type.replace(/_/g,' ')} scheduled for minute ${data.minute}</div>` + log.innerHTML;
+    } else {
+      log.innerHTML = `<div style="color:var(--red)">✗ ${data.error || 'Failed'}</div>` + log.innerHTML;
+    }
+  } catch(e) {
+    // No server — apply to in-browser simulation
+    if (sessionData && sessionData.timeline) {
+      const min = currentMinute + 1;
+      const log = document.getElementById('intervention-log');
+      log.innerHTML = `<div>✓ ${type.replace(/_/g,' ')} applied at minute ${min} (browser mode)</div>` + log.innerHTML;
+    }
+  }
+}
+
+// Show instructor toolbar when simulation is running
+function updateInstructorToolbar() {
+  const toolbar = document.getElementById('instructor-toolbar');
+  const profSelect = document.getElementById('professor-select');
+  // Show when professor is "none" (manual mode) and simulation has data
+  if (profSelect.value === 'none' && sessionData && sessionData.timeline.length > 0) {
+    toolbar.style.display = 'block';
+  } else {
+    toolbar.style.display = 'none';
+  }
 }
 
 // ============================================================
