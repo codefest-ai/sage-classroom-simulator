@@ -34,6 +34,7 @@ if os.path.isfile(_env_path):
 
 from simulator.engine import SimulationEngine, SCENARIOS, CONTENT_TIMELINES
 from simulator.university_presets import list_presets, get_university_info
+from simulator.zoom_adapter import ZoomWebhookHandler
 
 
 # ============================================================
@@ -91,6 +92,7 @@ class SessionState:
 
 
 STATE = SessionState()
+ZOOM = ZoomWebhookHandler(secret_token=os.environ.get("ZOOM_WEBHOOK_SECRET", ""))
 
 
 # ============================================================
@@ -320,6 +322,21 @@ class SAGEHandler(SimpleHTTPRequestHandler):
                 "professor_actions": STATE.professor_actions,
             })
 
+        elif path == "/api/zoom/state":
+            # Live Zoom meeting state as dashboard frame
+            meeting = ZOOM.get_active_meeting()
+            if meeting:
+                self._json_response(meeting.to_dashboard_frame())
+            else:
+                self._json_response({"error": "No active Zoom meeting"}, status=404)
+
+        elif path == "/api/zoom/history":
+            meeting = ZOOM.get_active_meeting()
+            if meeting:
+                self._json_response(ZOOM.get_meeting_history(meeting.meeting_id))
+            else:
+                self._json_response({"error": "No active Zoom meeting"}, status=404)
+
         elif path.startswith("/dashboard/"):
             # Serve static dashboard files
             rel_path = path.lstrip("/")
@@ -349,6 +366,14 @@ class SAGEHandler(SimpleHTTPRequestHandler):
 
         elif path == "/api/intervention":
             self._handle_intervention(data)
+
+        elif path == "/api/zoom/webhook":
+            # Zoom sends webhook events here
+            result = ZOOM.handle_event(data)
+            if result:
+                self._json_response(result)
+            else:
+                self._json_response({"status": "ok"})
 
         else:
             self.send_error(404, "Not found")

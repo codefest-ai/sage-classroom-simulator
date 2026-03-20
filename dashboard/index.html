@@ -628,6 +628,7 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   </select>
 
   <button style="background:var(--accent);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" id="run-btn" onclick="runSmart()" title="Run simulation — uses AI students if server is running, otherwise rule-based">▶ Run</button>
+  <button style="background:var(--green);border:none;color:#000;font-weight:600;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px" onclick="startZoomLive()" title="Connect to live Zoom meeting">📡 Live</button>
   <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
   <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄</button>
 
@@ -2710,6 +2711,88 @@ function clearSimulation() {
   setModeBadge('');
   lastSpokenMinute = -1;
   speechSynthesis.cancel();
+}
+
+// ============================================================
+// ZOOM LIVE MODE
+// ============================================================
+
+let zoomPolling = null;
+
+async function startZoomLive() {
+  // Check if server has an active Zoom meeting
+  try {
+    const resp = await fetch('/api/zoom/state');
+    if (!resp.ok) {
+      alert('No active Zoom meeting detected. Start a Zoom meeting and ensure webhooks are configured.');
+      return;
+    }
+  } catch(e) {
+    alert('Server not running. Start with: python3 server.py');
+    return;
+  }
+
+  setModeBadge('');
+  const badge = document.getElementById('mode-badge');
+  badge.textContent = '📡 LIVE';
+  badge.style.background = 'var(--green)';
+  badge.style.color = '#000';
+
+  document.getElementById('run-btn').disabled = true;
+
+  // Poll Zoom state every 3 seconds
+  if (zoomPolling) clearInterval(zoomPolling);
+  zoomPolling = setInterval(async () => {
+    try {
+      const [stateResp, historyResp] = await Promise.all([
+        fetch('/api/zoom/state'),
+        fetch('/api/zoom/history'),
+      ]);
+
+      if (!stateResp.ok) {
+        // Meeting ended
+        clearInterval(zoomPolling);
+        zoomPolling = null;
+        badge.textContent = 'ENDED';
+        badge.style.background = 'var(--red)';
+        badge.style.color = 'white';
+        document.getElementById('run-btn').disabled = false;
+        return;
+      }
+
+      const frame = await stateResp.json();
+      const history = await historyResp.json();
+
+      // Build sessionData from Zoom state
+      sessionData = {
+        metadata: { scenario: 'zoom_live', university: 'live', duration_minutes: frame.minute + 10 },
+        students: (frame.students || []).map(s => ({
+          student_id: s.student_id,
+          name: s.name,
+          engagement_baseline: 'medium',
+          demographic: {},
+        })),
+        timeline: sessionData?.timeline || [],
+        events: history.events || [],
+        recommendations: sessionData?.recommendations || [],
+        professor: null,
+      };
+
+      // Add frame to timeline if new minute
+      if (!sessionData.timeline.length || sessionData.timeline[sessionData.timeline.length - 1].minute < frame.minute) {
+        sessionData.timeline.push(frame);
+      } else {
+        sessionData.timeline[sessionData.timeline.length - 1] = frame;
+      }
+
+      const dur = frame.minute + 10;
+      renderAll(dur);
+      showMinute(frame.minute);
+
+    } catch(e) {
+      // Network glitch — keep trying
+    }
+  }, 3000);
 }
 
 // ============================================================
