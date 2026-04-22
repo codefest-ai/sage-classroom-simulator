@@ -157,6 +157,23 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   margin-bottom: 10px;
   line-height: 1.45;
 }
+.proxy-caveat {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  background: rgba(139, 92, 246, 0.10);
+  border-left: 2px solid rgba(139, 92, 246, 0.55);
+  border-radius: 3px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+}
+.proxy-caveat strong {
+  color: var(--text);
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
 .live-debug-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1226,6 +1243,12 @@ body.mode-manual .chat-log { max-height: 260px; }
   <div class="panel primary-panel" id="recommendation-panel">
     <h2 id="recommendation-panel-title">Instructional Recommendations</h2>
     <div id="recommendation-helper" class="panel-helper"></div>
+    <div id="rec-proxy-caveat" class="proxy-caveat">
+      <strong>Proxy signal, not engagement truth.</strong>
+      These advisory prompts reflect observable participation (speaking, chat, polls, reactions).
+      Silence may mean focus; chat volume may mean skimming.
+      The instructor interprets and decides.
+    </div>
     <div class="rec-list" id="rec-list">
       <div class="loading">No recommendations yet</div>
     </div>
@@ -1490,10 +1513,41 @@ function formatPatternLabel(patternType) {
   return patternType.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
 }
 
+// Map scorer-detected patterns to a human-readable signal breakdown so every
+// recommendation card visibly answers "what observable signal triggered this?"
+// Mirrors the detection rules in simulator/scoring.py; update both together.
+function describeTriggeringSignal(evidence) {
+  if (!evidence) return '';
+  const type = evidence.type;
+  const v = evidence.value;
+  const asPct = (val) => (typeof val === 'number' ? `${(val * 100).toFixed(0)}%` : val);
+  const asFixed = (val, d=2) => (typeof val === 'number' ? val.toFixed(d) : val);
+  switch (type) {
+    case 'energy_decay':
+      return `Mean observable participation dropped ${asPct(v)} since session start (threshold: 10%).`;
+    case 'equity_imbalance':
+      return `Speaking Gini = ${asFixed(v)} (target < 0.50 indicates balanced voice distribution).`;
+    case 'confusion_cluster':
+      return `${v} student${v === 1 ? '' : 's'} flagged possible confusion tokens in chat.`;
+    case 'silent_majority':
+      return `${asPct(v)} of the class has no contributing signals (no speaking, chat, polls, or reactions).`;
+    case 'fade_cascade':
+      return `${v} student${v === 1 ? '' : 's'} moved to low observable participation since the previous minute.`;
+    default:
+      return '';
+  }
+}
+
 function getRecommendationSignalText(rec) {
   const evidence = rec?.evidence;
   if (!evidence) return '';
   const patternLabel = formatPatternLabel(evidence.type);
+  const triggered = describeTriggeringSignal(evidence);
+  if (triggered) {
+    return `Triggered by ${patternLabel.toLowerCase()} — ${triggered}`;
+  }
+  // Fallback for unknown pattern types: surface whatever message/value the
+  // scorer attached so the card is never opaque.
   const base = evidence.message || '';
   if (evidence.value === undefined || evidence.value === null) {
     return `${patternLabel}: ${base}`.trim();
