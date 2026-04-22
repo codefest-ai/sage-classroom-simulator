@@ -891,6 +891,20 @@ body.mode-manual .chat-log { max-height: 260px; }
 .zoom-tile.camera-off .zt-name { z-index: 1; }
 .zoom-tile.camera-off .zt-status { z-index: 1; }
 .zoom-tile.camera-off .zt-engagement { z-index: 1; }
+/* Camera status unknown — distinct from off. Shown when no camera signal
+   has been observed. Never used as a scored participation signal. */
+.zoom-tile.camera-unknown .avatar { background: var(--surface2) !important; opacity: 0.75; }
+.zoom-tile.camera-unknown::after {
+  content: 'camera: no signal';
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+  z-index: 1;
+  pointer-events: none;
+}
 .zoom-tile .zt-bubble {
   position: absolute;
   top: 8px;

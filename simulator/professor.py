@@ -107,6 +107,11 @@ PROFESSOR_STYLES = {
     ),
 }
 
+RECOMMENDATION_ACTION_MAP = {
+    "equity_intervention": "think_pair_share",
+    "activation": "poll",
+}
+
 
 @dataclass
 class ProfessorAction:
@@ -116,6 +121,7 @@ class ProfessorAction:
     response_category: str  # ignore, acknowledge, accept, modify, reject
     intervention_type: Optional[str]
     rationale: str
+    spoken_text: Optional[str]
     delay_minutes: int
 
 
@@ -181,6 +187,7 @@ class SimulatedProfessor:
                 response_category=category,
                 intervention_type=intervention_type,
                 rationale=rationale,
+                spoken_text=self._generate_spoken_text(category, intervention_type, rec),
                 delay_minutes=delay,
             )
 
@@ -212,6 +219,7 @@ class SimulatedProfessor:
                 response_category="self_initiated",
                 intervention_type=intervention,
                 rationale=f"Self-initiated: noticed low engagement ({class_engagement:.2f}), trying {intervention}",
+                spoken_text=self._generate_spoken_text("self_initiated", intervention, None),
                 delay_minutes=0,
             )
             self.actions.append(action)
@@ -228,11 +236,14 @@ class SimulatedProfessor:
 
     def _select_intervention(self, recommendation: Dict, category: str) -> Optional[str]:
         """Select specific intervention type based on recommendation and style."""
-        suggested = recommendation.get("action", "")
+        suggested = RECOMMENDATION_ACTION_MAP.get(
+            recommendation.get("action", ""),
+            recommendation.get("action", "")
+        )
 
         if category == "accept":
             # Follow recommendation as given
-            return suggested if suggested in PROFESSOR_STYLES else suggested
+            return suggested or None
 
         # Modify: choose based on preference
         options = sorted(
@@ -244,9 +255,9 @@ class SimulatedProfessor:
         # Weight by preference
         for option, pref in options:
             if random.random() < pref:
-                return option
+                return RECOMMENDATION_ACTION_MAP.get(option, option)
 
-        return suggested  # Fallback to recommendation
+        return suggested or None  # Fallback to recommendation
 
     def _generate_rationale(self, category: str, recommendation: Dict,
                             intervention_type: Optional[str]) -> str:
@@ -283,6 +294,80 @@ class SimulatedProfessor:
 
         options = rationales.get(category, ["Action recorded"])
         return random.choice(options)
+
+    def _generate_spoken_text(self, category: str, intervention_type: Optional[str],
+                              recommendation: Optional[Dict]) -> Optional[str]:
+        """Generate what the professor would actually say to the class."""
+        if category == "ignore":
+            return None
+
+        if intervention_type == "clarification":
+            return random.choice([
+                "Let me pause for a moment and clarify that idea before we move on.",
+                "I want to slow down here and re-explain that concept in a simpler way.",
+                "Before we keep going, let me clear up what this means in practice.",
+            ])
+
+        if intervention_type == "breakout":
+            return random.choice([
+                "Let's take a short breakout and talk this through in smaller groups, then we'll come back together.",
+                "I want to shift us into brief breakout groups so everyone has a chance to process this.",
+                "Take a few minutes in breakout rooms to work through this together, then we'll debrief.",
+            ])
+
+        if intervention_type == "poll":
+            return random.choice([
+                "Let me run a quick poll so I can see where everyone is before we continue.",
+                "I want to check the room with a fast poll before we move on.",
+                "Let's do a quick pulse check with a poll and use that to guide the next step.",
+            ])
+
+        if intervention_type == "think_pair_share":
+            return random.choice([
+                "Take a moment to think on your own, compare with a partner, and then we'll share out.",
+                "Let's do a quick think-pair-share so more voices can come into the conversation.",
+                "Pause for a minute, talk to a partner, and then we'll bring the ideas back to the full group.",
+            ])
+
+        if intervention_type == "pace_change":
+            return random.choice([
+                "Let's shift gears for a moment and change the pace before we keep going.",
+                "I'm going to break the rhythm here and reset how we're approaching this.",
+                "Let's pause the lecture flow and switch the pace for a minute so we can re-engage.",
+            ])
+
+        if intervention_type == "cold_call":
+            return random.choice([
+                "I want to bring another voice in here. Who hasn't spoken yet and wants to jump in?",
+                "Let's hear from someone we haven't heard from yet.",
+                "I'm going to invite a quieter voice into the conversation here.",
+            ])
+
+        if category == "acknowledge":
+            return random.choice([
+                "I'm noticing that pattern too, so I'm going to keep an eye on it as we continue.",
+                "I see what's happening here, and I'm going to monitor it for another minute.",
+                "That's worth noting. Let me watch it a little more before I intervene.",
+            ])
+
+        if category == "reject":
+            return random.choice([
+                "I'm going to stay the course for the moment and revisit this if needed.",
+                "For now, I want to keep the current flow and see if the class self-corrects.",
+                "I'm holding the current approach a bit longer before changing direction.",
+            ])
+
+        if category == "self_initiated":
+            return random.choice([
+                "I'm going to step in here and adjust our approach before we continue.",
+                "Let me intervene for a moment based on what I'm seeing in the room.",
+                "I want to make a quick adjustment here before we move on.",
+            ])
+
+        if recommendation and recommendation.get("message"):
+            return recommendation["message"]
+
+        return "Let me respond to what I'm seeing in the room before we continue."
 
     def get_action_summary(self) -> Dict:
         """Summarize professor actions for analysis."""
@@ -336,6 +421,7 @@ def run_closed_loop(duration: int = 45, professor_style: str = "adaptive",
                     "response_category": a.response_category,
                     "intervention_type": a.intervention_type,
                     "rationale": a.rationale,
+                    "spoken_text": a.spoken_text,
                     "delay": a.delay_minutes,
                 })
 
@@ -347,6 +433,7 @@ def run_closed_loop(duration: int = 45, professor_style: str = "adaptive",
                 "response_category": "self_initiated",
                 "intervention_type": self_action.intervention_type,
                 "rationale": self_action.rationale,
+                "spoken_text": self_action.spoken_text,
                 "delay": 0,
             })
 

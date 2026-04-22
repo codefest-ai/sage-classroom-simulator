@@ -1,6 +1,6 @@
-# SAGE — Simulated Agent-Generated Engagement
+# Instructional Decision Support Prototype
 
-**An Agent-Based Simulation Framework for Evaluating AI-Augmented Instructional Decision Support in Synchronous Online Learning Environments**
+**Evaluated through SAGE (Simulated Agent-Generated Engagement)**
 
 IST 505 – Design Research Methods (DSR)
 Dr. Samir Chatterjee
@@ -12,25 +12,31 @@ Claremont Graduate University — Spring 2026
 
 ## What This Is
 
-**SAGE** (Simulated Agent-Generated Engagement) is a Stage 1 prototype: an agent-based classroom simulator with 15 AI "students" that generates realistic engagement data, paired with an instructor dashboard that displays engagement patterns and AI-generated recommendations.
+This project centers a working instructional decision-support prototype for synchronous online teaching. **SAGE** (Simulated Agent-Generated Engagement) is the classroom simulation and evaluation environment used to generate classroom states, route them through the dashboard, and record instructor-response behavior during formative evaluation.
+
+### Current Project Framing
+
+- **Class artifact:** an instructional decision support system for synchronous online teaching
+- **Simulation and evaluation environment:** SAGE
+- **Deployment-oriented live path:** Zoom/webhook ingestion (current implementation still prototype-level)
 
 ### Components
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | Student Agent Profiles | `simulator/profiles.py` | 15 student agents with demographic, behavioral, and response profiles |
-| Simulator Engine | `simulator/engine.py` | Runs N-minute class sessions, generates timestamped engagement streams |
-| Engagement Scoring | `simulator/scoring.py` | Weighted engagement index, state classification (Endsley SA Levels 2-3) |
+| Simulator Engine | `simulator/engine.py` | Runs N-minute class sessions, generates timestamped observable-participation streams |
+| Participation Scoring | `simulator/scoring.py` | Weighted observable-participation index, state classification (Endsley SA Levels 2-3) |
 | NLP Analyzer | `simulator/nlp.py` | Confusion detection, sentiment, participation patterns from chat |
 | Instructor Dashboard | `dashboard/index.html` | Real-time heatmap, timeline, recommendations, response taxonomy |
 | Simulated Professor | `simulator/professor.py` | AI professor agent that responds to dashboard recommendations |
 
 ### Theoretical Grounding
 
-- **Endsley (1995):** SA Levels 1-3 map to signal collection → engagement scoring → recommendations
+- **Endsley (1995):** SA Levels 1-3 map to signal collection → pattern interpretation → advisory recommendations
 - **Sweller (1988):** Dashboard reduces extraneous cognitive load on instructor
 - **Van Leeuwen et al. (2019):** Advising mode > mirroring mode under time pressure
-- **Li et al. (2025):** Instructor heterogeneity → suggestions not directives
+- **Wise & Jung (2019):** Instructional decision-making is situated rather than one-size-fits-all
 
 ### Instructor Response Taxonomy (Construct Artifact)
 
@@ -38,9 +44,9 @@ Claremont Graduate University — Spring 2026
 |----------|-------------|
 | **Ignore** | No action taken |
 | **Acknowledge** | Awareness without behavior change |
-| **Accept & Adjust** | Adopt recommendation as given |
-| **Modify & Adjust** | Adapt recommendation using pedagogical judgment |
-| **Reject with Reason** | Override with contextual rationale |
+| **Accept** | Adopt recommendation as given |
+| **Modify** | Adapt recommendation using pedagogical judgment |
+| **Reject** | Override with contextual rationale |
 
 ---
 
@@ -67,15 +73,51 @@ Options:
 ### View Dashboard
 
 ```bash
-# Option 1: Just open the HTML file
-open dashboard/index.html
+# Server-backed dashboard
+python3 server.py
+# Then open http://localhost:8000
 
-# Option 2: Serve locally (for fetch API support)
-python3 -m http.server 8080 --directory .
-# Then open http://localhost:8080/dashboard/
+# Optional AI mode
+python3 server.py --llm
 ```
 
-Load a session file into the dashboard, or run live simulation from the dashboard UI.
+Browser-only mode still works as a fallback:
+
+```bash
+open dashboard/index.html
+```
+
+Use the server-backed surface for the main dashboard workflow, sessionized runs, and the optional Zoom/webhook extension.
+
+### Recommended Live Demo Path
+
+For classroom demos, prefer a hosted endpoint over a temporary localhost tunnel:
+
+1. Deploy the app with `render.yaml`
+2. Configure `ZOOM_WEBHOOK_SECRET` in Render
+3. Point the Zoom webhook app at the hosted `/api/zoom/webhook`
+4. Use `/api/zoom/debug`, `/api/zoom/state`, and `/api/zoom/history` to verify what Zoom is actually sending
+
+This keeps the real-time Zoom path aligned with the intended deployment context while SAGE remains the primary simulation and evaluation environment.
+
+Current recommendation logic is rule-based and advisory. The system maps detected patterns such as observable participation decline, participation concentration, confusion signals, and low observable activity to candidate instructional moves. LLMs may enrich simulated dialogue, but they do not replace the core recommendation rules. Camera state is treated as non-scoring context rather than a core engagement signal because camera use can reflect bandwidth, privacy, culture, disability, and access constraints.
+
+Note: if in-meeting chat events never arrive even after the webhook is validated and subscribed, Zoom may require account-level in-meeting chat DLP/support enablement in addition to the webhook subscription.
+
+Quick smoke check after deployment:
+
+```bash
+python3 scripts/check_zoom_live.py https://your-app.onrender.com
+```
+
+Synthetic webhook verification after deployment or on localhost:
+
+```bash
+python3 scripts/send_zoom_fixture.py https://your-app.onrender.com --secret "$ZOOM_WEBHOOK_SECRET"
+python3 scripts/send_zoom_fixture.py http://localhost:8096 --mode rich
+```
+
+This pushes a small signed Zoom-like event sequence through `/api/zoom/webhook` so you can verify the live pipeline before relying on a real meeting.
 
 ### Run with Simulated Professor
 
@@ -96,7 +138,7 @@ ist505/
 │   ├── __init__.py
 │   ├── profiles.py      # 15 student agent definitions
 │   ├── engine.py        # Simulation engine (main entry point)
-│   ├── scoring.py       # Engagement scoring model
+│   ├── scoring.py       # Observable participation scoring model
 │   ├── nlp.py           # Chat analysis / confusion detection
 │   └── professor.py     # Simulated professor agent
 ├── dashboard/

@@ -208,6 +208,26 @@ class LLMClient:
             text = text.split(token)[0]
         text = text.strip()
 
+        # Preserve structured JSON outputs for callers that expect machine-readable responses.
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start >= 0 and end > start:
+            candidate = text[start:end].strip()
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, dict):
+                    return candidate
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+
         # Remove AI assistant artifacts
         for prefix in ["Sure!", "Of course!", "As a student,", "I'd say:", "Here's my response:"]:
             if text.lower().startswith(prefix.lower()):

@@ -1,12 +1,12 @@
 """
-Engagement Scoring Model — Weighted engagement index and state classification.
+Observable Participation Scoring Model — weighted observable-participation index and state classification.
 
 Maps to Endsley (1995) SA Levels:
   Level 1 (Perception)    → Raw signal collection (engine.py)
-  Level 2 (Comprehension) → Engagement scoring + pattern classification (THIS FILE)
+  Level 2 (Comprehension) → Observable-participation scoring + pattern classification (THIS FILE)
   Level 3 (Projection)    → Recommendation generation (engine.py + dashboard)
 
-Engagement-to-action translation framework from Phase 2 Section 3.1b.
+Observable-participation-to-action translation framework from Phase 2 Section 3.1b.
 """
 
 from dataclasses import dataclass
@@ -15,41 +15,40 @@ from typing import Dict, List, Optional, Tuple
 
 # ============================================================
 # SIGNAL WEIGHTS
-# Derived from the engagement signal literature.
+# Derived from participation and engagement-signal literature.
 # Weights sum to 1.0 for normalized index.
 # ============================================================
 
 SIGNAL_WEIGHTS = {
-    "speaking_equity": 0.25,     # Most reliable engagement indicator
-    "chat_activity": 0.20,       # Active participation signal
-    "poll_participation": 0.20,  # Structured response signal
-    "reaction_frequency": 0.10,  # Low-effort but present signal
-    "camera_status": 0.15,       # Presence signal (noisy but informative)
-    "silence_gap": 0.10,         # Inverse signal — long silence = disengagement
+    "speaking_equity": 0.30,     # Observable participation signal
+    "chat_activity": 0.25,       # Observable participation signal
+    "poll_participation": 0.25,  # Structured response signal
+    "reaction_frequency": 0.15,  # Low-effort but present signal
+    "silence_gap": 0.05,         # Very light inverse signal; silence alone is ambiguous
 }
 
 
 # ============================================================
-# ENGAGEMENT STATES
+# PARTICIPATION STATES
 # ============================================================
 
 ENGAGEMENT_STATES = {
     "engaged":      {"min": 0.65, "max": 1.00, "color": "#22c55e", "label": "Engaged"},
     "drifting":     {"min": 0.40, "max": 0.65, "color": "#f59e0b", "label": "Drifting"},
     "disengaged":   {"min": 0.15, "max": 0.40, "color": "#ef4444", "label": "Disengaged"},
-    "confused":     {"min": 0.00, "max": 1.00, "color": "#8b5cf6", "label": "Confused"},  # Orthogonal to engagement
+    "confused":     {"min": 0.00, "max": 1.00, "color": "#8b5cf6", "label": "Confused"},  # Orthogonal to participation level
 }
 
 
 # ============================================================
 # PATTERN CLASSIFICATIONS
-# SA Level 2: What the engagement data MEANS
+# SA Level 2: What the observable participation data MEANS
 # ============================================================
 
 PATTERNS = {
     "energy_decay": {
-        "description": "Class-wide engagement declining over time",
-        "detection": "Mean engagement drops >15% from session start",
+        "description": "Class-wide observable participation declining over time",
+        "detection": "Mean observable participation drops >15% from session start",
         "severity_thresholds": [0.10, 0.20, 0.30],  # mild, moderate, severe
     },
     "equity_imbalance": {
@@ -63,18 +62,18 @@ PATTERNS = {
         "severity_thresholds": [2, 4, 6],  # student count
     },
     "silent_majority": {
-        "description": "Most students have not spoken or chatted",
+        "description": "Most students have low observable participation",
         "detection": ">60% of students with zero speaking + zero chat",
         "severity_thresholds": [0.5, 0.65, 0.80],  # percentage
     },
     "breakout_boost": {
-        "description": "Engagement increased after breakout room activity",
-        "detection": "Mean engagement rises >10% post-breakout",
+        "description": "Observable participation increased after breakout room activity",
+        "detection": "Mean observable participation rises >10% post-breakout",
         "severity_thresholds": [0.05, 0.15, 0.25],  # positive pattern
     },
     "fade_cascade": {
-        "description": "Sequential student disengagement (social contagion)",
-        "detection": "3+ students drift to disengaged within 3-minute window",
+        "description": "Sequential low observable participation pattern",
+        "detection": "3+ students drift into low observable participation within 3-minute window",
         "severity_thresholds": [2, 4, 6],
     },
 }
@@ -82,7 +81,7 @@ PATTERNS = {
 
 @dataclass
 class SignalSnapshot:
-    """Raw engagement signals for one student at one time step."""
+    """Raw observable participation signals for one student at one time step."""
     student_id: str
     minute: int
     speaking: bool = False
@@ -99,19 +98,19 @@ class SignalSnapshot:
 
 @dataclass
 class EngagementScore:
-    """Computed engagement score for one student."""
+    """Computed observable participation score for one student."""
     student_id: str
     minute: int
     raw_scores: Dict[str, float]  # Per-signal scores
-    weighted_index: float          # 0.0-1.0 composite
-    state: str                     # engaged / drifting / disengaged
+    weighted_index: float          # 0.0-1.0 observable-participation composite
+    state: str                     # high / medium / low observable participation
     is_confused: bool              # Orthogonal flag
     contributing_signals: List[str]  # Which signals drove the score
 
 
 @dataclass
 class ClassSnapshot:
-    """Aggregate engagement for the whole class at one time step."""
+    """Aggregate observable participation for the whole class at one time step."""
     minute: int
     mean_engagement: float
     median_engagement: float
@@ -125,7 +124,7 @@ class ClassSnapshot:
 
 class EngagementScorer:
     """
-    Computes engagement indices from raw signals.
+    Computes observable-participation indices from raw signals.
     SA Level 2: transforms perception into comprehension.
     """
 
@@ -137,7 +136,7 @@ class EngagementScorer:
         self._confusion_signals: List[Tuple[str, int]] = []  # (student_id, minute)
 
     def score_student(self, signals: SignalSnapshot, profile_engagement: float = 0.5) -> EngagementScore:
-        """Score a single student's engagement from raw signals."""
+        """Score a single student's observable participation from raw signals."""
         raw = {}
         contributing = []
 
@@ -171,21 +170,21 @@ class EngagementScorer:
         if signals.reaction_sent:
             contributing.append("reaction")
 
-        # Camera status
-        raw["camera_status"] = 0.8 if signals.camera_on else 0.1
-        if signals.camera_on:
-            contributing.append("camera")
+        # Camera is intentionally excluded from the score. It is too sensitive to
+        # bandwidth, privacy, culture, disability, and access constraints to be a
+        # core participation signal. Keep it only as non-scoring context.
+        raw["camera_context"] = 1.0 if signals.camera_on else 0.0
 
-        # Silence gap (inverse — long silence = low score)
+        # Silence gap is low-weight context only; silence can also mean attention.
         if signals.silence_duration_sec > 0:
             raw["silence_gap"] = max(0.0, 1.0 - (signals.silence_duration_sec / 120.0))
         else:
             raw["silence_gap"] = 0.7  # No silence data = neutral
 
-        # Weighted composite
+        # Weighted observable-participation composite
         weighted = sum(raw.get(k, 0) * v for k, v in self.weights.items())
 
-        # Blend with profile-based engagement (50/50 signal vs profile)
+        # Blend with profile-based baseline (50/50 signal vs profile)
         blended = 0.5 * weighted + 0.5 * profile_engagement
 
         # Classify state
@@ -196,7 +195,7 @@ class EngagementScorer:
         else:
             state = "disengaged"
 
-        # Confusion detection (orthogonal to engagement level)
+        # Confusion detection (orthogonal to participation level)
         is_confused = False
         if signals.chat_sent and signals.chat_text:
             confusion_keywords = ["lost", "confused", "don't understand", "what", "?", "help",
@@ -217,7 +216,7 @@ class EngagementScorer:
         )
 
     def score_class(self, student_scores: List[EngagementScore], minute: int) -> ClassSnapshot:
-        """Aggregate individual scores into class-level engagement snapshot."""
+        """Aggregate individual scores into a class-level observable participation snapshot."""
         if not student_scores:
             return ClassSnapshot(
                 minute=minute, mean_engagement=0, median_engagement=0,
@@ -267,7 +266,7 @@ class EngagementScorer:
 
     def _detect_patterns(self, scores: List[EngagementScore], minute: int,
                          mean_eng: float, gini: float) -> List[Dict]:
-        """Detect class-level engagement patterns (SA Level 2)."""
+        """Detect class-level observable participation patterns (SA Level 2)."""
         patterns = []
 
         # Energy decay: compare to first 5 minutes
@@ -280,7 +279,7 @@ class EngagementScorer:
                     "type": "energy_decay",
                     "severity": severity,
                     "value": round(decay, 3),
-                    "message": f"Class engagement dropped {decay:.0%} from session start",
+                    "message": f"Class observable participation dropped {decay:.0%} from session start",
                 })
 
         # Equity imbalance
@@ -305,14 +304,14 @@ class EngagementScorer:
             })
 
         # Silent majority
-        silent_count = sum(1 for s in scores if not s.contributing_signals or s.contributing_signals == ["camera"])
+        silent_count = sum(1 for s in scores if not s.contributing_signals)
         silent_ratio = silent_count / len(scores) if scores else 0
         if silent_ratio > 0.5:
             patterns.append({
                 "type": "silent_majority",
                 "severity": "mild" if silent_ratio < 0.65 else "moderate" if silent_ratio < 0.80 else "severe",
                 "value": round(silent_ratio, 3),
-                "message": f"{silent_ratio:.0%} of students silent",
+                    "message": f"{silent_ratio:.0%} of students have low observable participation",
             })
 
         # Fade cascade
@@ -324,7 +323,7 @@ class EngagementScorer:
                     "type": "fade_cascade",
                     "severity": "moderate",
                     "value": len(disengaged),
-                    "message": f"Rapid disengagement: {len(disengaged)} students now disengaged",
+                    "message": f"Rapid observable participation decline: {len(disengaged)} students now low-participation",
                 })
 
         return patterns
@@ -345,21 +344,21 @@ class EngagementScorer:
                     recommendations.append({
                         "priority": "high",
                         "action": "breakout",
-                        "message": f"Participation dropped {pattern['value']:.0%} since session start. Consider a 5-minute breakout activity to re-engage.",
+                        "message": f"Observable participation dropped {pattern['value']:.0%} since session start. Consider a brief low-stakes activity shift; use instructor judgment before choosing breakout rooms.",
                         "evidence": pattern,
                     })
                 elif severity == "moderate":
                     recommendations.append({
                         "priority": "medium",
                         "action": "poll",
-                        "message": f"Energy declining ({pattern['value']:.0%} drop). A quick poll or discussion prompt could help.",
+                        "message": f"Observable participation is declining ({pattern['value']:.0%} drop). A quick poll or discussion prompt could help check understanding.",
                         "evidence": pattern,
                     })
                 else:
                     recommendations.append({
                         "priority": "low",
                         "action": "pace_change",
-                        "message": "Slight energy dip. Consider varying pace or asking a question.",
+                        "message": "Slight observable participation dip. Consider varying pace or asking a low-pressure question.",
                         "evidence": pattern,
                     })
 
@@ -367,7 +366,7 @@ class EngagementScorer:
                 recommendations.append({
                     "priority": "high" if severity == "severe" else "medium",
                     "action": "equity_intervention",
-                    "message": f"Discussion dominated by few voices (Gini={pattern['value']:.2f}). Consider cold-calling quieter students or using think-pair-share.",
+                    "message": f"Discussion appears concentrated in a few voices (Gini={pattern['value']:.2f}). Consider a low-pressure equity move such as think-pair-share before directly calling on quiet students.",
                     "evidence": pattern,
                 })
 
@@ -375,7 +374,7 @@ class EngagementScorer:
                 recommendations.append({
                     "priority": "high",
                     "action": "clarification",
-                    "message": f"{pattern['value']} students appear confused. Consider pausing for clarification or re-explaining the current concept.",
+                    "message": f"{pattern['value']} students signaled possible confusion. Consider pausing for clarification or checking understanding.",
                     "evidence": pattern,
                     "affected_students": pattern.get("students", []),
                 })
@@ -384,7 +383,7 @@ class EngagementScorer:
                 recommendations.append({
                     "priority": "medium",
                     "action": "activation",
-                    "message": f"{pattern['value']:.0%} of class is silent. Try a round-robin, poll, or chat prompt to activate participation.",
+                    "message": f"{pattern['value']:.0%} of the class has low observable participation. Try a low-pressure poll, chat prompt, or reflective pause before assuming disengagement.",
                     "evidence": pattern,
                 })
 
@@ -392,7 +391,7 @@ class EngagementScorer:
                 recommendations.append({
                     "priority": "high",
                     "action": "breakout",
-                    "message": "Multiple students disengaging rapidly. A breakout or activity shift is strongly recommended.",
+                    "message": "Multiple students show rapid observable participation decline. Consider an activity shift; breakout rooms are one option, not an automatic prescription.",
                     "evidence": pattern,
                 })
 
