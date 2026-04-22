@@ -218,11 +218,11 @@ class StudentAgent:
         Generate a chat message using the LLM.
 
         Args:
-            engagement: Current engagement score (0-1)
+            engagement: Current observable participation value (0-1)
             room_context: Recent chat messages [{student_id, name, text, minute}]
             professor_action: What the professor just said/did
             active_intervention: Current active intervention type
-            is_confused: Whether engagement model says student is confused
+            is_confused: Whether the simulation state marks the student as confused
 
         Returns:
             Chat message string, or None if student is silent
@@ -230,13 +230,13 @@ class StudentAgent:
         # Build context prompt
         context_lines = []
 
-        # Engagement state
+        # Observable participation state
         if engagement >= 0.65:
-            context_lines.append("You are currently ENGAGED and following along well.")
+            context_lines.append("Your observable participation is HIGH — actively signaling involvement.")
         elif engagement >= 0.40:
-            context_lines.append("You are currently DRIFTING — losing focus a bit.")
+            context_lines.append("Your observable participation is MEDIUM — signals are light or intermittent.")
         else:
-            context_lines.append("You are currently DISENGAGED — having trouble paying attention.")
+            context_lines.append("Your observable participation is LOW — few overt signals to the class.")
 
         if is_confused:
             context_lines.append("You are CONFUSED about what's being discussed.")

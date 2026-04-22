@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SAGE — Instructor Decision Support Dashboard</title>
+<title>Instructional Decision Support Dashboard — SAGE Evaluation Environment</title>
 <style>
 :root {
   --bg: #0f172a;
@@ -50,6 +50,38 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   top: 52px;
   z-index: 99;
 }
+.control-group,
+.control-status {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(71, 85, 105, 0.7);
+  background: rgba(15, 23, 42, 0.24);
+}
+.control-group.primary-group {
+  border-color: rgba(59, 130, 246, 0.26);
+}
+.control-group.action-group {
+  border-color: rgba(34, 197, 94, 0.22);
+}
+.control-group.utility-group {
+  opacity: 0.9;
+}
+.control-status {
+  margin-left: auto;
+  gap: 12px;
+}
+.control-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.control-field.tight {
+  gap: 4px;
+}
 .controls label { font-size: 13px; color: var(--text-dim); }
 .controls select, .controls input, .controls button {
   background: var(--surface2);
@@ -68,18 +100,47 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 }
 .controls button:hover { opacity: 0.9; }
 .controls button.secondary { background: var(--surface2); border: 1px solid var(--border); }
+.controls .utility-control,
+.controls .utility-select {
+  opacity: 0.82;
+}
+.controls .utility-control:hover,
+.controls .utility-select:hover {
+  opacity: 1;
+}
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto auto;
+  grid-template-columns: minmax(0, 1.16fr) minmax(320px, 0.84fr);
+  grid-template-areas:
+    "recommendations overview"
+    "recommendations student"
+    "professor chat"
+    "toolbar chat"
+    "timeline timeline"
+    "heatmap heatmap";
   gap: 16px;
   padding: 16px 24px;
+  align-items: start;
 }
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
+}
+.panel.primary-panel {
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.28);
+}
+.panel.secondary-panel {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.98));
+}
+.panel.supporting-panel {
+  border-color: rgba(148, 163, 184, 0.24);
+}
+.panel.response-log-panel {
+  border-color: rgba(59, 130, 246, 0.24);
 }
 .panel h2 {
   font-size: 14px;
@@ -89,7 +150,198 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   letter-spacing: 0.5px;
   margin-bottom: 12px;
 }
-.panel.full-width { grid-column: 1 / -1; }
+.panel.full-width { grid-column: auto; }
+.panel-helper {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  line-height: 1.45;
+}
+.live-debug-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.live-signal-card {
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.live-signal-card.good {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+.live-signal-card.warn {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.live-signal-card .metric-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.live-signal-card .metric-value {
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.live-signal-card .metric-note {
+  margin-top: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.live-debug-meta {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.35);
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.live-signal-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.live-signal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(71, 85, 105, 0.65);
+  background: rgba(15, 23, 42, 0.3);
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.live-signal-badge.active {
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--green);
+}
+.live-signal-badge.inactive {
+  border-color: rgba(148, 163, 184, 0.18);
+  color: var(--text-dim);
+}
+.live-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.live-event-item {
+  border: 1px solid rgba(71, 85, 105, 0.55);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.34);
+  padding: 10px 12px;
+}
+.live-event-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.live-event-type {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.live-event-minute {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.live-event-body {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.45;
+}
+.live-event-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.mode-strip {
+  margin: 0 24px 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+}
+.mode-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mode-description {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.mode-boundary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+#overview-panel { grid-area: overview; }
+#student-panel { grid-area: student; }
+#timeline-panel { grid-area: timeline; }
+#heatmap-panel { grid-area: heatmap; }
+#recommendation-panel { grid-area: recommendations; }
+#chat-panel { grid-area: chat; }
+#instructor-toolbar { grid-area: toolbar; }
+#professor-panel { grid-area: professor; }
+body.mode-live .grid {
+  grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
+  grid-template-areas:
+    "overview recommendations"
+    "student chat"
+    "timeline timeline"
+    "heatmap heatmap"
+    "professor professor"
+    "toolbar toolbar";
+}
+body.mode-live #recommendation-panel {
+  border-color: rgba(245, 158, 11, 0.32);
+  box-shadow: none;
+}
+body.mode-live .mode-strip {
+  border-color: rgba(245, 158, 11, 0.26);
+}
+body.mode-live .mode-title {
+  color: var(--yellow);
+}
+body.mode-live #chat-panel,
+body.mode-live #student-panel,
+body.mode-live #timeline-panel,
+body.mode-live #heatmap-panel {
+  border-color: rgba(59, 130, 246, 0.2);
+}
+body.mode-manual #recommendation-panel {
+  border-width: 2px;
+}
+body.mode-manual #professor-panel {
+  border-color: rgba(59, 130, 246, 0.32);
+}
+body.mode-manual .mode-title {
+  color: var(--accent);
+}
+body.mode-simulated .mode-title {
+  color: var(--text);
+}
 
 /* Engagement Overview */
 .overview-stats {
@@ -203,46 +455,182 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 }
 
 /* Recommendations */
-.rec-list { max-height: 400px; overflow-y: auto; }
+.rec-list { max-height: 520px; overflow-y: auto; }
+body.mode-live .rec-list { max-height: 360px; }
 .rec-item {
-  background: var(--surface2);
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 8px;
-  border-left: 3px solid var(--accent);
+  background: linear-gradient(180deg, rgba(51, 65, 85, 0.96), rgba(30, 41, 59, 0.96));
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--accent);
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 .rec-item.high { border-left-color: var(--red); }
 .rec-item.medium { border-left-color: var(--yellow); }
 .rec-item.low { border-left-color: var(--green); }
+.rec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.rec-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .rec-item .priority {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  letter-spacing: 0.08em;
 }
 .rec-item.high .priority { color: var(--red); }
 .rec-item.medium .priority { color: var(--yellow); }
 .rec-item.low .priority { color: var(--green); }
-.rec-item .message { font-size: 13px; margin-bottom: 8px; }
-.rec-item .minute-tag { font-size: 11px; color: var(--text-dim); }
-
+.rec-item.newest {
+  border-color: rgba(59, 130, 246, 0.38);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18), 0 14px 28px rgba(15, 23, 42, 0.24);
+}
+.rec-item .message {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+.rec-item .minute-tag {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.newest-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #04111f;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.rec-signal {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  line-height: 1.45;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.36);
+}
+.rec-action {
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+}
+.response-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
 /* Response buttons */
 .response-buttons {
-  display: flex;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
   margin-top: 8px;
 }
 .response-btn {
-  padding: 4px 8px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   background: var(--surface);
-  color: var(--text-dim);
-  border-radius: 4px;
+  color: var(--text);
+  border-radius: 6px;
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
+  min-height: 40px;
 }
 .response-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
 .response-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
+.response-btn.modify-branch {
+  border-style: dashed;
+  color: var(--accent);
+}
+.response-btn.decision-acknowledge { color: var(--yellow); border-color: rgba(245, 158, 11, 0.28); }
+.response-btn.decision-accept { color: var(--green); border-color: rgba(34, 197, 94, 0.28); }
+.response-btn.decision-reject { color: var(--red); border-color: rgba(239, 68, 68, 0.28); }
+.manual-response-form {
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+}
+.manual-response-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 180px) minmax(0, 1fr);
+  gap: 8px;
+}
+.manual-response-form label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.manual-response-form select,
+.manual-response-form input {
+  width: 100%;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.manual-response-note {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.response-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.32);
+}
+.response-consequence {
+  margin-top: 6px;
+  line-height: 1.45;
+}
+.manual-response-details {
+  margin-top: 10px;
+}
+.manual-response-details summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-dim);
+  list-style: none;
+}
+.manual-response-details summary::-webkit-details-marker { display: none; }
+.manual-response-details summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--accent);
+}
+.manual-response-details[open] summary::before {
+  content: '▾';
+}
 
 /* Chat log */
 .chat-log {
@@ -250,6 +638,7 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   overflow-y: auto;
   font-size: 13px;
 }
+body.mode-manual .chat-log { max-height: 260px; }
 .chat-msg {
   padding: 6px 0;
   border-bottom: 1px solid var(--surface2);
@@ -333,6 +722,63 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 .prof-action .category.ignore { color: var(--text-dim); }
 .prof-action .category.acknowledge { color: var(--yellow); }
 .prof-action .category.self_initiated { color: var(--purple); }
+
+.artifact-details {
+  margin: 0 24px 20px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+  overflow: hidden;
+}
+.artifact-details summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 18px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.artifact-details summary::-webkit-details-marker { display: none; }
+.artifact-details summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--purple);
+}
+.artifact-details[open] summary::before {
+  content: '▾';
+}
+.artifact-details-body {
+  padding: 0 20px 20px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+.artifact-details-body h2 {
+  color: var(--purple);
+  margin-bottom: 12px;
+}
+.toolbar-disclosure {
+  margin-top: 2px;
+}
+.toolbar-disclosure summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+.toolbar-disclosure summary::-webkit-details-marker { display: none; }
+.toolbar-disclosure summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--accent);
+}
+.toolbar-disclosure[open] summary::before {
+  content: '▾';
+}
 
 /* View toggle */
 .view-toggle {
@@ -504,6 +950,33 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 }
 .zoom-toolbar button:hover { background: var(--accent); }
 
+@media (max-width: 1100px) {
+  .grid,
+  body.mode-live .grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "overview"
+      "recommendations"
+      "professor"
+      "toolbar"
+      "student"
+      "chat"
+      "timeline"
+      "heatmap";
+  }
+  .response-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .manual-response-grid {
+    grid-template-columns: 1fr;
+  }
+  .control-group,
+  .control-status {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
@@ -571,7 +1044,10 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 <body>
 
 <header>
-  <h1>SAGE — Simulated Agent-Generated Engagement</h1>
+  <div>
+    <h1>Instructional Decision Support Dashboard</h1>
+    <div class="meta">Evaluated through SAGE (Simulated Agent-Generated Engagement)</div>
+  </div>
   <div style="display:flex;align-items:center;gap:16px">
     <div class="meta">IST 505 &middot; CGU Spring 2026</div>
     <div class="view-toggle">
@@ -582,68 +1058,94 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 </header>
 
 <div class="controls">
-  <label>Scenario:</label>
-  <select id="scenario-select">
-    <option value="baseline">Baseline</option>
-    <option value="energy_decay">Energy Decay</option>
-    <option value="equity_imbalance">Equity Imbalance</option>
-    <option value="confusion_cluster">Confusion Cluster</option>
-    <option value="intervention_test">Intervention Test</option>
-    <option value="full_scenario" selected>Full Scenario</option>
-  </select>
+  <div class="control-group primary-group">
+    <div class="control-field">
+      <label>Scenario:</label>
+      <select id="scenario-select">
+        <option value="baseline">Baseline</option>
+        <option value="energy_decay">Energy Decay</option>
+        <option value="equity_imbalance">Equity Imbalance</option>
+        <option value="confusion_cluster">Confusion Cluster</option>
+        <option value="intervention_test">Intervention Test</option>
+        <option value="full_scenario" selected>Full Scenario</option>
+      </select>
+    </div>
+    <div class="control-field">
+      <label>Instructor:</label>
+      <select id="professor-select">
+        <option value="none">Human Instructor (manual responses)</option>
+        <option value="adaptive" selected>Dr. Adaptive</option>
+        <option value="lecture_focused">Dr. Lecturer</option>
+        <option value="discussion_based">Dr. Discussion</option>
+        <option value="hands_off">Dr. Observer</option>
+      </select>
+    </div>
+    <div class="control-field">
+      <label>University:</label>
+      <select id="university-select">
+        <option value="cgu" selected>CGU (Claremont)</option>
+        <option value="gatech">Georgia Tech</option>
+        <option value="howard">Howard University</option>
+      </select>
+    </div>
+    <div class="control-field">
+      <label>Content:</label>
+      <select id="content-select">
+        <option value="sa_theory" selected>SA Theory</option>
+        <option value="dsr_methods">DSR Methods</option>
+        <option value="data_ethics">Data Ethics</option>
+        <option value="hci_dashboards">HCI & Dashboards</option>
+        <option value="lecture_heavy">Lecture Only (stress test)</option>
+        <option value="active_learning">Active Learning (best practice)</option>
+      </select>
+    </div>
+  </div>
 
-  <label>Duration:</label>
-  <input type="number" id="duration-input" value="45" min="10" max="90" style="width:60px">
-  <label>min</label>
+  <div class="control-group">
+    <div class="control-field tight">
+      <label>Duration:</label>
+      <input type="number" id="duration-input" value="45" min="10" max="90" style="width:60px">
+      <label>min</label>
+    </div>
+    <div class="control-field">
+      <label>Seed:</label>
+      <input type="number" id="seed-input" value="42" style="width:60px">
+      <button class="secondary" onclick="document.getElementById('seed-input').value = Math.floor(Math.random()*9999)" title="Random seed for different outcomes">🎲</button>
+    </div>
+    <div class="control-field">
+      <label><input type="checkbox" id="jitter-check"> Jitter</label>
+    </div>
+    <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
+    <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄 Export</button>
+  </div>
 
-  <label>Seed:</label>
-  <input type="number" id="seed-input" value="42" style="width:60px">
-  <button class="secondary" onclick="document.getElementById('seed-input').value = Math.floor(Math.random()*9999)" title="Random seed for different outcomes">🎲</button>
-  <label><input type="checkbox" id="jitter-check"> Jitter</label>
+  <div class="control-group action-group">
+    <button style="background:var(--accent);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" id="run-btn" onclick="runSmart()" title="Run simulation — uses AI students if server is running, otherwise rule-based">▶ Run</button>
+    <button style="background:var(--green);border:none;color:#000;font-weight:600;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px" onclick="startZoomLive()" title="Connect to live Zoom meeting data">📡 Live</button>
+  </div>
 
-  <label>Professor:</label>
-  <select id="professor-select">
-    <option value="none">None (manual)</option>
-    <option value="adaptive" selected>Dr. Adaptive</option>
-    <option value="lecture_focused">Dr. Lecturer</option>
-    <option value="discussion_based">Dr. Discussion</option>
-    <option value="hands_off">Dr. Observer</option>
-  </select>
+  <div class="control-status">
+    <span id="minute-display" style="font-weight:700;font-size:14px;min-width:70px">Min: --</span>
+    <span id="mode-badge" style="font-size:11px;padding:3px 8px;border-radius:10px;font-weight:600;background:var(--surface2);color:var(--text-dim)"></span>
+  </div>
 
-  <label>University:</label>
-  <select id="university-select">
-    <option value="cgu" selected>CGU (Claremont)</option>
-    <option value="gatech">Georgia Tech</option>
-    <option value="howard">Howard University</option>
-  </select>
-
-  <label>Content:</label>
-  <select id="content-select">
-    <option value="sa_theory" selected>SA Theory</option>
-    <option value="dsr_methods">DSR Methods</option>
-    <option value="data_ethics">Data Ethics</option>
-    <option value="hci_dashboards">HCI & Dashboards</option>
-    <option value="lecture_heavy">Lecture Only (stress test)</option>
-    <option value="active_learning">Active Learning (best practice)</option>
-  </select>
-
-  <button style="background:var(--accent);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" id="run-btn" onclick="runSmart()" title="Run simulation — uses AI students if server is running, otherwise rule-based">▶ Run</button>
-  <button style="background:var(--green);border:none;color:#000;font-weight:600;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px" onclick="startZoomLive()" title="Connect to live Zoom meeting">📡 Live</button>
-  <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
-  <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄</button>
-
-  <span id="minute-display" style="margin-left:auto;font-weight:700;font-size:14px;min-width:70px">Min: --</span>
-  <span id="mode-badge" style="font-size:11px;padding:3px 8px;border-radius:10px;font-weight:600;background:var(--surface2);color:var(--text-dim)"></span>
-  <button class="secondary" id="voice-btn" onclick="toggleVoice()" title="Read student chat aloud">🔇</button>
-  <button class="secondary" id="play-btn" onclick="togglePlayback()">Play</button>
-  <select id="speed-select">
-    <option value="500">Fast</option>
-    <option value="1000" selected>Normal</option>
-    <option value="2000">Slow</option>
-  </select>
-  <button style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Guided demo + evaluation suite">▶ Demo Suite</button>
-  <button class="secondary" onclick="document.getElementById('ppt-upload').click()" title="Upload slides (.pptx or .txt outline)">📎 Slides</button>
+  <div class="control-group utility-group">
+    <button class="secondary utility-control" id="voice-btn" onclick="toggleVoice()" title="Read student chat aloud">🔇</button>
+    <button class="secondary utility-control" id="play-btn" onclick="togglePlayback()">Play</button>
+    <select id="speed-select" class="utility-select">
+      <option value="500">Fast</option>
+      <option value="1000" selected>Normal</option>
+      <option value="2000">Slow</option>
+    </select>
+    <button class="utility-control" style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Run the guided walkthrough and evaluation suite">▶ Evaluation Suite</button>
+    <button class="secondary utility-control" onclick="document.getElementById('ppt-upload').click()" title="Upload slides (.pptx or .txt outline)">📎 Slides</button>
+  </div>
   <input type="file" id="ppt-upload" accept=".pptx,.txt,.md" style="display:none" onchange="handleSlideUpload(event)">
+</div>
+<div id="mode-helper" class="mode-strip">
+  <div id="mode-title" class="mode-title">Simulated Instructor Mode</div>
+  <div id="mode-description" class="mode-description">Simulated classroom plus simulated instructor responses.</div>
+  <div id="mode-boundary" class="mode-boundary">IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: prototype-level ingestion</div>
 </div>
 
 <!-- Content Timeline Bar -->
@@ -652,12 +1154,12 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 
 <div class="grid">
   <!-- Row 1: Overview + Students -->
-  <div class="panel">
-    <h2>Class Engagement Overview</h2>
+  <div class="panel supporting-panel" id="overview-panel">
+    <h2 id="overview-panel-title">Class Participation Overview</h2>
     <div class="overview-stats">
       <div class="stat-card green" id="stat-engagement">
         <div class="value">--</div>
-        <div class="label">Mean Engagement</div>
+        <div class="label">Participation Index</div>
       </div>
       <div class="stat-card" id="stat-speakers">
         <div class="value">--</div>
@@ -675,23 +1177,23 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     <div id="patterns-area"></div>
     <div style="margin-top:12px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim)">
-        <span>Speaking Equity (Gini)</span>
+        <span id="gini-metric-label">Speaking Equity (Gini)</span>
         <span id="gini-value">--</span>
       </div>
       <div class="gini-bar"><div class="gini-fill" id="gini-fill" style="width:50%;background:var(--green)"></div></div>
     </div>
   </div>
 
-  <div class="panel">
-    <h2>Student Status</h2>
+  <div class="panel supporting-panel" id="student-panel">
+    <h2 id="student-panel-title">Student Status</h2>
     <div class="student-grid" id="student-grid">
       <div class="loading">Run a simulation to see student data</div>
     </div>
   </div>
 
   <!-- Row 2: Timeline + Heatmap -->
-  <div class="panel full-width">
-    <h2>Engagement Timeline</h2>
+  <div class="panel supporting-panel full-width" id="timeline-panel">
+    <h2 id="timeline-panel-title">Participation Timeline</h2>
     <div id="timeline-chart"></div>
     <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-top:4px">
       <span>Minute 1</span>
@@ -699,60 +1201,67 @@ header .meta { color: var(--text-dim); font-size: 13px; }
     </div>
   </div>
 
-  <div class="panel full-width">
-    <h2>Engagement Heatmap (Students x Time)</h2>
+  <div class="panel supporting-panel full-width" id="heatmap-panel">
+    <h2 id="heatmap-panel-title">Participation Heatmap (Students x Time)</h2>
     <div id="heatmap-container">
       <div id="heatmap" class="loading">Run a simulation to generate heatmap</div>
     </div>
   </div>
 
   <!-- Row 3: Recommendations + Chat -->
-  <div class="panel">
-    <h2>AI Recommendations</h2>
+  <div class="panel primary-panel" id="recommendation-panel">
+    <h2 id="recommendation-panel-title">Instructional Recommendations</h2>
+    <div id="recommendation-helper" class="panel-helper"></div>
     <div class="rec-list" id="rec-list">
       <div class="loading">No recommendations yet</div>
     </div>
   </div>
 
-  <div class="panel">
-    <h2>Chat Activity</h2>
+  <div class="panel supporting-panel" id="chat-panel">
+    <h2 id="chat-panel-title">Chat Activity</h2>
     <div class="chat-log" id="chat-log">
       <div class="loading">No chat messages yet</div>
     </div>
   </div>
 
   <!-- Row 4: Live Instructor Toolbar -->
-  <div class="panel full-width" id="instructor-toolbar" style="display:none;background:linear-gradient(135deg,var(--surface),var(--surface2));border:2px solid var(--accent)">
-    <h2 style="color:var(--accent);font-size:14px;margin-bottom:10px">Instructor Controls</h2>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <button onclick="fireIntervention('breakout')" style="background:var(--green);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">🔀 Breakout Rooms</button>
-      <button onclick="fireIntervention('poll')" style="background:var(--yellow);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">📊 Quick Poll</button>
-      <button onclick="fireIntervention('think_pair_share')" style="background:var(--purple);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">💬 Think-Pair-Share</button>
-      <button onclick="fireIntervention('pace_change')" style="background:var(--accent);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">⚡ Change Pace</button>
-      <button onclick="fireIntervention('cold_call')" style="background:var(--red);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">🎯 Cold Call</button>
-      <button onclick="fireIntervention('clarification')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">❓ Clarification Pause</button>
-    </div>
-    <div id="intervention-log" style="font-size:11px;color:var(--text-dim);max-height:60px;overflow-y:auto"></div>
+  <div class="panel secondary-panel full-width" id="instructor-toolbar" style="display:none">
+    <details class="toolbar-disclosure">
+      <summary>Optional Direct Intervention Controls</summary>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px">The instructor decision queue is the primary workflow. Open this only when you want a manual override path.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button onclick="fireIntervention('breakout')" style="background:var(--green);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">🔀 Breakout Rooms</button>
+        <button onclick="fireIntervention('poll')" style="background:var(--yellow);border:none;color:#000;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">📊 Quick Poll</button>
+        <button onclick="fireIntervention('think_pair_share')" style="background:var(--purple);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">💬 Think-Pair-Share</button>
+        <button onclick="fireIntervention('pace_change')" style="background:var(--accent);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">⚡ Change Pace</button>
+        <button onclick="fireIntervention('cold_call')" style="background:var(--red);border:none;color:white;padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">🎯 Cold Call</button>
+        <button onclick="fireIntervention('clarification')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:6px;font-weight:600;cursor:pointer;font-size:13px">❓ Clarification Pause</button>
+      </div>
+      <div id="intervention-log" style="font-size:11px;color:var(--text-dim);max-height:60px;overflow-y:auto"></div>
+    </details>
   </div>
 
   <!-- Row 5: Professor Actions (if closed-loop) -->
-  <div class="panel full-width" id="professor-panel" style="display:none">
-    <h2 id="professor-title">Simulated Professor Actions</h2>
+  <div class="panel response-log-panel full-width" id="professor-panel" style="display:none">
+    <h2 id="professor-title">Instructor Response Log</h2>
+    <div id="professor-helper" class="panel-helper"></div>
     <div id="professor-summary" style="margin-bottom:12px"></div>
     <div id="professor-actions"></div>
   </div>
 </div>
 
 <!-- ABOUT THIS ARTIFACT -->
-<div class="panel full-width" style="margin:16px 24px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;font-size:12px;line-height:1.7;color:var(--text-dim)">
-  <h2 style="color:var(--purple)">About This Artifact</h2>
-  <p><strong>SAGE</strong> (Simulated Agent-Generated Engagement) is a DSR evaluation sandbox for an Instructional Decision Support System (IDSS). It is the Stage 1 artifact for IST 505 Design Research Methods at Claremont Graduate University, Spring 2026.</p>
-  <p style="margin-top:8px"><strong>What it does:</strong> 15 student agents with distinct behavioral profiles (engagement baselines, attention spans, drift rates, confusion thresholds) generate engagement data in a simulated 45-minute class. The IDSS detects patterns (energy decay, confusion clusters, equity imbalance, silent majority, fade cascades) and generates prioritized recommendations. A simulated professor responds using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.</p>
-  <p style="margin-top:8px"><strong>What it tests:</strong> Whether the IDSS dashboard supports instructor decision-making at SA Level 2 (comprehension — pattern detection) and Level 3 (projection — actionable recommendations). The evaluation suite compares outcomes across scenarios and professor styles to isolate the IDSS contribution from instructor variation.</p>
-  <p style="margin-top:8px"><strong>What is real:</strong> All engagement scores are computed from weighted signal formulas. Pattern detection uses real thresholds (energy decay = 15%+ drop, equity = Gini > 0.5, confusion = 3+ students). Professor responses sample from real probability distributions per style. University presets use IPEDS enrollment data. Each run with a different seed produces genuinely different outcomes.</p>
-  <p style="margin-top:8px"><strong>AI mode:</strong> When the server is running (<code>python3 server.py</code>), students generate chat using an LLM (Groq/Llama 3.1). Students perceive room context and each other — social contagion emerges from shared context, not explicit modeling. A professor agent reads the actual dashboard JSON to make decisions. Without the server, the simulation runs in-browser with rule-based templates.</p>
-  <p style="margin-top:8px"><strong>Theoretical grounding:</strong> Endsley (1995) Situational Awareness, Hevner et al. (2004) DSR guidelines, Venable et al. (2016) FEDS evaluation framework, Li et al. (2025) instructor analytics heterogeneity, Wise & Jung (2019) instructor intervention patterns.</p>
-</div>
+<details class="artifact-details">
+  <summary>Artifact context and scope: IDSS under study, SAGE as the simulation and evaluation environment.</summary>
+  <div class="artifact-details-body">
+    <h2>About This Artifact</h2>
+    <p><strong>This dashboard is a working instructional decision-support prototype for synchronous online teaching.</strong> <strong>SAGE</strong> is the simulation and formative-evaluation environment: it generates observable-participation proxy signals from 15 agent students, routes them through the dashboard, and records instructor response behavior. SAGE does not measure engagement, attention, or learning outcomes.</p>
+    <p style="margin-top:8px"><strong>What it demonstrates:</strong> 15 student agents with distinct behavioral profiles generate observable participation signals in a simulated 45-minute class. The IDSS detects patterns such as participation decline, confusion clusters, equity imbalance, and low-observable-participation conditions, then generates prioritized advisory recommendations. In one-player mode, a human instructor can respond through the inline recommendation cards using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.</p>
+    <p style="margin-top:8px"><strong>What is currently in scope:</strong> Pattern detection uses rule-based computed thresholds and recommendations are rule-based and advisory. University presets supply institutional enrollment context, and each run can produce different outcomes. Participation proxies are formula-driven in all modes; when an LLM backend is available it only enriches simulated student chat dialogue, and does not replace rule-based participation signals or recommendation logic. The instructor role can remain simulated or human-controlled.</p>
+    <p style="margin-top:8px"><strong>Deployment-oriented extension:</strong> Zoom meeting events can be connected to the dashboard through webhooks as the intended live deployment path. The current implementation is still prototype-level, so the main Phase 3 evidence lane remains the simulated classroom workflow.</p>
+    <p style="margin-top:8px"><strong>Theoretical grounding:</strong> Endsley (1995) situation awareness, Sweller (1988) cognitive load, Hevner et al. (2004) DSR guidelines, Venable et al. (2016) FEDS evaluation framework, Van Leeuwen et al. (2019) advising-oriented learning analytics, and Wise & Jung (2019) instructional decision-making.</p>
+  </div>
+</details>
 
 <!-- CLASSROOM VIEW -->
 <div id="classroom-view">
@@ -772,7 +1281,7 @@ header .meta { color: var(--text-dim); font-size: 13px; }
       <div id="zoom-alerts" style="font-size:12px"></div>
     </div>
     <div class="panel" id="zoom-prof-panel" style="flex:1;display:none">
-      <h2 id="zoom-prof-name">Professor</h2>
+      <h2 id="zoom-prof-name">Instructor</h2>
       <div id="zoom-prof-actions" style="font-size:12px"></div>
     </div>
   </div>
@@ -792,6 +1301,480 @@ let sessionData = null;
 let currentMinute = 0;
 let playbackInterval = null;
 let responseLog = [];
+let lastRenderedTopRecommendationKey = null;
+const SESSION_STORAGE_KEY = 'sageSessionId';
+const MANUAL_INTERVENTION_OPTIONS = ['breakout', 'poll', 'cold_call', 'pace_change', 'think_pair_share', 'clarification'];
+const RECOMMENDATION_ACTION_MAP = {
+  equity_intervention: 'think_pair_share',
+  activation: 'poll',
+};
+
+function getCurrentSessionId() {
+  const urlSid = new URLSearchParams(window.location.search).get('sid');
+  if (urlSid) {
+    try { sessionStorage.setItem(SESSION_STORAGE_KEY, urlSid); } catch (e) {}
+    return urlSid;
+  }
+  try {
+    return sessionStorage.getItem(SESSION_STORAGE_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+function setCurrentSessionId(sessionId) {
+  if (!sessionId) return;
+  try { sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId); } catch (e) {}
+}
+
+function clearCurrentSessionId() {
+  try { sessionStorage.removeItem(SESSION_STORAGE_KEY); } catch (e) {}
+}
+
+function apiUrl(path, opts = {}) {
+  const { includeSession = true } = opts;
+  const url = new URL(path, window.location.origin);
+  const sessionId = includeSession ? getCurrentSessionId() : null;
+  if (sessionId) url.searchParams.set('session_id', sessionId);
+  return url.toString();
+}
+
+function isZoomLiveMode() {
+  return sessionData?.metadata?.source_mode === 'zoom_live';
+}
+
+function setModeBadgePending(text = 'Starting…') {
+  const badge = document.getElementById('mode-badge');
+  badge.textContent = text;
+  badge.style.background = 'var(--surface2)';
+  badge.style.color = 'var(--text)';
+  badge.title = 'Connecting to the server-backed run.';
+}
+
+function syncModeBadge(metadata = {}) {
+  const badge = document.getElementById('mode-badge');
+  if (metadata?.source_mode === 'zoom_live') {
+    badge.textContent = '📡 Live';
+    badge.style.background = 'var(--green)';
+    badge.style.color = '#000';
+    badge.title = 'Zoom live mode using meeting signals from webhooks.';
+    return;
+  }
+
+  if (metadata?.runtime_mode === 'ai' || metadata?.llm_effective) {
+    badge.textContent = 'AI Students';
+    badge.style.background = 'var(--green)';
+    badge.style.color = '#000';
+    badge.title = metadata?.llm_backend
+      ? `LLM backend active: ${metadata.llm_backend}`
+      : 'LLM backend active for this run.';
+    return;
+  }
+
+  if (metadata?.llm_requested && !metadata?.llm_effective) {
+    badge.textContent = 'Rules Fallback';
+    badge.style.background = 'var(--yellow)';
+    badge.style.color = '#000';
+    badge.title = 'LLM mode was requested, but no backend was reachable. This run is using rule-based behavior.';
+    return;
+  }
+
+  setModeBadge('rules');
+  badge.title = 'Rule-based run.';
+}
+
+function isManualMode() {
+  return document.getElementById('professor-select')?.value === 'none';
+}
+
+function updateWorkflowHints() {
+  const modeHelper = document.getElementById('mode-helper');
+  const modeTitle = document.getElementById('mode-title');
+  const modeDescription = document.getElementById('mode-description');
+  const modeBoundary = document.getElementById('mode-boundary');
+  const recHelper = document.getElementById('recommendation-helper');
+  const professorHelper = document.getElementById('professor-helper');
+  const recommendationTitle = document.getElementById('recommendation-panel-title');
+  const overviewTitle = document.getElementById('overview-panel-title');
+  const studentTitle = document.getElementById('student-panel-title');
+  const timelineTitle = document.getElementById('timeline-panel-title');
+  const chatTitle = document.getElementById('chat-panel-title');
+  const engagementLabel = document.querySelector('#stat-engagement .label');
+  const speakersLabel = document.querySelector('#stat-speakers .label');
+  const giniLabel = document.querySelector('#stat-gini .label');
+  const giniMetricLabel = document.getElementById('gini-metric-label');
+  if (!modeHelper || !modeTitle || !modeDescription || !modeBoundary || !recHelper) return;
+
+  modeBoundary.innerHTML = 'IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: prototype-level ingestion';
+
+  document.body.classList.toggle('mode-live', isZoomLiveMode());
+  document.body.classList.toggle('mode-manual', !isZoomLiveMode() && isManualMode());
+  document.body.classList.toggle('mode-simulated', !isZoomLiveMode() && !isManualMode());
+
+  if (isZoomLiveMode()) {
+    modeTitle.textContent = 'Live Zoom Monitoring';
+    modeDescription.textContent = 'Real-time meeting signals are being interpreted in session through the current Zoom deployment prototype.';
+    if (recommendationTitle) recommendationTitle.textContent = 'Live Recommendation Alerts';
+    if (overviewTitle) overviewTitle.textContent = 'Live Meeting Overview';
+    if (studentTitle) studentTitle.textContent = 'Current Participants';
+    if (timelineTitle) timelineTitle.textContent = 'Live Signal Timeline';
+    if (chatTitle) chatTitle.textContent = 'Live Chat Signals';
+    if (engagementLabel) engagementLabel.textContent = 'Live Participation';
+    if (speakersLabel) speakersLabel.textContent = 'Recently Active';
+    if (giniLabel) giniLabel.textContent = 'Chat Equity';
+    if (giniMetricLabel) giniMetricLabel.textContent = 'Chat Equity (Gini)';
+    if (professorHelper) professorHelper.textContent = 'This live trace shows what Zoom has actually delivered to the server, which signal types are active, and why the dashboard is or is not differentiating participants yet.';
+    recHelper.textContent = 'Live recommendations are rule-based advisory prompts from received Zoom signals, not automatic judgments. Use the live trace below to verify what Zoom has actually sent.';
+    return;
+  }
+
+  if (isManualMode()) {
+    modeTitle.textContent = 'Instructor Decision Mode';
+    modeDescription.textContent = 'Simulated students are running while a human instructor responds through the decision queue.';
+    if (recommendationTitle) recommendationTitle.textContent = 'Instructor Decision Queue';
+    if (overviewTitle) overviewTitle.textContent = 'Class State Overview';
+    if (studentTitle) studentTitle.textContent = 'Simulated Students';
+    if (timelineTitle) timelineTitle.textContent = 'Participation Timeline';
+    if (chatTitle) chatTitle.textContent = 'Student Chat Signals';
+    if (engagementLabel) engagementLabel.textContent = 'Participation Index';
+    if (speakersLabel) speakersLabel.textContent = 'Active Speakers';
+    if (giniLabel) giniLabel.textContent = 'Speaking Equity';
+    if (giniMetricLabel) giniMetricLabel.textContent = 'Speaking Equity (Gini)';
+    if (professorHelper) professorHelper.textContent = 'Chosen responses appear here after you act on recommendations in the decision queue, and they are reflected in the ongoing run.';
+    recHelper.textContent = 'Instructor decision flow: review the rule-based rationale, then choose ignore, acknowledge, accept, modify, or reject. Recommendations are candidate moves, not commands.';
+    return;
+  }
+
+  modeTitle.textContent = 'Simulated Instructor Mode';
+  modeDescription.textContent = 'Simulated classroom plus simulated instructor responses.';
+  if (recommendationTitle) recommendationTitle.textContent = 'Instructional Recommendations';
+  if (overviewTitle) overviewTitle.textContent = 'Class Participation Overview';
+  if (studentTitle) studentTitle.textContent = 'Student Status';
+  if (timelineTitle) timelineTitle.textContent = 'Participation Timeline';
+  if (chatTitle) chatTitle.textContent = 'Chat Activity';
+  if (engagementLabel) engagementLabel.textContent = 'Participation Index';
+  if (speakersLabel) speakersLabel.textContent = 'Active Speakers';
+  if (giniLabel) giniLabel.textContent = 'Speaking Equity';
+  if (giniMetricLabel) giniMetricLabel.textContent = 'Speaking Equity (Gini)';
+  if (professorHelper) professorHelper.textContent = 'Simulated instructor decisions are summarized here as the run progresses.';
+  recHelper.textContent = 'Recommendations appear as classroom patterns emerge. They are generated from rule-based pattern mappings and still require instructor judgment.';
+}
+
+function normalizeInterventionType(action) {
+  if (!action) return null;
+  const normalized = RECOMMENDATION_ACTION_MAP[action] || action;
+  return MANUAL_INTERVENTION_OPTIONS.includes(normalized) ? normalized : null;
+}
+
+function formatInterventionLabel(action) {
+  if (!action) return 'No intervention';
+  return action.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+}
+
+function formatPatternLabel(patternType) {
+  if (!patternType) return 'Pattern';
+  return patternType.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+}
+
+function getRecommendationSignalText(rec) {
+  const evidence = rec?.evidence;
+  if (!evidence) return '';
+  const patternLabel = formatPatternLabel(evidence.type);
+  const base = evidence.message || '';
+  if (evidence.value === undefined || evidence.value === null) {
+    return `${patternLabel}: ${base}`.trim();
+  }
+  const valueText = typeof evidence.value === 'number'
+    ? Number.isInteger(evidence.value) ? String(evidence.value) : evidence.value.toFixed(2)
+    : String(evidence.value);
+  return `${patternLabel}: ${base}${base ? ' ' : ''}(value=${valueText})`;
+}
+
+function escapeHtmlAttr(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function isLocalOrigin() {
+  return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+}
+
+async function fetchZoomDebugSnapshot() {
+  try {
+    const resp = await fetch(apiUrl('/api/zoom/debug', { includeSession: false }));
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+function formatLiveSignalLabel(signal) {
+  const labels = {
+    presence: 'Presence',
+    chat: 'Chat',
+    hand: 'Hand',
+    reaction: 'Reaction',
+  };
+  return labels[signal] || formatPatternLabel(signal);
+}
+
+function formatLiveEventTypeLabel(eventType) {
+  const labels = {
+    meeting_started: 'Meeting Started',
+    meeting_ended: 'Meeting Ended',
+    join: 'Participant Joined',
+    leave: 'Participant Left',
+    chat: 'Chat Message',
+    hand_raise: 'Hand Raised',
+    hand_lower: 'Hand Lowered',
+    reaction: 'Reaction',
+    other: 'Other Event',
+  };
+  return labels[eventType] || formatPatternLabel(eventType);
+}
+
+function describeLiveEvent(event) {
+  const data = event?.data || {};
+  const name = escapeHtml(event?.name || 'Unknown participant');
+  switch (event?.event_type) {
+    case 'meeting_started':
+      return 'Zoom reported that a live meeting has started.';
+    case 'meeting_ended':
+      return 'Zoom reported that the live meeting has ended.';
+    case 'join':
+      return `${name} joined the meeting.`;
+    case 'leave':
+      return `${name} left the meeting.`;
+    case 'chat':
+      return `${name} sent a chat message${data.text ? `: "${escapeHtml(data.text)}"` : '.'}`;
+    case 'hand_raise':
+      return `${name} raised a hand in Zoom.`;
+    case 'hand_lower':
+      return `${name} lowered a hand in Zoom.`;
+    case 'reaction':
+      return `${name} sent a ${formatLiveSignalLabel(data.type || 'reaction').toLowerCase()} event.`;
+    default:
+      return event?.raw_event_type
+        ? `Zoom delivered ${event.raw_event_type}.`
+        : 'Zoom delivered an unclassified event.';
+  }
+}
+
+function renderLiveDebugPanel(frame) {
+  const panel = document.getElementById('professor-panel');
+  const title = document.getElementById('professor-title');
+  const helper = document.getElementById('professor-helper');
+  const summary = document.getElementById('professor-summary');
+  const actions = document.getElementById('professor-actions');
+  if (!panel || !title || !summary || !actions) return;
+
+  const debug = frame?.live_debug || {};
+  const signalStatus = debug.signal_status || 'waiting';
+  const statusCardClass = signalStatus === 'rich' ? 'good' : (signalStatus === 'presence_only' ? 'warn' : '');
+  const webhookUrl = `${window.location.origin}/api/zoom/webhook`;
+  const supportedSignals = debug.supported_signal_types || ['presence', 'chat', 'hand', 'reaction'];
+  const signalCounts = debug.signal_counts || {};
+  const signalCoverage = debug.signal_coverage || {};
+  const recentEvents = debug.recent_events || [];
+
+  panel.style.display = 'block';
+  title.textContent = 'Live Signal Trace';
+  if (helper) {
+    helper.textContent = 'This panel is the live observability surface: it shows which Zoom signals the server supports, which ones have actually arrived, and the recent event trace driving the dashboard.';
+  }
+
+  summary.innerHTML = `
+    <div class="live-debug-summary">
+      <div class="live-signal-card ${statusCardClass}">
+        <div class="metric-label">Signal Status</div>
+        <div class="metric-value">${signalStatus === 'rich' ? 'Rich' : signalStatus === 'presence_only' ? 'Presence only' : 'Waiting'}</div>
+        <div class="metric-note">${escapeHtml(debug.signal_status_reason || 'Waiting for Zoom activity.')}</div>
+      </div>
+      <div class="live-signal-card">
+        <div class="metric-label">Meeting ID</div>
+        <div class="metric-value" style="font-size:18px">${escapeHtml(debug.meeting_id || '—')}</div>
+        <div class="metric-note">${debug.active ? 'Active live meeting on the server.' : 'No active live meeting currently attached.'}</div>
+      </div>
+      <div class="live-signal-card">
+        <div class="metric-label">Participants</div>
+        <div class="metric-value">${debug.participant_count ?? 0}</div>
+        <div class="metric-note">Current roster size visible to the live webhook adapter.</div>
+      </div>
+      <div class="live-signal-card">
+        <div class="metric-label">Last Raw Event</div>
+        <div class="metric-value" style="font-size:18px">${escapeHtml(debug.last_raw_event_type || '—')}</div>
+        <div class="metric-note">${debug.last_event_at ? `Last event reached the server at ${new Date(debug.last_event_at * 1000).toLocaleTimeString()}.` : 'No live event has reached the server yet.'}</div>
+      </div>
+    </div>
+    <div class="live-debug-meta">
+      <div><strong>Webhook endpoint:</strong> <code>${escapeHtml(webhookUrl)}</code></div>
+      <div><strong>Supported live inputs:</strong> ${supportedSignals.map(formatLiveSignalLabel).join(', ')}</div>
+      ${debug.recent_raw_event_types?.length ? `<div><strong>Raw Zoom events seen recently:</strong> ${debug.recent_raw_event_types.map(type => escapeHtml(type)).join(', ')}</div>` : ''}
+      ${!signalCoverage.chat ? '<div><strong>Chat note:</strong> if in-meeting chat never appears here, Zoom may require account-level in-meeting chat DLP/support enablement in addition to the webhook subscription.</div>' : ''}
+      ${isLocalOrigin() ? '<div><strong>Demo reliability note:</strong> for class demos, the recommended path is a hosted Render deployment using this same webhook route rather than a temporary local tunnel.</div>' : ''}
+      <div class="live-signal-badges">
+        ${supportedSignals.map(signal => `
+          <span class="live-signal-badge ${signalCoverage[signal] ? 'active' : 'inactive'}">
+            ${formatLiveSignalLabel(signal)} · ${signalCounts[signal] || 0}
+          </span>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  actions.innerHTML = recentEvents.length
+    ? `<div class="live-event-list">${recentEvents.slice().reverse().map(event => `
+        <div class="live-event-item">
+          <div class="live-event-top">
+            <span class="live-event-type">${formatLiveEventTypeLabel(event.event_type)}</span>
+            <span class="live-event-minute">Min ${event.minute}</span>
+          </div>
+          <div class="live-event-body">${describeLiveEvent(event)}</div>
+          <div class="live-event-meta">
+            ${event.raw_event_type ? `Raw: ${escapeHtml(event.raw_event_type)}` : 'Raw: n/a'}${event.student_id ? ` · ID: ${escapeHtml(event.student_id)}` : ''}
+          </div>
+        </div>
+      `).join('')}</div>`
+    : '<div class="live-debug-meta">No Zoom webhook events have been recorded yet. Once a meeting starts and Zoom delivers events, the trace will appear here.</div>';
+}
+
+function getRecommendationFormValues(rec) {
+  const recId = rec?.rec_id || '';
+  const root = document.querySelector(`[data-rec-form-id="${recId}"]`);
+  if (!root) return { interventionType: null, rationale: '' };
+  const select = root.querySelector('.manual-intervention-select');
+  const rationaleInput = root.querySelector('.manual-rationale-input');
+  return {
+    interventionType: normalizeInterventionType(select?.value || ''),
+    rationale: (rationaleInput?.value || '').trim(),
+  };
+}
+
+function getVisibleRecommendations(min = currentMinute) {
+  if (!sessionData?.recommendations) return [];
+  return sessionData.recommendations.filter(r => r.minute <= min).slice(-10).reverse();
+}
+
+function getRecommendationKey(rec) {
+  if (!rec) return null;
+  return rec.rec_id || `${rec.minute}|${rec.message || ''}|${rec.priority || ''}|${rec.action || ''}`;
+}
+
+function syncRecommendationViewport(recs) {
+  const recList = document.getElementById('rec-list');
+  if (!recList) return;
+  if (!recs?.length) {
+    lastRenderedTopRecommendationKey = null;
+    return;
+  }
+
+  const topKey = getRecommendationKey(recs[0]);
+  const newestChanged = topKey && topKey !== lastRenderedTopRecommendationKey;
+  lastRenderedTopRecommendationKey = topKey;
+
+  if (newestChanged) {
+    recList.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function ensureManualProfessorData() {
+  if (!sessionData) return null;
+  if (!sessionData.professor) {
+    sessionData.professor = {
+      style: 'none',
+      style_name: 'Manual Instructor',
+      style_description: 'Human-controlled response logging',
+      actions: [],
+      summary: {
+        total_actions: 0,
+        category_distribution: {},
+        interventions_used: {},
+        interventions_total: 0,
+        acceptance_rate: 0,
+      }
+    };
+  }
+  return sessionData.professor;
+}
+
+function summarizeProfessorActions(actions) {
+  const category_distribution = {};
+  const interventions_used = {};
+  for (const action of actions || []) {
+    category_distribution[action.response_category] = (category_distribution[action.response_category] || 0) + 1;
+    if (action.intervention_type) {
+      interventions_used[action.intervention_type] = (interventions_used[action.intervention_type] || 0) + 1;
+    }
+  }
+  const total_actions = (actions || []).length;
+  return {
+    total_actions,
+    category_distribution,
+    interventions_used,
+    interventions_total: Object.values(interventions_used).reduce((a, b) => a + b, 0),
+    acceptance_rate: Math.round((((category_distribution.accept || 0) + (category_distribution.modify || 0)) / Math.max(1, total_actions)) * 100),
+  };
+}
+
+function upsertManualAction(action) {
+  const professor = ensureManualProfessorData();
+  if (!professor) return;
+
+  const actionKey = action.recommendation_id || `${action.minute}|${action.recommendation || ''}|${action.response_category}`;
+  const existing = professor.actions.findIndex(a =>
+    (a.recommendation_id || `${a.minute}|${a.recommendation || ''}|${a.response_category}`) === actionKey &&
+    (a.response_source || 'manual') === 'manual'
+  );
+
+  if (existing >= 0) professor.actions[existing] = action;
+  else professor.actions.push(action);
+
+  professor.style = 'none';
+  professor.style_name = 'Manual Instructor';
+  professor.style_description = 'Human-controlled response logging';
+  professor.summary = summarizeProfessorActions(professor.actions);
+
+  const logExisting = responseLog.findIndex(a =>
+    (a.recommendation_id || `${a.minute}|${a.recommendation || ''}|${a.response_category}`) === actionKey
+  );
+  if (logExisting >= 0) responseLog[logExisting] = action;
+  else responseLog.push(action);
+}
+
+function getLoggedResponseForRecommendation(rec) {
+  if (!rec) return null;
+  const recId = rec.rec_id;
+  const actions = sessionData?.professor?.actions || responseLog;
+  return [...actions].reverse().find(a =>
+    (a.response_source || 'manual') === 'manual' &&
+    (a.recommendation_id === recId ||
+      ((a.recommendation || '') === (rec.message || '') && a.minute === rec.minute))
+  ) || null;
+}
+
+function defaultProfessorSpokenText(category, interventionType, recommendationMessage = '') {
+  if (category === 'ignore') return null;
+  if (interventionType === 'clarification') return 'Let me pause for a moment and clarify that idea before we move on.';
+  if (interventionType === 'breakout') return 'Let’s take a short breakout and talk this through in smaller groups, then we’ll come back together.';
+  if (interventionType === 'poll') return 'Let me run a quick poll so I can see where everyone is before we continue.';
+  if (interventionType === 'think_pair_share') return 'Take a moment to think on your own, compare with a partner, and then we’ll share out.';
+  if (interventionType === 'pace_change') return 'Let’s shift gears for a moment and change the pace before we keep going.';
+  if (interventionType === 'cold_call') return 'I want to bring another voice in here. Let’s hear from someone we have not heard from yet.';
+  if (category === 'acknowledge') return 'I’m noticing that pattern too, so I’m going to keep an eye on it as we continue.';
+  if (category === 'reject') return 'I’m going to stay the course for the moment and revisit this if needed.';
+  return recommendationMessage || 'Let me respond to what I’m seeing in the room before we continue.';
+}
 
 // ============================================================
 // SIMULATION (runs in-browser via the scoring logic)
@@ -915,7 +1898,7 @@ function runSimulation() {
     if (timeline.length >= 5) {
       const earlyMean = timeline.slice(0, 5).reduce((s, t) => s + t.class_engagement, 0) / 5;
       const decay = earlyMean - meanEng;
-      if (decay > 0.10) patterns.push({ type: 'energy_decay', severity: decay < 0.2 ? 'mild' : decay < 0.3 ? 'moderate' : 'severe', value: Math.round(decay * 100) / 100, message: `Class engagement dropped ${Math.round(decay * 100)}% from session start` });
+      if (decay > 0.10) patterns.push({ type: 'energy_decay', severity: decay < 0.2 ? 'mild' : decay < 0.3 ? 'moderate' : 'severe', value: Math.round(decay * 100) / 100, message: `Class observable participation dropped ${Math.round(decay * 100)}% from session start` });
     }
     if (gini > 0.5) patterns.push({ type: 'equity_imbalance', severity: gini < 0.65 ? 'mild' : gini < 0.8 ? 'moderate' : 'severe', value: Math.round(gini * 100) / 100, message: `Speaking time concentrated (Gini=${gini.toFixed(2)})` });
     if (confused.length >= 3) patterns.push({ type: 'confusion_cluster', severity: confused.length < 4 ? 'mild' : 'moderate', value: confused.length, message: `${confused.length} students signaling confusion`, students: confused });
@@ -926,11 +1909,11 @@ function runSimulation() {
       if (recentSame.length > 0) continue; // Don't repeat same recommendation within 5 minutes
       let rec = null;
       if (p.type === 'energy_decay') {
-        rec = { priority: p.severity === 'severe' ? 'high' : 'medium', action: 'breakout', message: `Participation dropped ${Math.round(p.value * 100)}% since start. Consider breakout activity.`, minute: min };
+        rec = { rec_id: `local-${min}-${recommendations.length}`, priority: p.severity === 'severe' ? 'high' : 'medium', action: 'breakout', message: `Observable participation dropped ${Math.round(p.value * 100)}% since start. Consider a brief activity shift; use instructor judgment before choosing breakout rooms.`, minute: min, evidence: p };
       } else if (p.type === 'equity_imbalance') {
-        rec = { priority: p.severity === 'severe' ? 'high' : 'medium', action: 'equity_intervention', message: `Discussion dominated by few voices (Gini=${p.value.toFixed(2)}). Try think-pair-share.`, minute: min };
+        rec = { rec_id: `local-${min}-${recommendations.length}`, priority: p.severity === 'severe' ? 'high' : 'medium', action: 'equity_intervention', message: `Discussion appears concentrated in a few voices (Gini=${p.value.toFixed(2)}). Consider think-pair-share or another low-pressure equity move.`, minute: min, evidence: p };
       } else if (p.type === 'confusion_cluster') {
-        rec = { priority: 'high', action: 'clarification', message: `${p.value} students confused. Pause for clarification.`, minute: min };
+        rec = { rec_id: `local-${min}-${recommendations.length}`, priority: 'high', action: 'clarification', message: `${p.value} students signaled possible confusion. Consider pausing to check understanding.`, minute: min, evidence: p };
       }
       if (rec) recommendations.push(rec);
     }
@@ -993,7 +1976,7 @@ function runSimulation() {
         const selfIv = ['poll', 'pace_change', 'think_pair_share'][Math.floor(rng() * 3)];
         profActions.push({
           minute: min, response_category: 'self_initiated', intervention_type: selfIv,
-          rationale: `Noticed low engagement (${(frame.class_engagement * 100).toFixed(0)}%) — trying ${selfIv}`,
+          rationale: `Noticed low observable participation (${(frame.class_engagement * 100).toFixed(0)}%) — trying ${selfIv}`,
           delay: 0, recommendation: null
         });
         lastInterventionMin = min;
@@ -1215,8 +2198,9 @@ function createProfessor(style) {
         reject: ['Students need to push through this', 'Current approach is working for my goals', 'Disagree — continuing as planned'],
       };
       const rationale = (rationales[category] || [''])[Math.floor(rng() * 3)];
+      const spoken_text = defaultProfessorSpokenText(category, intervention_type, rec.message);
 
-      return { response_category: category, intervention_type, rationale, delay };
+      return { response_category: category, intervention_type, rationale, spoken_text, delay };
     }
   };
 }
@@ -1241,6 +2225,42 @@ function renderAll(duration) {
   renderHeatmap(duration);
 }
 
+function getLiveSignalProfile(frame) {
+  if (!frame || frame.source !== 'zoom_live') {
+    return { sparse: false, reason: '' };
+  }
+
+  const liveDebug = frame.live_debug || {};
+  if (liveDebug.signal_status === 'presence_only') {
+    return {
+      sparse: true,
+      reason: liveDebug.signal_status_reason || 'Only presence and join signals have arrived so far.',
+    };
+  }
+
+  const students = frame.students || [];
+  if (students.length === 0) {
+    return { sparse: false, reason: '' };
+  }
+
+  const anyRichEvent = students.some(s => {
+    const signals = s.signals || {};
+    return (signals.chat_count || 0) > 0 || (signals.reaction_count || 0) > 0 || signals.hand_raised;
+  });
+  const anyVeryRecentActivity = students.some(s => {
+    const signals = s.signals || {};
+    return (signals.minutes_since_active || Infinity) <= 1;
+  });
+  const sparse = frame.participant_count >= 2 && frame.minute >= 3 && !anyRichEvent && !anyVeryRecentActivity;
+
+  return {
+    sparse,
+    reason: sparse
+      ? 'Only presence and join signals have arrived so far. Per-student live differentiation stays at a shared baseline until richer chat, hand, reaction, or speaking signals come through.'
+      : '',
+  };
+}
+
 function showMinute(min) {
   if (!sessionData || !sessionData.timeline[min - 1]) return;
   currentMinute = min;
@@ -1248,13 +2268,18 @@ function showMinute(min) {
   renderContentBar(min);
   speakMinuteChats(min);
   updateInstructorToolbar();
+  updateWorkflowHints();
 
   const frame = sessionData.timeline[min - 1];
+  const liveInsufficientSignal = Boolean(isZoomLiveMode() && frame.insufficient_signal);
+  const liveSignalProfile = getLiveSignalProfile(frame);
+  const liveSparseSignal = Boolean(isZoomLiveMode() && liveSignalProfile.sparse);
+  const liveLimitedSignal = liveInsufficientSignal || liveSparseSignal;
 
   // Overview stats
   const engEl = document.getElementById('stat-engagement');
-  engEl.querySelector('.value').textContent = (frame.class_engagement * 100).toFixed(0) + '%';
-  engEl.className = 'stat-card ' + (frame.class_engagement >= 0.65 ? 'green' : frame.class_engagement >= 0.4 ? 'yellow' : 'red');
+  engEl.querySelector('.value').textContent = liveLimitedSignal ? '--' : (frame.class_engagement * 100).toFixed(0) + '%';
+  engEl.className = 'stat-card ' + (liveLimitedSignal ? 'yellow' : (frame.class_engagement >= 0.65 ? 'green' : frame.class_engagement >= 0.4 ? 'yellow' : 'red'));
 
   document.querySelector('#stat-speakers .value').textContent = frame.active_speakers;
   document.querySelector('#stat-gini .value').textContent = (1 - frame.speaking_gini).toFixed(2);
@@ -1269,9 +2294,11 @@ function showMinute(min) {
 
   // Patterns
   const patternsArea = document.getElementById('patterns-area');
-  patternsArea.innerHTML = frame.patterns.map(p =>
-    `<span class="pattern-badge ${p.severity}">${p.type.replace(/_/g, ' ')}</span>`
-  ).join('');
+  patternsArea.innerHTML = liveLimitedSignal
+    ? `<div style="font-size:12px;color:var(--text-dim)">${frame.insufficient_signal_reason || frame.live_debug?.signal_status_reason || liveSignalProfile.reason || 'Live signal confidence is limited until richer activity arrives.'}</div>`
+    : frame.patterns.map(p =>
+        `<span class="pattern-badge ${p.severity}">${p.type.replace(/_/g, ' ')}</span>`
+      ).join('');
 
   // Student grid
   const grid = document.getElementById('student-grid');
@@ -1279,10 +2306,13 @@ function showMinute(min) {
     const stu = sessionData.students.find(st => st.student_id === s.student_id);
     const name = stu ? stu.name.split(' ')[0] : s.student_id;
     const cls = s.is_confused ? 'confused' : s.state;
+    const scoreLabel = liveLimitedSignal ? 'BASELINE' : `${(s.engagement * 100).toFixed(0)}%`;
+    const participationLabel = participationProxyLabel(s.state);
+    const stateLabel = liveLimitedSignal && !s.is_confused ? 'presence only' : (s.is_confused ? 'possible confusion signal' : participationLabel);
     return `<div class="student-card ${cls}">
       <div class="name">${name}</div>
-      <div class="score" style="color:${engColor(s.engagement)}">${(s.engagement * 100).toFixed(0)}%</div>
-      <div class="state">${s.is_confused ? 'CONFUSED' : s.state}</div>
+      <div class="score" style="color:${liveLimitedSignal ? 'var(--text-dim)' : engColor(s.engagement)}">${scoreLabel}</div>
+      <div class="state">${stateLabel}</div>
     </div>`;
   }).join('');
 
@@ -1290,29 +2320,81 @@ function showMinute(min) {
   const recs = sessionData.recommendations.filter(r => r.minute <= min);
   const recList = document.getElementById('rec-list');
   if (recs.length === 0) {
-    recList.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">No recommendations generated yet</div>';
+    recList.innerHTML = isZoomLiveMode()
+      ? (liveLimitedSignal
+          ? `<div style="color:var(--text-dim);padding:20px;text-align:center">${frame.insufficient_signal_reason || frame.live_debug?.signal_status_reason || liveSignalProfile.reason || 'Live signal confidence is limited until richer Zoom activity arrives.'}<div style="margin-top:8px">Use the live trace below to verify which signals have actually reached the server.</div></div>`
+          : '<div style="color:var(--text-dim);padding:20px;text-align:center">No live recommendations generated yet. Recommendations appear here when Zoom activity indicates participation issues.<div style="margin-top:8px">Use the live trace below to verify incoming events.</div></div>')
+      : '<div style="color:var(--text-dim);padding:20px;text-align:center">No recommendations generated yet</div>';
   } else {
-    recList.innerHTML = recs.slice(-10).reverse().map((r, i) => `
-      <div class="rec-item ${r.priority}">
-        <div class="priority">${r.priority} priority</div>
-        <div class="message">${r.message}</div>
-        <div class="minute-tag">Minute ${r.minute} &middot; Suggested: ${r.action}</div>
-        <div class="response-buttons" data-rec="${i}">
-          <button class="response-btn" onclick="logResponse(${i},'ignore')">Ignore</button>
-          <button class="response-btn" onclick="logResponse(${i},'acknowledge')">Acknowledge</button>
-          <button class="response-btn" onclick="logResponse(${i},'accept')">Accept</button>
-          <button class="response-btn" onclick="logResponse(${i},'modify')">Modify</button>
-          <button class="response-btn" onclick="logResponse(${i},'reject')">Reject</button>
+    recList.innerHTML = recs.slice(-10).reverse().map((r, i) => {
+      const manualResponse = isManualMode() ? getLoggedResponseForRecommendation(r) : null;
+      const suggestedIntervention = normalizeInterventionType(r.action);
+      const selectedIntervention = manualResponse?.intervention_type || suggestedIntervention || 'poll';
+      const actionLabel = formatInterventionLabel(suggestedIntervention || r.action);
+      const signalText = getRecommendationSignalText(r);
+      const manualForm = isManualMode() ? `
+        <details class="manual-response-details" ${manualResponse?.response_category === 'modify' || manualResponse?.rationale ? 'open' : ''}>
+          <summary>Adjust intervention / rationale</summary>
+          <div class="manual-response-form" data-rec-form-id="${r.rec_id || ''}">
+            <div class="manual-response-grid">
+              <div>
+                <label>Modify Intervention</label>
+                <select class="manual-intervention-select">
+                  ${MANUAL_INTERVENTION_OPTIONS.map(option => `
+                    <option value="${option}" ${selectedIntervention === option ? 'selected' : ''}>${formatInterventionLabel(option)}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div>
+                <label>Rationale</label>
+                <input class="manual-rationale-input" type="text" maxlength="180" placeholder="Optional note about why you chose this response" value="${escapeHtmlAttr(manualResponse?.rationale || '')}" />
+              </div>
+            </div>
+            <div class="manual-response-note">Suggested action: <strong>${actionLabel}</strong>. The selector is used when you choose <strong>Modify</strong>.</div>
+          </div>
+        </details>
+      ` : '';
+      const responseButtons = isManualMode() ? `
+        <div class="response-label">Instructor decision</div>
+        <div class="response-buttons" data-rec-id="${r.rec_id || ''}">
+          <button class="response-btn decision-ignore ${manualResponse?.response_category === 'ignore' ? 'selected' : ''}" onclick="logResponse(${i},'ignore')">Ignore</button>
+          <button class="response-btn decision-acknowledge ${manualResponse?.response_category === 'acknowledge' ? 'selected' : ''}" onclick="logResponse(${i},'acknowledge')">Acknowledge</button>
+          <button class="response-btn decision-accept ${manualResponse?.response_category === 'accept' ? 'selected' : ''}" onclick="logResponse(${i},'accept')">Accept</button>
+          <button class="response-btn decision-modify modify-branch ${manualResponse?.response_category === 'modify' ? 'selected' : ''}" onclick="logResponse(${i},'modify')">Modify</button>
+          <button class="response-btn decision-reject ${manualResponse?.response_category === 'reject' ? 'selected' : ''}" onclick="logResponse(${i},'reject')">Reject</button>
         </div>
+      ` : '';
+      const responseStatus = manualResponse ? `
+        <div class="response-status">
+          Logged response: <strong>${manualResponse.response_category}</strong>${manualResponse.intervention_type ? ` · ${manualResponse.intervention_type}` : ''}${manualResponse.rationale ? `<div style="margin-top:4px">${manualResponse.rationale}</div>` : ''}
+          <div class="response-consequence">This response will be reflected in subsequent classroom state and the instructor response log.</div>
+        </div>
+      ` : '';
+      return `
+      <div class="rec-item ${r.priority}">
+        <div class="rec-header">
+          <div class="priority">${r.priority} priority</div>
+          <div class="minute-tag">Minute ${r.minute}</div>
+        </div>
+        <div class="message">${r.message}</div>
+        ${signalText ? `<div class="rec-signal">Signal: ${signalText}</div>` : ''}
+        <div class="rec-signal">Method: rule-based pattern mapping from observable participation signals; LLMs may enrich simulation dialogue but do not decide this recommendation.</div>
+        <div class="rec-action">Candidate next move: <strong>${actionLabel}</strong></div>
+        ${responseButtons}
+        ${manualForm}
+        ${responseStatus}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   // Chat log up to this minute
   const chats = sessionData.events.filter(e => e.event_type === 'chat' && e.minute <= min);
   const chatLog = document.getElementById('chat-log');
   if (chats.length === 0) {
-    chatLog.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">No chat messages yet</div>';
+    chatLog.innerHTML = isZoomLiveMode()
+      ? '<div style="color:var(--text-dim);padding:20px;text-align:center">No live chat messages yet. Presence, hand, and reaction events will still appear in the live trace below.</div>'
+      : '<div style="color:var(--text-dim);padding:20px;text-align:center">No chat messages yet</div>';
   } else {
     chatLog.innerHTML = chats.slice(-30).reverse().map(e => {
       const stu = sessionData.students.find(s => s.student_id === e.student_id);
@@ -1332,14 +2414,25 @@ function showMinute(min) {
   });
 
   // Professor actions
-  if (sessionData.professor) {
+  if (isZoomLiveMode()) {
+    renderLiveDebugPanel(frame);
+  } else if (sessionData.professor) {
     const profPanel = document.getElementById('professor-panel');
     profPanel.style.display = 'block';
     const prof = sessionData.professor;
+    const professorHelper = document.getElementById('professor-helper');
 
     // Title with professor name
-    document.getElementById('professor-title').textContent =
-      `${prof.style_name || prof.style} — ${prof.style_description || 'Simulated Professor'}`;
+    if ((prof.style_name || '').toLowerCase() === 'manual instructor') {
+      document.getElementById('professor-title').textContent = 'Instructor Response Log';
+      if (professorHelper) professorHelper.textContent = 'Chosen responses appear here after you act on recommendations in the decision queue, and they are reflected in the ongoing run.';
+    } else {
+      document.getElementById('professor-title').textContent =
+        `${prof.style_name || prof.style} — ${prof.style_description || 'Simulated Instructor'}`;
+      if (professorHelper && !isZoomLiveMode()) {
+        professorHelper.textContent = 'Simulated instructor decisions are summarized here as the run progresses.';
+      }
+    }
 
     // Summary stats
     const s = prof.summary;
@@ -1368,6 +2461,7 @@ function showMinute(min) {
         ${a.intervention_type ? `<span> &middot; <strong>${a.intervention_type}</strong></span>` : ''}
         <span class="minute-tag"> &middot; Min ${a.minute}${a.delay ? ` (+${a.delay}m delay)` : ''}</span>
         <div style="font-size:12px;color:var(--text-dim);margin-top:4px">${a.rationale}</div>
+        ${a.spoken_text ? `<div style="font-size:12px;color:var(--text-dim);margin-top:4px;font-style:italic">"${escapeHtml(a.spoken_text)}"</div>` : ''}
         ${a.recommendation ? `<div style="font-size:11px;color:var(--text-dim);margin-top:2px;font-style:italic">Re: ${a.recommendation}</div>` : ''}
       </div>
     `).join('');
@@ -1470,6 +2564,17 @@ function engColor(value) {
   return `rgba(239, 68, 68, ${0.3 + value * 0.7})`;
 }
 
+function participationProxyLabel(state) {
+  // State values come from the rule-based simulator. The dashboard surfaces them
+  // as observable-participation proxy tiers, not engagement/attention diagnoses.
+  switch (state) {
+    case 'engaged': return 'high participation';
+    case 'drifting': return 'medium participation';
+    case 'disengaged': return 'low participation';
+    default: return state || 'unknown';
+  }
+}
+
 // ============================================================
 // PLAYBACK
 // ============================================================
@@ -1502,19 +2607,94 @@ function togglePlayback() {
 // ============================================================
 
 function logResponse(recIndex, category) {
-  responseLog.push({
-    recommendation_index: recIndex,
-    response: category,
-    minute: currentMinute,
-    timestamp: new Date().toISOString(),
-  });
+  const rec = getVisibleRecommendations(currentMinute)[recIndex];
+  if (!rec) return;
+  const formValues = getRecommendationFormValues(rec);
+  const suggestedIntervention = normalizeInterventionType(rec.action);
 
-  // Visual feedback
-  const buttons = document.querySelectorAll(`[data-rec="${recIndex}"] .response-btn`);
-  buttons.forEach(btn => {
-    btn.classList.remove('selected');
-    if (btn.textContent.toLowerCase() === category) btn.classList.add('selected');
-  });
+  let interventionType = null;
+  if (category === 'accept') {
+    interventionType = suggestedIntervention;
+  } else if (category === 'modify') {
+    interventionType = formValues.interventionType || suggestedIntervention;
+    if (!interventionType) {
+      alert(`Choose one of: ${MANUAL_INTERVENTION_OPTIONS.join(', ')}`);
+      return;
+    }
+  }
+
+  const defaultRationale = interventionType
+    ? `Manual instructor chose ${category} and selected ${interventionType}`
+    : `Manual instructor chose ${category}`;
+  const rationale = formValues.rationale || defaultRationale;
+
+  const action = {
+    minute: currentMinute,
+    recommendation_id: rec.rec_id || null,
+    response_category: category,
+    intervention_type: interventionType,
+    rationale,
+    recommendation: rec.message,
+    recommendation_action: rec.action,
+    recommendation_priority: rec.priority,
+    response_source: 'manual',
+    timestamp: new Date().toISOString(),
+  };
+
+  const updateButtons = () => {
+    const buttons = document.querySelectorAll(`[data-rec-id="${rec.rec_id || ''}"] .response-btn`);
+    buttons.forEach(btn => {
+      btn.classList.remove('selected');
+      if (btn.textContent.toLowerCase() === category) btn.classList.add('selected');
+    });
+  };
+
+  const updateInterventionLog = (message, isError = false) => {
+    const log = document.getElementById('intervention-log');
+    log.innerHTML = `<div${isError ? ' style="color:var(--red)"' : ''}>${message}</div>` + log.innerHTML;
+  };
+
+  const finalizeLocal = (storedAction) => {
+    upsertManualAction(storedAction || action);
+    updateButtons();
+    renderAll(sessionData?.timeline?.length || (sessionData?.metadata?.duration_minutes || 45));
+    showMinute(currentMinute || 1);
+  };
+
+  if (getCurrentSessionId()) {
+    fetch(apiUrl('/api/response'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: getCurrentSessionId(),
+        minute: currentMinute,
+        response_category: category,
+        intervention_type: interventionType,
+        recommendation_id: rec.rec_id,
+        recommendation_message: rec.message,
+        recommendation_priority: rec.priority,
+        recommended_action: rec.action,
+        recommendation: rec,
+        rationale: action.rationale,
+      }),
+    })
+      .then(resp => resp.json().then(data => ({ ok: resp.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.error || 'Failed to log response');
+        finalizeLocal(data.action || action);
+        if (data.scheduled_minute && data.action?.intervention_type) {
+          updateInterventionLog(`✓ ${data.action.intervention_type.replace(/_/g, ' ')} scheduled for minute ${data.scheduled_minute}`);
+        }
+      })
+      .catch(err => {
+        finalizeLocal(action);
+        updateInterventionLog(`✗ ${err.message}`, true);
+      });
+    return;
+  }
+
+  finalizeLocal(action);
+  updateInterventionLog('• Response logged (no live session — classroom state unaffected)');
 }
 
 // ============================================================
@@ -1673,7 +2853,7 @@ function openProfile(studentId) {
     </div>
 
     <div class="profile-section">
-      <h3>Engagement Over Session</h3>
+      <h3>Participation Over Session</h3>
       <div class="profile-sparkline">
         <svg viewBox="0 0 ${sparkW} ${sparkH}" preserveAspectRatio="none">
           <polyline points="${sparkPoints}" fill="none" stroke="${sparkColor}" stroke-width="2"/>
@@ -1685,7 +2865,7 @@ function openProfile(studentId) {
     <div class="profile-section">
       <h3>Current State</h3>
       <div class="profile-stat">
-        <span class="label">Engagement</span>
+        <span class="label">Participation</span>
         <span class="value" style="color:${currentStudent ? engColor(currentStudent.engagement) : 'var(--text)'}">${currentStudent ? (currentStudent.engagement * 100).toFixed(0) + '%' : '--'}</span>
       </div>
       <div class="profile-stat">
@@ -1696,7 +2876,7 @@ function openProfile(studentId) {
 
     <div class="profile-section">
       <h3>Session Stats</h3>
-      <div class="profile-stat"><span class="label">Avg Engagement</span><span class="value">${(avgEng * 100).toFixed(0)}%</span></div>
+      <div class="profile-stat"><span class="label">Avg Participation</span><span class="value">${(avgEng * 100).toFixed(0)}%</span></div>
       <div class="profile-stat"><span class="label">Peak</span><span class="value">${(maxEng * 100).toFixed(0)}%</span></div>
       <div class="profile-stat"><span class="label">Low</span><span class="value">${(minEng * 100).toFixed(0)}%</span></div>
       <div class="profile-stat"><span class="label">Chat Messages</span><span class="value">${chats.length}</span></div>
@@ -1730,6 +2910,8 @@ function closeProfile() {
 function renderClassroom(min) {
   if (!sessionData || !sessionData.timeline[min - 1]) return;
   const frame = sessionData.timeline[min - 1];
+  const liveSignalProfile = getLiveSignalProfile(frame);
+  const liveLimitedSignal = Boolean(frame.insufficient_signal || liveSignalProfile.sparse);
 
   document.getElementById('zoom-minute').textContent = `Min: ${min}`;
 
@@ -1780,8 +2962,13 @@ function renderClassroom(min) {
     grid.innerHTML = frame.students.map((s, i) => {
       const stu = sessionData.students.find(st => st.student_id === s.student_id);
       const name = stu ? stu.name : s.student_id;
-      const cameraOn = s.engagement > 0.3;
-      const isSpeaking = s.signals && s.signals.includes('speaking');
+      const signalArray = Array.isArray(s.signals) ? s.signals : [];
+      const signalObject = (!Array.isArray(s.signals) && s.signals) ? s.signals : {};
+      // Do not infer camera state from participation — camera status is non-scoring
+      // context and only rendered when an explicit signal exists.
+      const cameraSignalPresent = typeof signalObject.camera_on === 'boolean';
+      const cameraOn = cameraSignalPresent ? signalObject.camera_on : null;
+      const isSpeaking = signalArray.includes('speaking') || (isZoomLiveMode() && !liveLimitedSignal && (signalObject.minutes_since_active ?? Infinity) <= 1);
       const isConfused = s.is_confused;
       const stateClass = isConfused ? 'confused-state' : s.state + '-state';
 
@@ -1790,19 +2977,21 @@ function renderClassroom(min) {
 
       let statusIcon = '';
       if (isConfused) statusIcon = '&#10067;';
+      else if (signalObject.hand_raised) statusIcon = '&#9995;';
       else if (s.state === 'disengaged') statusIcon = '&#128564;';
       else if (isSpeaking) statusIcon = '&#127908;';
 
       const eColor = s.engagement >= 0.65 ? 'var(--green)' : s.engagement >= 0.40 ? 'var(--yellow)' : 'var(--red)';
 
-      const avatarSvg = cameraOn ? generateAvatarSVG(s.student_id) :
+      const avatarSvg = cameraOn === true ? generateAvatarSVG(s.student_id) :
         `<div class="avatar" style="background:var(--surface2)">${name.split(/[\s()]+/).filter(w=>w.length>0).slice(0,2).map(w=>w[0]).join('').toUpperCase()}</div>`;
+      const cameraTileClass = cameraOn === true ? '' : (cameraOn === false ? 'camera-off' : 'camera-unknown');
 
-      return `<div class="zoom-tile ${cameraOn ? '' : 'camera-off'} ${isSpeaking ? 'speaking' : ''} ${stateClass}" onclick="openProfile('${s.student_id}')" style="cursor:pointer">
+      return `<div class="zoom-tile ${cameraTileClass} ${isSpeaking ? 'speaking' : ''} ${stateClass}" onclick="openProfile('${s.student_id}')" style="cursor:pointer">
         ${avatarSvg}
         <div class="zt-name">${name.split(' ')[0]} ${name.split(' ').slice(-1)[0]?.[0] || ''}.</div>
         <div class="zt-status">${statusIcon}</div>
-        <div class="zt-engagement" style="color:${eColor}">${(s.engagement * 100).toFixed(0)}%</div>
+        <div class="zt-engagement" style="color:${liveLimitedSignal ? 'var(--text-dim)' : eColor}">${liveLimitedSignal ? 'BASE' : `${(s.engagement * 100).toFixed(0)}%`}</div>
         <div class="zt-speaking"></div>
         ${bubbleText ? `<div class="zt-bubble show">${bubbleText}</div>` : '<div class="zt-bubble"></div>'}
       </div>`;
@@ -1826,25 +3015,34 @@ function renderClassroom(min) {
   // Alerts
   const alerts = document.getElementById('zoom-alerts');
   const recs = sessionData.recommendations.filter(r => r.minute <= min).slice(-5).reverse();
-  alerts.innerHTML = recs.map(r => `
+  alerts.innerHTML = recs.map(r => {
+    const signalText = getRecommendationSignalText(r);
+    return `
     <div class="rec-item ${r.priority}" style="padding:8px;margin-bottom:4px">
       <div class="priority">${r.priority}</div>
       <div class="message">${r.message}</div>
+      ${signalText ? `<div class="rec-signal">Signal: ${signalText}</div>` : ''}
       <div class="minute-tag">Min ${r.minute}</div>
     </div>
-  `).join('') || '<div style="color:var(--text-dim);padding:12px">No alerts</div>';
+  `;
+  }).join('') || (isZoomLiveMode()
+    ? (liveLimitedSignal
+        ? `<div style="color:var(--text-dim);padding:12px">${frame.insufficient_signal_reason || liveSignalProfile.reason || 'Live signal confidence is limited until richer Zoom activity arrives.'}</div>`
+        : '<div style="color:var(--text-dim);padding:12px">No live recommendation alerts yet. Alerts appear here when Zoom activity indicates participation issues.</div>')
+    : '<div style="color:var(--text-dim);padding:12px">No alerts</div>');
 
   // Professor actions in classroom view
   if (sessionData.professor) {
     const profPanel = document.getElementById('zoom-prof-panel');
     profPanel.style.display = 'block';
-    document.getElementById('zoom-prof-name').textContent = sessionData.professor.style_name || 'Professor';
+    document.getElementById('zoom-prof-name').textContent = sessionData.professor.style_name || 'Instructor';
     const profActions = sessionData.professor.actions.filter(a => a.minute <= min).slice(-4).reverse();
     document.getElementById('zoom-prof-actions').innerHTML = profActions.map(a => `
       <div class="prof-action" style="padding:6px;margin-bottom:4px">
         <span class="category ${a.response_category}">${a.response_category}</span>
         ${a.intervention_type ? ` · <strong>${a.intervention_type}</strong>` : ''}
         <span class="minute-tag"> · Min ${a.minute}</span>
+        ${a.spoken_text ? `<div style="margin-top:6px;color:var(--text-dim);font-style:italic">"${escapeHtml(a.spoken_text)}"</div>` : ''}
       </div>
     `).join('') || '<div style="color:var(--text-dim)">No actions yet</div>';
   }
@@ -1871,22 +3069,32 @@ function setModeBadge(mode) {
     badge.textContent = 'AI Students';
     badge.style.background = 'var(--green)';
     badge.style.color = '#000';
+    badge.title = 'LLM backend active for this run.';
   } else if (mode === 'rules') {
     badge.textContent = 'Rule-Based';
     badge.style.background = 'var(--surface2)';
     badge.style.color = 'var(--text-dim)';
+    badge.title = 'Rule-based run.';
   } else {
     badge.textContent = '';
     badge.style.background = 'var(--surface2)';
+    badge.style.color = 'var(--text-dim)';
+    badge.title = '';
   }
 }
 
 async function runSmart(configOverrides) {
+  configOverrides = configOverrides || {};
   const serverUp = await isServerAvailable();
   if (serverUp) {
     // Stop any previous sim first
-    await fetch('/api/stop', { method: 'POST' }).catch(() => {});
-    setModeBadge('ai');
+    await fetch(apiUrl('/api/stop'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: getCurrentSessionId() }),
+    }).catch(() => {});
+    if (configOverrides.llm === false) setModeBadge('rules');
+    else setModeBadgePending();
     try {
       await runLive(configOverrides);
     } catch(e) {
@@ -1908,31 +3116,38 @@ async function runLive(configOverrides) {
     university: document.getElementById('university-select').value,
     professor_style: document.getElementById('professor-select').value,
     content_timeline: document.getElementById('content-select').value,
-    speed: 0.3,
-    llm: true,
+    speed: 0.05,
+    // Do not hardcode `llm: true` here — the server applies its CLI/Procfile
+    // `--llm` / `default_llm` setting when the dashboard does not specify one.
+    // Callers that explicitly want LLM-backed behavior pass `llm: true` via
+    // `configOverrides`; rule-based callers pass `llm: false`.
     ...configOverrides,
   };
+  const existingSessionId = getCurrentSessionId();
+  if (existingSessionId) config.session_id = existingSessionId;
 
   // Start simulation
-  const startResp = await fetch('/api/start', {
+  const startResp = await fetch(apiUrl('/api/start', { includeSession: false }), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
   });
   if (!startResp.ok) throw new Error(`Server returned ${startResp.status}`);
+  const startData = await startResp.json();
+  setCurrentSessionId(startData.session_id);
 
   document.getElementById('run-btn').textContent = 'Running...';
   document.getElementById('run-btn').disabled = true;
 
-  // Poll for updates every 2 seconds
+  // Poll frequently during live mode so the UI feels responsive during demos
   let lastMinute = -1;
   while (true) {
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 500));
 
     try {
       const [sessionResp, historyResp] = await Promise.all([
-        fetch('/api/session'),
-        fetch('/api/history'),
+        fetch(apiUrl('/api/session')),
+        fetch(apiUrl('/api/history')),
       ]);
       const session = await sessionResp.json();
       const history = await historyResp.json();
@@ -1945,9 +3160,33 @@ async function runLive(configOverrides) {
         events: history.events || [],
         recommendations: history.recommendations || [],
         professor: history.professor_actions?.length > 0
-          ? { actions: history.professor_actions, summary: {} }
+          ? (() => {
+              const acts = history.professor_actions;
+              const catCounts = {};
+              const ivCounts = {};
+              for (const a of acts) {
+                catCounts[a.response_category] = (catCounts[a.response_category] || 0) + 1;
+                if (a.intervention_type) ivCounts[a.intervention_type] = (ivCounts[a.intervention_type] || 0) + 1;
+              }
+              return {
+                style_name: session.metadata?.professor_style === 'none' ? 'Manual Instructor' : (session.metadata?.professor_style || 'Adaptive'),
+                style_description: session.metadata?.professor_style === 'none'
+                  ? 'Human-controlled response logging'
+                  : 'Simulated Instructor',
+                actions: acts,
+                summary: {
+                  total_actions: acts.length,
+                  category_distribution: catCounts,
+                  interventions_used: ivCounts,
+                  interventions_total: Object.values(ivCounts).reduce((a, b) => a + b, 0),
+                  acceptance_rate: Math.round(((catCounts['accept'] || 0) + (catCounts['modify'] || 0)) / Math.max(1, acts.length) * 100),
+                }
+              };
+            })()
           : null,
       };
+
+      syncModeBadge(sessionData.metadata);
 
       const dur = session.metadata?.duration_minutes || history.timeline?.length || config.duration;
       const currentMin = session.current_minute || 0;
@@ -1979,7 +3218,7 @@ let _serverAvailable = null;
 async function isServerAvailable() {
   if (_serverAvailable !== null) return _serverAvailable;
   try {
-    const resp = await fetch('/api/session', { signal: AbortSignal.timeout(2000) });
+    const resp = await fetch(apiUrl('/api/session', { includeSession: false }), { signal: AbortSignal.timeout(2000) });
     _serverAvailable = resp.ok;
   } catch(e) { _serverAvailable = false; }
   return _serverAvailable;
@@ -1995,12 +3234,11 @@ async function isServerAvailable() {
 
 const DEMO_SUITE = [
   { scenario: 'baseline', professor: 'adaptive', seed: 0, label: 'Test 1: Baseline (Emergent)', question: 'Do patterns emerge naturally from agent behavior alone — no forced events?' },
-  { scenario: 'baseline', professor: 'hands_off', seed: 0, label: 'Test 2: Baseline + Hands-Off', question: 'What happens when natural drift meets no intervention?' },
-  { scenario: 'confusion_cluster', professor: 'adaptive', seed: 0, label: 'Test 3: Confusion Spike + Adaptive', question: 'Does the IDSS detect forced confusion and recommend clarification?' },
-  { scenario: 'energy_decay', professor: 'lecture_focused', seed: 0, label: 'Test 4: Energy Decay + Lecturer', question: 'Does a content-driven professor ignore energy warnings?' },
-  { scenario: 'equity_imbalance', professor: 'discussion_based', seed: 0, label: 'Test 5: Equity Imbalance + Discussion', question: 'Does a Socratic professor act on speaking equity alerts?' },
-  { scenario: 'full_scenario', professor: 'hands_off', seed: 0, label: 'Test 6: Full Scenario + Hands-Off', question: 'Compound problems + minimal intervention — worst case?' },
-  { scenario: 'full_scenario', professor: 'adaptive', seed: 0, label: 'Test 7: Full Scenario + Adaptive', question: 'Same scenario as Test 6, different professor — do outcomes differ?' },
+  { scenario: 'confusion_cluster', professor: 'adaptive', seed: 0, label: 'Test 2: Confusion Spike + Adaptive', question: 'Does the IDSS detect forced confusion and recommend clarification?' },
+  { scenario: 'energy_decay', professor: 'lecture_focused', seed: 0, label: 'Test 3: Energy Decay + Lecturer', question: 'Does a content-driven professor ignore energy warnings?' },
+  { scenario: 'equity_imbalance', professor: 'discussion_based', seed: 0, label: 'Test 4: Equity Imbalance + Discussion', question: 'Does a discussion-based professor act on equity recommendations?' },
+  { scenario: 'full_scenario', professor: 'hands_off', seed: 0, label: 'Test 5: Full Scenario + Hands-Off', question: 'Compound problems + minimal intervention — worst case?' },
+  { scenario: 'full_scenario', professor: 'adaptive', seed: 0, label: 'Test 6: Full Scenario + Adaptive', question: 'Same scenario as Test 5, different professor — do outcomes differ?' },
 ];
 
 let demoRunning = false;
@@ -2096,9 +3334,9 @@ async function runGuidedTour() {
   clearSimulation();
 
   card.innerHTML = `
-    <div style="font-size:28px;font-weight:800;color:var(--purple);margin-bottom:8px">SAGE</div>
-    <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px">Simulated Agent-Generated Engagement</div>
-    <div style="font-size:15px;margin-bottom:12px">An agent-based classroom simulator with an<br><strong>Instructor Decision Support System (IDSS)</strong></div>
+    <div style="font-size:28px;font-weight:800;color:var(--purple);margin-bottom:8px">Instructional Decision Support Dashboard</div>
+    <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px">Evaluated through SAGE (Simulated Agent-Generated Engagement)</div>
+    <div style="font-size:15px;margin-bottom:12px">This walkthrough shows the classroom signal → recommendation → instructor response workflow.</div>
     <div style="font-size:12px;color:var(--text-dim);margin-bottom:20px">IST 505 · Design Research Methods · CGU Spring 2026</div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <button id="demo-auto" style="padding:10px 24px;background:var(--purple);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">▶ Auto Demo (~2 min)</button>
@@ -2116,8 +3354,8 @@ async function runGuidedTour() {
   if (demoExited) return;
 
   await showCard(`
-    <div style="font-size:20px;font-weight:700;margin-bottom:16px">Instructors see data. They need insight.</div>
-    <div style="font-size:14px;color:var(--text-dim)">The IDSS detects patterns and recommends interventions.</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:16px">This walkthrough shows how the IDSS interprets classroom signals.</div>
+    <div style="font-size:14px;color:var(--text-dim)">The instructional decision-support prototype detects patterns and generates recommendations.</div>
   `);
 
   await showCard(`
@@ -2131,20 +3369,20 @@ async function runGuidedTour() {
   `);
 
   await showCard(`
-    <div style="font-size:18px;font-weight:700;margin-bottom:16px">What's real in this demo:</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:16px">Current prototype elements:</div>
     <div style="font-size:14px;text-align:left;line-height:1.9">
-      ✅ <strong>Real computation</strong> — engagement scores, pattern detection, recommendations<br>
+      ✅ <strong>Real computation</strong> — observable participation indices, pattern detection, advisory recommendations<br>
       ✅ <strong>Real variation</strong> — change the seed, get different outcomes<br>
       ✅ <strong>Real professor logic</strong> — each style has distinct response probabilities<br>
       ✅ <strong>Real university demographics</strong> — CGU, Georgia Tech, Howard (IPEDS data)<br>
-      ✅ <strong>AI student chat</strong> — LLM-powered when server is running (free via Groq)
+      ✅ <strong>AI student chat</strong> — LLM-powered when the server and a backend are both available
     </div>
   `);
 
   // ---- RUN FIRST SIMULATION ----
   const serverUp = await isServerAvailable();
   const modeText = serverUp
-    ? 'AI students will generate real conversation. This takes ~2-3 minutes.'
+    ? 'If a server-side LLM backend is reachable, students will generate model-driven conversation. Otherwise the run stays rule-based.'
     : 'Running with rule-based students (start server for AI mode).';
   await showCard(`
     <div style="font-size:20px;font-weight:700;margin-bottom:12px">Starting simulation.</div>
@@ -2205,7 +3443,7 @@ async function runGuidedTour() {
   const drifting10 = frame10 ? frame10.students.filter(s => s.state === 'drifting' || s.state === 'disengaged').length : 0;
   const confused10 = frame10 ? frame10.students.filter(s => s.is_confused).length : 0;
   const eng10 = frame10 ? (frame10.class_engagement * 100).toFixed(0) : '?';
-  let min10text = `Class at ${eng10}% engagement.`;
+  let min10text = `Class at ${eng10}% observable participation.`;
   if (drifting10 > 0) min10text += ` ${drifting10} student${drifting10>1?'s':''} drifting.`;
   if (confused10 > 0) min10text += ` ${confused10} confused.`;
   if (drifting10 === 0 && confused10 === 0) min10text += ' All engaged so far.';
@@ -2244,7 +3482,7 @@ async function runGuidedTour() {
   const frame25 = sessionData.timeline[24];
   const eng25 = frame25 ? (frame25.class_engagement * 100).toFixed(0) : '?';
   const chatsInBreakout = sessionData.events.filter(e => e.event_type === 'chat' && e.minute >= 25 && e.minute <= 29).length;
-  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms active.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement: ${eng25}%. ${chatsInBreakout} chat messages during breakout. Professor rotating between groups.</div>`);
+  await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Breakout rooms active.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Observable participation: ${eng25}%. ${chatsInBreakout} chat messages during breakout. Professor rotating between groups.</div>`);
 
   // Post-breakout: back to dashboard, show recovery
   overlay.style.display = 'none';
@@ -2257,7 +3495,7 @@ async function runGuidedTour() {
   const frame35 = sessionData.timeline[34];
   const eng35 = frame35 ? (frame35.class_engagement * 100).toFixed(0) : '?';
   const profActions = sessionData.professor ? sessionData.professor.actions.filter(a => a.minute <= 35).length : 0;
-  await showCard(`<div style="font-size:22px;font-weight:700">Minute 35.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement: ${eng35}%. Professor made ${profActions} decision${profActions!==1?'s':''}. Scroll down to see the full log.</div>`);
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 35.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Observable participation: ${eng35}%. Professor made ${profActions} decision${profActions!==1?'s':''}. Scroll down to see the full log.</div>`);
 
   // Minutes 36-40: poll intervention
   overlay.style.display = 'none';
@@ -2267,7 +3505,7 @@ async function runGuidedTour() {
   // Dynamic poll card
   const frame40 = sessionData.timeline[39];
   const eng40 = frame40 ? (frame40.class_engagement * 100).toFixed(0) : '?';
-  await showCard(`<div style="font-size:22px;font-weight:700">Minute 40 — Poll.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Engagement: ${eng40}%. Second intervention launched.</div>`);
+  await showCard(`<div style="font-size:22px;font-weight:700">Minute 40 — Poll.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Observable participation: ${eng40}%. Second intervention launched.</div>`);
 
   // Final stretch
   overlay.style.display = 'none';
@@ -2279,7 +3517,7 @@ async function runGuidedTour() {
   const totalChats = sessionData.events.filter(e => e.event_type === 'chat').length;
   const finalEng = sessionData.timeline.length ? (sessionData.timeline[sessionData.timeline.length-1].class_engagement * 100).toFixed(0) : '?';
   const totalProfActions = sessionData.professor ? sessionData.professor.actions.length : 0;
-  await showCard(`<div style="font-size:22px;font-weight:700">Session complete — 45 minutes.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Final engagement: ${finalEng}%. ${totalRecs} recommendations. ${totalProfActions} professor decisions. ${totalChats} chat messages.<br>Click <strong>📄 Export</strong> to download.</div>`);
+  await showCard(`<div style="font-size:22px;font-weight:700">Session complete — 45 minutes.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Final observable participation: ${finalEng}%. ${totalRecs} recommendations. ${totalProfActions} professor decisions. ${totalChats} chat messages.<br>Click <strong>📄 Export</strong> to download.</div>`);
 
   await showCard(`<div style="font-size:22px;font-weight:700;color:var(--purple)">Now: 6 evaluation tests.</div><div style="font-size:14px;color:var(--text-dim);margin-top:8px">Same scenarios, different professors.<br>Summary table + report download at the end.</div>`);
 
@@ -2293,7 +3531,7 @@ async function runDemoSuite() {
   demoRunning = true;
   demoResults = [];
 
-  // ---- GUIDED TOUR (~90 sec) ----
+  // ---- GUIDED TOUR ----
   await runGuidedTour();
   await new Promise(r => setTimeout(r, 1000));
 
@@ -2301,7 +3539,7 @@ async function runDemoSuite() {
   const banner = document.createElement('div');
   banner.id = 'demo-banner';
   banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:200;background:var(--purple);color:white;padding:12px 24px;font-size:14px;font-weight:600;text-align:center;';
-  banner.textContent = 'Demo Suite starting...';
+  banner.textContent = 'Evaluation Suite starting...';
   document.body.appendChild(banner);
 
   for (let i = 0; i < DEMO_SUITE.length; i++) {
@@ -2313,8 +3551,8 @@ async function runDemoSuite() {
     document.getElementById('seed-input').value = test.seed;
     document.getElementById('professor-select').value = test.professor;
 
-    // Run simulation — AI if server available, otherwise rule-based
-    await runSmart();
+    // Run evaluation batch in fast rule-based mode so the suite completes quickly.
+    await runSmart({ llm: false, speed: 0.05 });
     const duration = parseInt(document.getElementById('duration-input').value) || 45;
     showMinute(duration); // Jump to end
 
@@ -2364,7 +3602,7 @@ async function runDemoSuite() {
   }
 
   // Show summary
-  banner.textContent = 'Demo Suite Complete — Scroll down for evaluation summary';
+  banner.textContent = 'Evaluation Suite complete — scroll down for the summary';
   banner.style.cursor = 'pointer';
   banner.onclick = () => { banner.remove(); };
 
@@ -2373,7 +3611,7 @@ async function runDemoSuite() {
 }
 
 function downloadEvaluationReport() {
-  let report = `SAGE v2 — IDSS Evaluation Report
+  let report = `IDSS Formative Evaluation Report
 Generated: ${new Date().toLocaleString()}
 IST 505 Design Research Methods — CGU Spring 2026
 
@@ -2382,21 +3620,22 @@ METHODOLOGY
 ================================================================================
 
 Framework: Design Science Research (Hevner et al., 2004)
-Artifact: Instructional Decision Support System (IDSS) dashboard
+System under study: Instructional Decision Support System (IDSS) for synchronous online teaching
+Evaluation environment: SAGE (Simulated Agent-Generated Engagement)
 Evaluation type: Formative — Technical Risk & Efficacy (FEDS: Venable et al., 2016)
 Theoretical grounding: Situational Awareness (Endsley, 1995) Levels 1-3
 
-The IDSS translates raw engagement signals (SA Level 1) into detected patterns
-(SA Level 2: comprehension) and actionable recommendations (SA Level 3: projection).
+The IDSS translates raw observable participation signals (SA Level 1) into detected patterns
+(SA Level 2: comprehension) and advisory recommendations (SA Level 3: projection).
 
 This evaluation tests whether:
-1. The IDSS correctly detects engagement patterns across different scenarios
+1. The system correctly detects observable participation patterns across different scenarios
 2. Different professor response styles produce different outcomes given the same recommendations
-3. The engagement-to-action translation framework generates appropriate interventions
+3. The observable-participation-to-action translation framework generates appropriate candidate interventions
 
 Agent-based simulation: 15 student agents with distinct behavioral profiles
-(engagement baselines, attention spans, drift rates, confusion thresholds).
-Seeded RNG for reproducibility. 6 predefined scenarios test specific IDSS capabilities.
+(participation baselines, attention spans, drift rates, confusion thresholds).
+Seeded RNG for reproducibility. 6 predefined scenarios test specific system behaviors.
 
 Instructor Response Taxonomy (Construct Artifact):
   - Ignore: No action taken
@@ -2412,7 +3651,7 @@ EVALUATION RESULTS
 `;
 
   // Results table
-  report += `${'Test'.padEnd(8)}${'Scenario'.padEnd(22)}${'Professor'.padEnd(18)}${'Avg Eng'.padEnd(10)}${'Range'.padEnd(12)}${'Recs'.padEnd(6)}${'Actions'.padEnd(9)}${'Accept%'.padEnd(9)}Patterns\n`;
+  report += `${'Test'.padEnd(8)}${'Scenario'.padEnd(22)}${'Professor'.padEnd(18)}${'Avg Part'.padEnd(10)}${'Range'.padEnd(12)}${'Recs'.padEnd(6)}${'Actions'.padEnd(9)}${'Accept%'.padEnd(9)}Patterns\n`;
   report += '-'.repeat(100) + '\n';
 
   demoResults.forEach((r, i) => {
@@ -2432,22 +3671,22 @@ KEY COMPARISON: Tests 5 vs 6 — Same scenario, different professor
 Scenario: full_scenario (energy decay 1.3x + confusion spike min 18 + interventions)
 
 Hands-Off Professor (Test 5):
-  Avg Engagement: ${t5.avgEngagement}  |  Range: ${t5.engRange}
+  Avg Participation: ${t5.avgEngagement}  |  Range: ${t5.engRange}
   Total Recommendations: ${t5.totalRecs}  |  Professor Actions: ${t5.profActions}
   Acceptance Rate: ${t5.acceptRate}
   Response Distribution: ${JSON.stringify(t5.categories)}
   Interventions Used: ${JSON.stringify(t5.interventionsUsed)}
 
 Adaptive Professor (Test 6):
-  Avg Engagement: ${t6.avgEngagement}  |  Range: ${t6.engRange}
+  Avg Participation: ${t6.avgEngagement}  |  Range: ${t6.engRange}
   Total Recommendations: ${t6.totalRecs}  |  Professor Actions: ${t6.profActions}
   Acceptance Rate: ${t6.acceptRate}
   Response Distribution: ${JSON.stringify(t6.categories)}
   Interventions Used: ${JSON.stringify(t6.interventionsUsed)}
 
-Finding: The IDSS generated the same recommendations for both professors.
+Finding: The system generated the same recommendations for both professors.
 The professor's response style determined the classroom outcome.
-This validates that the IDSS is a decision SUPPORT system — it surfaces
+This supports the argument that the system functions as a decision-support system — it surfaces
 patterns and recommends, but the instructor's pedagogical judgment
 determines the intervention and its effect.
 `;
@@ -2464,13 +3703,12 @@ RESEARCH QUESTIONS TESTED
     // Generate answer based on data
     let answer = '';
     if (i === 0) answer = r.totalRecs > 0 ? 'Yes — detected ' + Object.keys(r.patterns).join(', ') + ' patterns and generated ' + r.totalRecs + ' recommendations.' : 'Minimal patterns in baseline — as expected.';
-    if (i === 1) answer = r.patterns.confusion_cluster ? 'Yes — confusion cluster detected (' + r.patterns.confusion_cluster + ' occurrences). IDSS recommended clarification.' : 'Confusion detection needs tuning.';
-    if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = `Lecturer ignored ${ign}/${tot} recommendations (${Math.round(ign/tot*100)}%). Content-driven professors underutilize the IDSS.`; }
-    if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = `Discussion professor acted on ${act}/${tot} recommendations (${Math.round(act/tot*100)}%). Equity-focused style aligns with IDSS equity alerts.`; }
-    if (i === 4) answer = `Hands-off: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Minimal intervention led to sustained decline.`;
-    if (i === 5) answer = `Hands-off: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Minimal intervention during compound problems.`;
-    if (i === 6) answer = `Adaptive: ${r.avgEngagement} avg engagement, ${r.acceptRate} acceptance. Same scenario as Test 6 — professor style changed the outcome.`;
-    report += `Test ${i+1}: ${r.question}\n  Scenario: ${r.scenario} | Professor: ${r.professor}\n  Result: ${r.totalRecs} recs, ${r.profActions} actions, ${r.avgEngagement} avg engagement\n  Answer: ${answer}\n\n`;
+    if (i === 1) answer = r.patterns.confusion_cluster ? 'Yes — confusion cluster detected (' + r.patterns.confusion_cluster + ' occurrences). The system recommended clarification.' : 'Confusion detection needs tuning.';
+    if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = `Lecturer ignored ${ign}/${tot} recommendations (${Math.round(ign/tot*100)}%).`; }
+    if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = `Discussion professor acted on ${act}/${tot} recommendations (${Math.round(act/tot*100)}%).`; }
+    if (i === 4) answer = `Hands-off: ${r.avgEngagement} avg participation, ${r.acceptRate} acceptance. Minimal intervention led to sustained decline.`;
+    if (i === 5) answer = `Adaptive: ${r.avgEngagement} avg participation, ${r.acceptRate} acceptance. Same scenario as Test 5 — professor style changed the outcome.`;
+    report += `Test ${i+1}: ${r.question}\n  Scenario: ${r.scenario} | Professor: ${r.professor}\n  Result: ${r.totalRecs} recs, ${r.profActions} actions, ${r.avgEngagement} avg participation\n  Answer: ${answer}\n\n`;
   });
 
   report += `
@@ -2478,19 +3716,20 @@ RESEARCH QUESTIONS TESTED
 DSR ARTIFACT SUMMARY
 ================================================================================
 
-Instantiation Artifact: SAGE IDSS Dashboard
-  - Real-time engagement heatmap, timeline, and student status panels
+Evaluation environment: SAGE classroom simulation and dashboard environment
+System under study: Instructional Decision Support System (IDSS)
+  - Real-time observable participation heatmap, timeline, and student status panels
   - Pattern detection: energy_decay, equity_imbalance, confusion_cluster,
     silent_majority, fade_cascade
   - SA Level 2 comprehension → Level 3 projection recommendation engine
   - 4 simulated professor styles generating response taxonomy data
   - Classroom view with abstract avatars and clickable student profiles
 
-Method Artifact: Engagement-to-Action Translation Framework
-  - Signal weights: speaking_equity (0.25), chat_activity (0.20),
-    poll_participation (0.20), camera_status (0.15), reaction_frequency (0.10),
-    silence_gap (0.10)
-  - Pattern → recommendation mapping with priority levels
+Method Artifact: Observable-Participation-to-Action Translation Framework
+  - Signal weights: speaking_equity (0.30), chat_activity (0.25),
+    poll_participation (0.25), reaction_frequency (0.15), silence_gap (0.05)
+  - Camera state is retained only as context and is not scored
+  - Pattern → advisory recommendation mapping with priority levels
 
 Construct Artifact: Instructor Response Taxonomy
   - 5 categories: ignore, acknowledge, accept, modify, reject
@@ -2501,7 +3740,7 @@ Literature Base:
   - Endsley (1995) Situational Awareness model
   - Hevner et al. (2004) DSR guidelines
   - Venable et al. (2016) FEDS evaluation framework
-  - Li et al. (2025) Instructor analytics heterogeneity
+  - Van Leeuwen et al. (2019) Advising-oriented learning analytics
   - Wise & Jung (2019) Instructor intervention patterns
   - Kauffman (2019) Learner population differences
   - Dell et al. (2015) UDL principles
@@ -2525,7 +3764,7 @@ CHAT LOGS — All Test Runs
 
   report += `
 ================================================================================
-SAGE — Simulated Agent-Generated Engagement
+Evaluated through SAGE — Simulated Agent-Generated Engagement
 IST 505 Group Project — CGU Spring 2026
 ================================================================================
 `;
@@ -2535,7 +3774,7 @@ IST 505 Group Project — CGU Spring 2026
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `SAGE_Evaluation_Report_${new Date().toISOString().split('T')[0]}.md`;
+  a.download = `IDSS_Formative_Evaluation_Report_${new Date().toISOString().split('T')[0]}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -2549,7 +3788,7 @@ function showDemoSummary() {
   div.id = 'demo-summary';
   div.style.cssText = 'background:var(--surface);border:2px solid var(--purple);border-radius:8px;padding:20px;margin:16px 24px;';
 
-  let html = '<h2 style="color:var(--purple);font-size:16px;margin-bottom:12px">EVALUATION SUMMARY — Demo Suite Results</h2>';
+  let html = '<h2 style="color:var(--purple);font-size:16px;margin-bottom:12px">EVALUATION SUMMARY — Evaluation Suite Results</h2>';
   html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
   html += '<tr style="background:var(--surface2)"><th style="padding:8px;text-align:left;border-bottom:1px solid var(--border)">Test</th><th style="padding:8px">Scenario</th><th style="padding:8px">Professor</th><th style="padding:8px">Avg Eng.</th><th style="padding:8px">Range</th><th style="padding:8px">Recs</th><th style="padding:8px">Prof Actions</th><th style="padding:8px">Accept Rate</th><th style="padding:8px">Patterns</th></tr>';
 
@@ -2575,9 +3814,9 @@ function showDemoSummary() {
     const t6 = demoResults[5]; // full + adaptive
     html += `<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:6px;font-size:12px">
       <strong style="color:var(--purple)">Key Comparison (Tests 5 vs 6):</strong> Same scenario (full), different professor style.<br>
-      Hands-off: ${t5.avgEngagement} avg engagement, ${t5.acceptRate} acceptance rate, ${t5.profActions} actions.<br>
-      Adaptive: ${t6.avgEngagement} avg engagement, ${t6.acceptRate} acceptance rate, ${t6.profActions} actions.<br>
-      <strong>The IDSS generated the same recommendations. The professor's response style determined the outcome.</strong>
+      Hands-off: ${t5.avgEngagement} avg participation, ${t5.acceptRate} acceptance rate, ${t5.profActions} actions.<br>
+      Adaptive: ${t6.avgEngagement} avg participation, ${t6.acceptRate} acceptance rate, ${t6.profActions} actions.<br>
+      <strong>The system generated the same recommendations. The professor's response style determined the outcome.</strong>
     </div>`;
   }
 
@@ -2588,11 +3827,10 @@ function showDemoSummary() {
     let answer = '';
     if (i === 0) answer = r.totalRecs > 0 ? 'Yes \u2014 detected ' + Object.keys(r.patterns).join(', ').replace(/_/g,' ') + '.' : 'Minimal patterns in baseline \u2014 as expected.';
     if (i === 1) answer = r.patterns.confusion_cluster ? 'Yes \u2014 confusion cluster detected (' + r.patterns.confusion_cluster + 'x).' : 'Confusion detection needs tuning.';
-    if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = 'Lecturer ignored ' + ign + '/' + tot + ' (' + Math.round(ign/tot*100) + '%). Content-driven professors underutilize IDSS.'; }
+    if (i === 2) { const ign = r.categories.ignore || 0; const tot = r.profActions || 1; answer = 'Lecturer ignored ' + ign + '/' + tot + ' (' + Math.round(ign/tot*100) + '%).'; }
     if (i === 3) { const act = (r.categories.accept||0) + (r.categories.modify||0); const tot = r.profActions || 1; answer = 'Discussion prof acted on ' + act + '/' + tot + ' (' + Math.round(act/tot*100) + '%).'; }
-    if (i === 4) answer = 'Hands-off: ' + r.avgEngagement + ' avg engagement, ' + r.acceptRate + ' acceptance. Sustained decline.';
-    if (i === 5) answer = 'Hands-off: ' + r.avgEngagement + ' avg, ' + r.acceptRate + ' acceptance. Minimal intervention during compound problems.';
-    if (i === 6) answer = 'Adaptive: ' + r.avgEngagement + ' avg, ' + r.acceptRate + ' acceptance. Same scenario as Test 6 — professor style changed outcome.';
+    if (i === 4) answer = 'Hands-off: ' + r.avgEngagement + ' avg participation, ' + r.acceptRate + ' acceptance. Sustained decline.';
+    if (i === 5) answer = 'Adaptive: ' + r.avgEngagement + ' avg, ' + r.acceptRate + ' acceptance. Same scenario as Test 5 \u2014 professor style changed outcome.';
     html += '<div style="margin-bottom:8px"><strong>' + (i+1) + '.</strong> ' + r.question + '<br><span style="color:var(--green);margin-left:16px">\u2192 ' + answer + '</span></div>';
   });
   html += '</div>';
@@ -2620,18 +3858,30 @@ function exportCurrentSession() {
   const prof = sessionData.professor;
   const engagements = timeline.map(t => t.class_engagement);
   const avgEng = engagements.length ? (engagements.reduce((a,b) => a+b,0) / engagements.length) : 0;
+  const minEng = engagements.length ? Math.min(...engagements) : 0;
+  const maxEng = engagements.length ? Math.max(...engagements) : 0;
+  const latestLiveDebug = timeline.length
+    ? (timeline[timeline.length - 1].live_debug || sessionData.live_debug || null)
+    : (sessionData.live_debug || null);
 
-  let md = `# SAGE Session Export\n`;
+  let md = `# IDSS Session Export\n`;
   md += `**Date:** ${new Date().toLocaleString()}\n`;
   md += `**Scenario:** ${meta.scenario || 'unknown'}\n`;
   md += `**Professor:** ${meta.professor_style || prof?.style || 'none'}\n`;
   md += `**University:** ${meta.university || 'default'}\n`;
   md += `**Seed:** ${meta.seed || '?'}\n`;
   md += `**Duration:** ${timeline.length} minutes\n\n`;
+  md += `**Evaluation environment:** SAGE (Simulated Agent-Generated Engagement)\n\n`;
   md += `## Summary\n`;
-  md += `- Avg engagement: ${(avgEng*100).toFixed(0)}%\n`;
-  md += `- Range: ${(Math.min(...engagements)*100).toFixed(0)}% – ${(Math.max(...engagements)*100).toFixed(0)}%\n`;
+  md += `- Avg participation: ${(avgEng*100).toFixed(0)}%\n`;
+  md += `- Range: ${(minEng*100).toFixed(0)}% – ${(maxEng*100).toFixed(0)}%\n`;
   md += `- Recommendations generated: ${recs.length}\n`;
+  if (meta.source_mode === 'zoom_live' && latestLiveDebug) {
+    md += `- Live signal status: ${latestLiveDebug.signal_status || 'unknown'}\n`;
+    md += `- Supported live inputs: ${(latestLiveDebug.supported_signal_types || []).join(', ') || 'presence, chat, hand, reaction'}\n`;
+    md += `- Received live inputs: ${(latestLiveDebug.received_signal_types || []).join(', ') || 'none yet'}\n`;
+    md += `- Last raw Zoom event: ${latestLiveDebug.last_raw_event_type || 'none yet'}\n`;
+  }
 
   if (prof) {
     const s = prof.summary || {};
@@ -2647,8 +3897,8 @@ function exportCurrentSession() {
   md += `- Patterns detected: ${JSON.stringify(patternCounts)}\n\n`;
 
   // Timeline
-  md += `## Engagement Timeline\n`;
-  md += `| Min | Engagement | Speakers | Gini | Patterns |\n|-----|-----------|----------|------|----------|\n`;
+  md += `## Participation Timeline\n`;
+  md += `| Min | Participation | Speakers | Gini | Patterns |\n|-----|-----------|----------|------|----------|\n`;
   timeline.forEach(t => {
     const pats = (t.patterns||[]).map(p => p.type).join(', ') || '-';
     md += `| ${t.minute} | ${(t.class_engagement*100).toFixed(0)}% | ${t.active_speakers} | ${(t.speaking_gini||0).toFixed(2)} | ${pats} |\n`;
@@ -2657,7 +3907,42 @@ function exportCurrentSession() {
   // Recommendations
   if (recs.length) {
     md += `\n## Recommendations\n`;
-    recs.forEach(r => { md += `- **Min ${r.minute}** [${r.priority}]: ${r.message}\n`; });
+    recs.forEach(r => {
+      const signalText = getRecommendationSignalText(r);
+      md += `- **Min ${r.minute}** [${r.priority}]: ${r.message}`;
+      if (signalText) md += ` · Signal: ${signalText}`;
+      md += `\n`;
+    });
+  }
+
+  if (prof?.actions?.length) {
+    md += `\n## Instructor Response Log\n`;
+    prof.actions.forEach(a => {
+      md += `- **Min ${a.minute}** [${a.response_category}]`;
+      if (a.intervention_type) md += ` → ${a.intervention_type}`;
+      if (a.recommendation) md += ` · Re: ${a.recommendation}`;
+      if (a.rationale) md += ` · ${a.rationale}`;
+      if (a.spoken_text) md += ` · Says: "${a.spoken_text}"`;
+      md += `\n`;
+    });
+  }
+
+  if (meta.source_mode === 'zoom_live' && latestLiveDebug) {
+    md += `\n## Live Signal Trace\n`;
+    md += `- Signal status: ${latestLiveDebug.signal_status || 'unknown'}\n`;
+    md += `- Signal status reason: ${latestLiveDebug.signal_status_reason || 'n/a'}\n`;
+    md += `- Signal counts: ${JSON.stringify(latestLiveDebug.signal_counts || {})}\n`;
+    md += `- Raw Zoom events seen recently: ${(latestLiveDebug.recent_raw_event_types || []).join(', ') || 'none yet'}\n`;
+    if ((latestLiveDebug.recent_events || []).length) {
+      md += `\n### Recent Live Events\n`;
+      latestLiveDebug.recent_events.forEach(event => {
+        const label = formatLiveEventTypeLabel(event.event_type);
+        const raw = event.raw_event_type ? ` · Raw: ${event.raw_event_type}` : '';
+        const name = event.name ? ` · ${event.name}` : '';
+        const text = event.data?.text ? ` · ${event.data.text}` : '';
+        md += `- **Min ${event.minute}** ${label}${name}${raw}${text}\n`;
+      });
+    }
   }
 
   // Chat
@@ -2670,13 +3955,13 @@ function exportCurrentSession() {
     });
   }
 
-  md += `\n---\n*SAGE — IST 505 — CGU Spring 2026*\n`;
+  md += `\n---\n*Instructional decision-support prototype session export · Evaluated through SAGE · IST 505 — CGU Spring 2026*\n`;
 
   const blob = new Blob([md], { type: 'text/markdown' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `SAGE_Session_${meta.scenario||'manual'}_${new Date().toISOString().split('T')[0]}.md`;
+  a.download = `IDSS_Session_${meta.scenario||'manual'}_${new Date().toISOString().split('T')[0]}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -2686,6 +3971,7 @@ function clearSimulation() {
   currentMinute = 0;
   if (playbackInterval) { clearInterval(playbackInterval); playbackInterval = null; }
   if (sseSource) { sseSource.close(); sseSource = null; }
+  if (zoomPolling) { clearInterval(zoomPolling); zoomPolling = null; }
   responseLog = [];
 
   // Reset all panels to empty state
@@ -2709,6 +3995,7 @@ function clearSimulation() {
   document.getElementById('run-btn').textContent = '▶ Run';
   document.getElementById('run-btn').disabled = false;
   setModeBadge('');
+  updateWorkflowHints();
   lastSpokenMinute = -1;
   speechSynthesis.cancel();
 }
@@ -2720,52 +4007,109 @@ function clearSimulation() {
 let zoomPolling = null;
 
 async function startZoomLive() {
+  clearSimulation();
+  clearCurrentSessionId();
+  const webhookUrl = `${window.location.origin}/api/zoom/webhook`;
+  const debugSnapshot = await fetchZoomDebugSnapshot();
+  const debug = debugSnapshot?.live_debug || null;
+  const hostedHint = isLocalOrigin()
+    ? 'Recommended for demo reliability: deploy this repo to Render using render.yaml and point Zoom at the hosted /api/zoom/webhook endpoint instead of a temporary local tunnel.\n\n'
+    : '';
+
   // Check if server has an active Zoom meeting
   try {
-    const resp = await fetch('/api/zoom/state');
-    if (!resp.ok) {
-      alert('No active Zoom meeting detected. Start a Zoom meeting and ensure webhooks are configured.');
+    const resp = await fetch(apiUrl('/api/zoom/state', { includeSession: false }));
+    const peek = resp.ok ? await resp.clone().json().catch(() => null) : null;
+    const hasActiveMeeting = resp.ok && peek && peek.active !== false;
+    if (!hasActiveMeeting) {
+      const debugLines = debug ? (
+        `Server live status:\n` +
+        `- webhook secret configured: ${debugSnapshot?.webhook_configured ? 'yes' : 'no'}\n` +
+        `- known meetings seen by server: ${debugSnapshot?.known_meetings ?? 0}\n` +
+        `- signal status: ${debug.signal_status_reason || 'no Zoom events yet'}\n` +
+        `- last raw event: ${debug.last_raw_event_type || 'none yet'}\n\n`
+      ) : '';
+      alert('📡 Server is running but no active Zoom meeting is attached right now.\n\n' +
+        debugLines +
+        `Webhook endpoint:\n${webhookUrl}\n\n` +
+        hostedHint +
+        'To connect:\n' +
+        '1. Save the Zoom app with this webhook endpoint\n' +
+        '2. Start a fresh Zoom meeting\n' +
+        '3. Have at least one participant join\n' +
+        '4. Click 📡 Live again\n\n' +
+        'For the main simulation workflow: click ▶ Run instead');
       return;
     }
   } catch(e) {
-    alert('Server not running. Start with: python3 server.py');
+    alert('📡 Zoom Live Setup\n\n' +
+      'This mode connects Zoom meeting events to the dashboard.\n\n' +
+      hostedHint +
+      'To connect a live Zoom meeting:\n\n' +
+      '1. Start the server:\n' +
+      '   python3 server.py --llm\n\n' +
+      '2. Create a Zoom Marketplace App (Webhook Only):\n' +
+      '   → zoom.us/develop → Build App → Webhook Only\n' +
+      `   → Add webhook endpoint: ${webhookUrl}\n` +
+      '   → Subscribe to: meeting.started, meeting.ended,\n' +
+      '     meeting.participant_joined, meeting.participant_left,\n' +
+      '     meeting.chat_message_sent, meeting.participant_raised_hand,\n' +
+      '     meeting.participant_lowered_hand, meeting.reaction_received\n\n' +
+      '   → If chat events do not arrive, Zoom may also require account-level in-meeting chat DLP/support enablement\n\n' +
+      '3. Start the server with your webhook secret in the environment:\n' +
+      '   ZOOM_WEBHOOK_SECRET=your_secret python3 server.py --port 8096\n\n' +
+      '4. Start a fresh Zoom meeting, then click 📡 Live again.\n\n' +
+      'For the main demo: click ▶ Run (uses the simulated classroom workflow)\n' +
+      'For AI chat: GROQ_API_KEY=your_key python3 server.py --llm, then click ▶ Run');
     return;
   }
 
-  setModeBadge('');
-  const badge = document.getElementById('mode-badge');
-  badge.textContent = '📡 LIVE';
-  badge.style.background = 'var(--green)';
-  badge.style.color = '#000';
+  syncModeBadge({ source_mode: 'zoom_live' });
 
   document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').textContent = '📡 Live';
 
   // Poll Zoom state every 3 seconds
   if (zoomPolling) clearInterval(zoomPolling);
   zoomPolling = setInterval(async () => {
     try {
       const [stateResp, historyResp] = await Promise.all([
-        fetch('/api/zoom/state'),
-        fetch('/api/zoom/history'),
+        fetch(apiUrl('/api/zoom/state', { includeSession: false })),
+        fetch(apiUrl('/api/zoom/history', { includeSession: false })),
       ]);
 
       if (!stateResp.ok) {
-        // Meeting ended
-        clearInterval(zoomPolling);
-        zoomPolling = null;
-        badge.textContent = 'ENDED';
-        badge.style.background = 'var(--red)';
-        badge.style.color = 'white';
-        document.getElementById('run-btn').disabled = false;
+        // Transport error — leave polling up so transient failures recover.
         return;
       }
 
       const frame = await stateResp.json();
-      const history = await historyResp.json();
+      const history = historyResp.ok ? await historyResp.json() : { active: false, participants: [], chat_messages: [] };
+
+      if (frame && frame.active === false) {
+        // Meeting ended or never started — stop polling and mark the badge.
+        clearInterval(zoomPolling);
+        zoomPolling = null;
+        const badge = document.getElementById('mode-badge');
+        badge.textContent = 'ENDED';
+        badge.style.background = 'var(--red)';
+        badge.style.color = 'white';
+        document.getElementById('run-btn').disabled = false;
+        document.getElementById('run-btn').textContent = '▶ Run';
+        return;
+      }
 
       // Build sessionData from Zoom state
       sessionData = {
-        metadata: { scenario: 'zoom_live', university: 'live', duration_minutes: frame.minute + 10 },
+        metadata: {
+          scenario: 'zoom_live',
+          university: 'live',
+          duration_minutes: frame.minute + 10,
+          source_mode: 'zoom_live',
+          runtime_mode: 'live_path',
+          recommendation_mode: frame.recommendation_mode || 'limited_live_heuristic',
+          live_signal_status: frame.live_debug?.signal_status || history.live_debug?.signal_status || null,
+        },
         students: (frame.students || []).map(s => ({
           student_id: s.student_id,
           name: s.name,
@@ -2774,8 +4118,9 @@ async function startZoomLive() {
         })),
         timeline: sessionData?.timeline || [],
         events: history.events || [],
-        recommendations: sessionData?.recommendations || [],
+        recommendations: history.recommendations || [],
         professor: null,
+        live_debug: history.live_debug || frame.live_debug || null,
       };
 
       // Add frame to timeline if new minute
@@ -2786,6 +4131,7 @@ async function startZoomLive() {
       }
 
       const dur = frame.minute + 10;
+      syncModeBadge(sessionData.metadata);
       renderAll(dur);
       showMinute(frame.minute);
 
@@ -2800,11 +4146,16 @@ async function startZoomLive() {
 // ============================================================
 
 async function fireIntervention(type) {
+  if (isZoomLiveMode()) {
+    const log = document.getElementById('intervention-log');
+    log.innerHTML = `<div style="color:var(--yellow)">ℹ Live Zoom mode is read-only in this build. Manual interventions are available in the simulated mode.</div>` + log.innerHTML;
+    return;
+  }
   try {
-    const resp = await fetch('/api/intervention', {
+    const resp = await fetch(apiUrl('/api/intervention'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({ type, session_id: getCurrentSessionId() }),
     });
     const data = await resp.json();
     const log = document.getElementById('intervention-log');
@@ -2828,11 +4179,12 @@ function updateInstructorToolbar() {
   const toolbar = document.getElementById('instructor-toolbar');
   const profSelect = document.getElementById('professor-select');
   // Show when professor is "none" (manual mode) and simulation has data
-  if (profSelect.value === 'none' && sessionData && sessionData.timeline.length > 0) {
+  if (profSelect.value === 'none' && sessionData && sessionData.timeline.length > 0 && !isZoomLiveMode()) {
     toolbar.style.display = 'block';
   } else {
     toolbar.style.display = 'none';
   }
+  updateWorkflowHints();
 }
 
 // ============================================================
@@ -3130,6 +4482,10 @@ async function unzipSlides(buffer) {
 // ============================================================
 
 window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('professor-select')?.addEventListener('change', () => {
+    updateInstructorToolbar();
+    updateWorkflowHints();
+  });
   clearSimulation();
 });
 </script>

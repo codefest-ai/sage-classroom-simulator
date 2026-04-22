@@ -57,6 +57,11 @@ INTERVENTION_TYPES = {
         "duration_minutes": 3,
         "description": "Individual reflection → partner discussion → class share",
     },
+    "clarification": {
+        "name": "Clarification Pause",
+        "duration_minutes": 2,
+        "description": "Pause to re-explain or clarify the current concept",
+    },
 }
 
 
@@ -257,6 +262,14 @@ class SimulationEvent:
     event_type: str  # "signal", "chat", "intervention", "pattern", "recommendation"
     student_id: Optional[str]
     data: Dict
+
+
+def _count_recommendations(engine):
+    """Count recommendations across both the event log and session_data so
+    summaries don't report zero when recommendations live in session_data."""
+    events_count = len([e for e in getattr(engine, "events", []) if e.event_type == "recommendation"])
+    session_recs = getattr(engine, "_session_recommendations", None) or []
+    return max(events_count, len(session_recs))
 
 
 class SimulationEngine:
@@ -516,6 +529,10 @@ class SimulationEngine:
                     rec["minute"] = minute
                     session_data["recommendations"].append(rec)
 
+        # Stash a reference so _generate_summary can count recommendations that
+        # live in session_data (not on self.events).
+        self._session_recommendations = session_data["recommendations"]
+
         # Final summary
         session_data["summary"] = self._generate_summary()
 
@@ -586,7 +603,7 @@ class SimulationEngine:
 
                 # LLM combined call — agent decides BOTH engagement and chat
                 content_block = get_content_at_minute(self.content_timeline, minute)
-                llm_eligible = self.use_llm and llm_chat_count < 8 and (
+                llm_eligible = self.use_llm and minute > 1 and llm_chat_count < 8 and (
                     signals.chat_sent or random.random() < 0.45
                 )
                 if llm_eligible:
@@ -610,8 +627,9 @@ class SimulationEngine:
                             minutes_elapsed=minute,
                         )
 
-                        # LLM decides engagement — override the formula
-                        engagement = result["engagement"]
+                        # Rule-based observable-participation stays authoritative.
+                        # LLM output is used only to enrich simulated chat dialogue,
+                        # never to overwrite the participation proxy value.
                         llm_text = result["chat"]
 
                         if llm_text:
@@ -804,6 +822,11 @@ class SimulationEngine:
                 boost = profile.pace_change_response * random.uniform(0.5, 1.5)
             elif itype == "think_pair_share":
                 boost = (profile.breakout_response + profile.poll_response) / 2
+            elif itype == "clarification":
+                boost = max(
+                    profile.recovery_rate * random.uniform(0.8, 1.4),
+                    (profile.poll_response + profile.pace_change_response) / 2,
+                )
             else:
                 boost = 0.0
 
@@ -853,7 +876,7 @@ class SimulationEngine:
             "pattern_frequency": pattern_counts,
             "student_summaries": student_summaries,
             "total_interventions": len(self.interventions),
-            "total_recommendations": len([e for e in self.events if e.event_type == "recommendation"]),
+            "total_recommendations": _count_recommendations(self),
             "confusion_timeline": self.chat_analyzer.get_confusion_timeline(),
         }
 

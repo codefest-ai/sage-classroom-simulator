@@ -2,8 +2,8 @@
 LLM-Powered Professor Agent — Makes decisions through the IDSS dashboard.
 
 The professor receives the EXACT same JSON the dashboard renders and makes
-taxonomy-classified decisions. This closes the DSR evaluation loop:
-if the professor makes good decisions → the dashboard design works.
+taxonomy-classified decisions. This supports formative evaluation of
+dashboard-mediated decisions rather than validating dashboard effectiveness.
 
 Produces:
 - response_category: ignore | acknowledge | accept | modify | reject
@@ -17,6 +17,11 @@ from typing import Dict, Optional, List
 
 from .llm_client import LLMClient
 from .professor import PROFESSOR_STYLES, SimulatedProfessor, ProfessorAction
+
+RECOMMENDATION_ACTION_MAP = {
+    "equity_intervention": "think_pair_share",
+    "activation": "poll",
+}
 
 
 class LLMProfessor:
@@ -47,13 +52,13 @@ class LLMProfessor:
             f"Teaching philosophy: {s.description}",
             "",
             "You are using an Instructional Decision Support System (IDSS) dashboard",
-            "that shows you real-time engagement data about your students.",
+            "that shows you observable participation signals about your students.",
             "",
             "The dashboard shows:",
-            "- Class-wide engagement percentage",
-            "- Individual student engagement states (engaged/drifting/disengaged/confused)",
+            "- Class-wide observable participation percentage",
+            "- Individual student participation states (high/medium/low observable participation, plus confusion flags)",
             "- Detected patterns (energy decay, equity imbalance, confusion clusters)",
-            "- AI-generated recommendations with priority levels",
+            "- System-generated advisory recommendations with priority levels",
             "- Recent student chat messages",
             "",
             "When you see a recommendation, you must decide:",
@@ -100,7 +105,7 @@ class LLMProfessor:
         # Build user prompt from dashboard data
         context_lines = [
             f"MINUTE {minute} — Dashboard State:",
-            f"  Class engagement: {dashboard_state.get('class_engagement', 0):.0%}",
+            f"  Class observable participation: {dashboard_state.get('class_engagement', 0):.0%}",
             f"  Active speakers: {dashboard_state.get('active_speakers', 0)}",
             f"  Speaking equity (Gini): {dashboard_state.get('speaking_gini', 0):.2f}",
         ]
@@ -185,9 +190,9 @@ class LLMProfessor:
         if engagement > self.style.self_initiation_threshold or gap < 5:
             return None
 
-        # Low engagement, no recommendation — ask LLM what to do
+        # Low observable participation, no recommendation — ask LLM what to do
         context = (
-            f"MINUTE {minute}: Class engagement is {engagement:.0%} which is below your comfort threshold. "
+            f"MINUTE {minute}: Class observable participation is {engagement:.0%} which is below your comfort threshold. "
             f"No recommendation from the dashboard. Last intervention was {gap} minutes ago. "
             f"Do you want to do something? If yes, what intervention and what do you say to the class?"
         )
@@ -226,17 +231,31 @@ class LLMProfessor:
                     category = "acknowledge"
 
                 valid_interventions = {"breakout", "poll", "cold_call", "pace_change",
-                                      "think_pair_share", "clarification", "none", None}
+                                      "think_pair_share", "clarification",
+                                      "equity_intervention", "activation",
+                                      "none", None}
                 intervention = data.get("intervention_type")
+                intervention = RECOMMENDATION_ACTION_MAP.get(intervention, intervention)
                 if intervention not in valid_interventions:
                     intervention = None
+
+                rationale = self._clean_text_field(
+                    data.get("rationale"),
+                    preferred_keys=("rationale", "spoken_text"),
+                ) or self._default_rationale(category, intervention)
+                spoken_text = None if category == "ignore" else self._clean_text_field(
+                    data.get("spoken_text"),
+                    preferred_keys=("spoken_text", "rationale"),
+                )
+                if category != "ignore" and not spoken_text:
+                    spoken_text = self._default_spoken_text(category, intervention, rationale)
 
                 return {
                     "minute": minute,
                     "response_category": category,
-                    "intervention_type": intervention if intervention != "none" else None,
-                    "rationale": data.get("rationale", "No rationale provided"),
-                    "spoken_text": data.get("spoken_text"),
+                    "intervention_type": RECOMMENDATION_ACTION_MAP.get(intervention, intervention) if intervention != "none" else None,
+                    "rationale": rationale,
+                    "spoken_text": spoken_text,
                 }
         except (json.JSONDecodeError, ValueError):
             pass
@@ -250,18 +269,88 @@ class LLMProfessor:
                 category = cat
                 break
 
-        for iv in ["breakout", "poll", "cold_call", "pace_change", "think_pair_share", "clarification"]:
+        for iv in ["breakout", "poll", "cold_call", "pace_change", "think_pair_share", "clarification", "equity_intervention", "activation"]:
             if iv.replace("_", " ") in response_lower or iv in response_lower:
-                intervention = iv
+                intervention = RECOMMENDATION_ACTION_MAP.get(iv, iv)
                 break
+
+        fallback_spoken = None if category == "ignore" else self._clean_text_field(response)
 
         return {
             "minute": minute,
             "response_category": category,
             "intervention_type": intervention,
-            "rationale": response[:100],
-            "spoken_text": response if category != "ignore" else None,
+            "rationale": self._default_rationale(category, intervention),
+            "spoken_text": fallback_spoken or (None if category == "ignore" else self._default_spoken_text(category, intervention)),
         }
+
+    def _clean_text_field(self, value, preferred_keys=("spoken_text", "rationale")) -> Optional[str]:
+        """Normalize text fields and unwrap accidental nested JSON blobs."""
+        if value is None:
+            return None
+
+        text = str(value).strip()
+        if not text or text.lower() == "null":
+            return None
+
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                nested = json.loads(text)
+                if isinstance(nested, dict):
+                    for key in preferred_keys:
+                        nested_value = nested.get(key)
+                        if nested_value and nested_value != value:
+                            return self._clean_text_field(nested_value, preferred_keys=preferred_keys)
+            except (json.JSONDecodeError, ValueError, TypeError):
+                return None
+
+        text = text.strip('"').strip("'")
+        text = " ".join(text.split())
+        if not text:
+            return None
+        return text[:220]
+
+    def _default_rationale(self, category: str, intervention: Optional[str]) -> str:
+        if category == "ignore":
+            return "The current recommendation does not warrant an intervention right now."
+        if category == "acknowledge":
+            return "The signal is worth noting, but a minimal response fits the moment."
+        if category == "accept":
+            return f"The recommendation fits the classroom state, so I am using {intervention or 'the suggested intervention'}."
+        if category == "modify":
+            return f"The recommendation is useful, but it needs adaptation to the classroom context through {intervention or 'a modified intervention'}."
+        if category == "reject":
+            return "The recommendation does not fit the instructional context, so I am choosing not to use it."
+        if category == "self_initiated":
+            return f"I noticed a need to act even without a dashboard prompt, so I am using {intervention or 'an instructor-led intervention'}."
+        return "Decision recorded."
+
+    def _default_spoken_text(self, category: str, intervention: Optional[str], rationale: Optional[str] = None) -> Optional[str]:
+        if category == "ignore":
+            return None
+        if intervention == "clarification":
+            return "Let me pause for a second and clarify that idea before we move on."
+        if intervention == "breakout":
+            return "Let's take a quick breakout to process this together, then we will come back."
+        if intervention == "poll":
+            return "I want to do a quick poll to see where everyone is before we keep going."
+        if intervention == "think_pair_share":
+            return "Take a moment to think, compare with a partner, and then we will share out."
+        if intervention == "pace_change":
+            return "Let's shift gears for a moment and change the pace so we can reset together."
+        if intervention == "cold_call":
+            return "I want to bring another voice in here. Who can help us think this through?"
+        if rationale:
+            return rationale
+        return "Let me respond to what I am seeing in the room before we continue."
 
     def _fallback_decide(self, recs: List[Dict], minute: int) -> Optional[Dict]:
         """Fall back to rule-based professor when LLM is unavailable."""
@@ -275,7 +364,7 @@ class LLMProfessor:
             "response_category": a.response_category,
             "intervention_type": a.intervention_type,
             "rationale": a.rationale,
-            "spoken_text": None,  # Rule-based professor doesn't speak
+            "spoken_text": a.spoken_text,
         }
 
     def get_action_summary(self) -> Dict:

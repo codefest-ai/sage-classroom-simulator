@@ -15,7 +15,7 @@ import queue
 import threading
 import time
 import uuid
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # Add project root to path
@@ -52,34 +52,44 @@ class SessionState:
         self.all_frames = []
         self.events = []
         self.recommendations = []
+        self.recent_rec_minutes = {}
         self.professor_actions = []
         self.metadata = {}
         self.students = []
         self.sse_queues = []  # List of queue.Queue for SSE clients
         self.lock = threading.Lock()
+        self.last_touched = time.time()
 
-    def reset(self):
-        self.session_id = str(uuid.uuid4())[:8]
+    def touch(self):
+        self.last_touched = time.time()
+
+    def reset(self, session_id=None):
+        self.session_id = session_id or str(uuid.uuid4())[:8]
         self.is_running = False
         self.current_minute = 0
         self.current_frame = None
         self.all_frames = []
         self.events = []
         self.recommendations = []
+        self.recent_rec_minutes = {}
         self.professor_actions = []
         self.metadata = {}
         self.students = []
+        self.touch()
 
     def add_sse_client(self):
         q = queue.Queue()
         self.sse_queues.append(q)
+        self.touch()
         return q
 
     def remove_sse_client(self, q):
         if q in self.sse_queues:
             self.sse_queues.remove(q)
+        self.touch()
 
     def broadcast(self, event_type, data):
+        self.touch()
         msg = f"event: {event_type}\ndata: {json.dumps(data, default=str)}\n\n"
         dead = []
         for q in self.sse_queues:
@@ -91,8 +101,89 @@ class SessionState:
             self.sse_queues.remove(q)
 
 
-STATE = SessionState()
+SESSIONS = {}
+SESSIONS_LOCK = threading.Lock()
+SESSION_MAX_AGE_SEC = int(os.environ.get("SESSION_MAX_AGE_SEC", "7200"))
 ZOOM = ZoomWebhookHandler(secret_token=os.environ.get("ZOOM_WEBHOOK_SECRET", ""))
+SERVER_STARTED_AT = time.time()
+VALID_RESPONSE_CATEGORIES = {"ignore", "acknowledge", "accept", "modify", "reject"}
+VALID_INTERVENTION_TYPES = {
+    "breakout", "poll", "cold_call", "pace_change", "think_pair_share", "clarification"
+}
+RECOMMENDATION_ACTION_MAP = {
+    "equity_intervention": "think_pair_share",
+    "activation": "poll",
+}
+
+
+def _extract_session_id(parsed=None, data=None):
+    """Accept either ?session_id= / ?sid= or JSON body session_id."""
+    if parsed:
+        qs = parse_qs(parsed.query)
+        sid = (qs.get("session_id") or qs.get("sid") or [None])[0]
+        if sid:
+            return sid
+    if isinstance(data, dict):
+        return data.get("session_id") or data.get("sid")
+    return None
+
+
+def _cleanup_sessions():
+    now = time.time()
+    stale = []
+    with SESSIONS_LOCK:
+        for sid, state in list(SESSIONS.items()):
+            if not state.is_running and (now - state.last_touched) > SESSION_MAX_AGE_SEC:
+                stale.append(sid)
+        for sid in stale:
+            del SESSIONS[sid]
+
+
+def _normalize_intervention_type(intervention_type):
+    if not intervention_type:
+        return None
+    normalized = RECOMMENDATION_ACTION_MAP.get(intervention_type, intervention_type)
+    return normalized if normalized in VALID_INTERVENTION_TYPES else None
+
+
+def _get_session(session_id=None, create=False):
+    _cleanup_sessions()
+
+    if session_id:
+        with SESSIONS_LOCK:
+            state = SESSIONS.get(session_id)
+            if state:
+                state.touch()
+                return state
+        if not create:
+            return None
+
+    if not create:
+        return None
+
+    state = SessionState()
+    state.reset(session_id=session_id)
+    with SESSIONS_LOCK:
+        while state.session_id in SESSIONS:
+            state.reset()
+        SESSIONS[state.session_id] = state
+    return state
+
+
+def _service_summary():
+    with SESSIONS_LOCK:
+        total_sessions = len(SESSIONS)
+        active_sessions = sum(1 for state in SESSIONS.values() if state.is_running)
+    return {
+        "status": "ok",
+        "service": "sage-server",
+        "uptime_sec": int(time.time() - SERVER_STARTED_AT),
+        "total_sessions": total_sessions,
+        "active_sessions": active_sessions,
+        "session_ttl_sec": SESSION_MAX_AGE_SEC,
+        "zoom_webhook_configured": bool(os.environ.get("ZOOM_WEBHOOK_SECRET")),
+        "groq_configured": bool(os.environ.get("GROQ_API_KEY")),
+    }
 
 
 # ============================================================
@@ -101,8 +192,9 @@ ZOOM = ZoomWebhookHandler(secret_token=os.environ.get("ZOOM_WEBHOOK_SECRET", "")
 
 def run_simulation_live(state, config):
     """Run simulation tick-by-tick, broadcasting each frame via SSE."""
-    state.reset()
+    state.reset(session_id=config.get("session_id") or state.session_id)
     state.is_running = True
+    state.touch()
 
     duration = config.get("duration", 45)
     scenario = config.get("scenario", "baseline")
@@ -126,6 +218,16 @@ def run_simulation_live(state, config):
         content_timeline=content_timeline,
     )
     state.engine = engine
+    llm_requested = bool(use_llm)
+    llm_available = False
+    llm_backend = None
+    if getattr(engine, "_llm_client", None):
+        try:
+            llm_available = bool(engine._llm_client.is_available())
+            llm_backend = engine._llm_client.backend_name
+        except Exception:
+            llm_available = False
+            llm_backend = None
 
     # Store student metadata
     state.students = [
@@ -147,6 +249,11 @@ def run_simulation_live(state, config):
         "seed": seed,
         "student_count": len(engine.profiles),
         "use_llm": use_llm,
+        "llm_requested": llm_requested,
+        "llm_available": llm_available,
+        "llm_effective": llm_requested and llm_available,
+        "llm_backend": llm_backend,
+        "runtime_mode": "ai" if (llm_requested and llm_available) else "rules",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
 
@@ -177,6 +284,7 @@ def run_simulation_live(state, config):
             break
 
         with state.lock:
+            state.touch()
             state.current_minute = frame["minute"]
             state.current_frame = frame
             state.all_frames.append(frame)
@@ -187,11 +295,22 @@ def run_simulation_live(state, config):
             for e in minute_events:
                 state.events.append({"minute": e.minute, "event_type": e.event_type, "student_id": e.student_id, "data": e.data})
 
-            # Get recommendations
-            recs = engine.scorer.get_recommendations(engine._last_class_snapshot) if hasattr(engine, '_last_class_snapshot') and engine._last_class_snapshot else []
-            for r in recs:
+            # Get recommendations, with per-pattern throttling so the same
+            # rule-based advisory doesn't spam the log every minute.
+            REC_COOLDOWN_MINUTES = 3
+            raw_recs = engine.scorer.get_recommendations(engine._last_class_snapshot) if hasattr(engine, '_last_class_snapshot') and engine._last_class_snapshot else []
+            recs = []
+            for idx, r in enumerate(raw_recs):
+                pattern_type = (r.get("evidence") or {}).get("type") or r.get("action") or "unknown"
+                last_minute = state.recent_rec_minutes.get(pattern_type, -10**9)
+                if frame["minute"] - last_minute < REC_COOLDOWN_MINUTES:
+                    continue
+                state.recent_rec_minutes[pattern_type] = frame["minute"]
+                r["rec_id"] = r.get("rec_id") or f"{frame['minute']}-{len(state.recommendations) + idx}"
                 r["minute"] = frame["minute"]
+                r["pattern_type"] = pattern_type
                 state.recommendations.append(r)
+                recs.append(r)
 
             # Professor decisions
             prof_action = None
@@ -207,12 +326,17 @@ def run_simulation_live(state, config):
                         # Rule-based professor
                         actions = prof.process_recommendations(recs, frame["minute"])
                         if actions:
+                            source_rec = recs[0] if recs else {}
                             prof_action = {
                                 "minute": actions[0].minute,
                                 "response_category": actions[0].response_category,
                                 "intervention_type": actions[0].intervention_type,
                                 "rationale": actions[0].rationale,
-                                "spoken_text": None,
+                                "spoken_text": actions[0].spoken_text,
+                                "rec_id": source_rec.get("rec_id"),
+                                "recommendation_message": source_rec.get("message"),
+                                "priority": source_rec.get("priority"),
+                                "source": "simulated_professor",
                             }
                 except Exception as e:
                     prof_action = None
@@ -248,6 +372,8 @@ def run_simulation_live(state, config):
 
 def _build_dashboard_state(state):
     """Build the exact JSON the frontend renders — this is what the professor sees."""
+    if not state:
+        return {}
     frame = state.current_frame
     if not frame:
         return {}
@@ -279,28 +405,34 @@ class SAGEHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        session_id = _extract_session_id(parsed)
+        state = _get_session(session_id, create=False) if session_id else None
 
         if path == "/" or path == "/index.html":
             # Serve dashboard
             self._serve_file("dashboard/index.html", "text/html")
 
         elif path == "/api/stream":
-            self._handle_sse()
+            self._handle_sse(parsed)
 
         elif path == "/api/state":
-            self._json_response(_build_dashboard_state(STATE))
+            self._json_response(_build_dashboard_state(state))
 
         elif path == "/api/dashboard-state":
-            self._json_response(_build_dashboard_state(STATE))
+            self._json_response(_build_dashboard_state(state))
 
         elif path == "/api/session":
             self._json_response({
-                "session_id": STATE.session_id,
-                "is_running": STATE.is_running,
-                "current_minute": STATE.current_minute,
-                "metadata": STATE.metadata,
-                "students": STATE.students,
+                "session_id": state.session_id if state else session_id,
+                "is_running": state.is_running if state else False,
+                "current_minute": state.current_minute if state else 0,
+                "metadata": state.metadata if state else {},
+                "students": state.students if state else [],
+                "service": "ok",
             })
+
+        elif path == "/api/health":
+            self._json_response(_service_summary())
 
         elif path == "/api/presets":
             presets = {}
@@ -316,26 +448,41 @@ class SAGEHandler(SimpleHTTPRequestHandler):
 
         elif path == "/api/history":
             self._json_response({
-                "timeline": STATE.all_frames,
-                "events": STATE.events,
-                "recommendations": STATE.recommendations,
-                "professor_actions": STATE.professor_actions,
+                "timeline": state.all_frames if state else [],
+                "events": state.events if state else [],
+                "recommendations": state.recommendations if state else [],
+                "professor_actions": state.professor_actions if state else [],
             })
 
         elif path == "/api/zoom/state":
-            # Live Zoom meeting state as dashboard frame
-            meeting = ZOOM.get_active_meeting()
-            if meeting:
-                self._json_response(meeting.to_dashboard_frame())
+            # Live Zoom meeting state as dashboard frame.
+            # Return 200 with an explicit inactive payload so the dashboard can
+            # distinguish "no meeting yet" from a live-path failure.
+            frame = ZOOM.get_active_frame()
+            if frame:
+                self._json_response(frame)
             else:
-                self._json_response({"error": "No active Zoom meeting"}, status=404)
+                self._json_response({
+                    "active": False,
+                    "reason": "No active Zoom meeting has been seen on this server yet.",
+                    "students": [],
+                    "patterns": [],
+                })
 
         elif path == "/api/zoom/history":
-            meeting = ZOOM.get_active_meeting()
-            if meeting:
-                self._json_response(ZOOM.get_meeting_history(meeting.meeting_id))
+            history = ZOOM.get_active_history()
+            if history:
+                self._json_response(history)
             else:
-                self._json_response({"error": "No active Zoom meeting"}, status=404)
+                self._json_response({
+                    "active": False,
+                    "reason": "No active Zoom meeting history is available.",
+                    "participants": [],
+                    "chat_messages": [],
+                })
+
+        elif path == "/api/zoom/debug":
+            self._json_response(ZOOM.get_debug_snapshot())
 
         elif path.startswith("/dashboard/"):
             # Serve static dashboard files
@@ -361,14 +508,38 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             self._handle_start(data)
 
         elif path == "/api/stop":
-            STATE.is_running = False
-            self._json_response({"status": "stopped"})
+            session_id = _extract_session_id(parsed, data)
+            state = _get_session(session_id, create=False)
+            if state:
+                state.is_running = False
+            self._json_response({"status": "stopped", "session_id": session_id})
 
         elif path == "/api/intervention":
             self._handle_intervention(data)
 
+        elif path == "/api/response":
+            self._handle_response(data)
+
         elif path == "/api/zoom/webhook":
             # Zoom sends webhook events here
+            event_name = data.get("event", "")
+            signature = self.headers.get("x-zm-signature", "")
+            timestamp = self.headers.get("x-zm-request-timestamp", "")
+            secret_configured = bool(getattr(ZOOM, "secret_token", None))
+            if secret_configured:
+                # When a secret is configured, require signed requests — do not
+                # silently accept requests that omit the signature headers.
+                if not signature or not timestamp or not ZOOM.verify_webhook(body, signature, timestamp):
+                    print(f"[zoom webhook] signature verification failed event={event_name or 'unknown'} (missing_headers={not signature or not timestamp})")
+                    self._json_response({"error": "Invalid Zoom webhook signature"}, status=401)
+                    return
+            elif signature and timestamp and not ZOOM.verify_webhook(body, signature, timestamp):
+                print(f"[zoom webhook] signature verification failed event={event_name or 'unknown'}")
+                self._json_response({"error": "Invalid Zoom webhook signature"}, status=401)
+                return
+            payload_obj = data.get("payload", {}).get("object", {}) or {}
+            meeting_id = payload_obj.get("id", "")
+            print(f"[zoom webhook] event={event_name or 'unknown'} meeting_id={meeting_id or 'n/a'}")
             result = ZOOM.handle_event(data)
             if result:
                 self._json_response(result)
@@ -378,15 +549,25 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         else:
             self.send_error(404, "Not found")
 
+    default_llm = False  # Set by CLI --llm flag
+
     def _handle_start(self, config):
         """Start a new simulation in a background thread."""
-        if STATE.is_running:
+        session_id = _extract_session_id(data=config)
+        state = _get_session(session_id, create=True)
+
+        if state.is_running:
             self._json_response({"error": "Simulation already running"}, status=409)
             return
 
+        # Apply CLI default if dashboard didn't specify
+        if "llm" not in config:
+            config["llm"] = self.default_llm
+        config["session_id"] = state.session_id
+
         thread = threading.Thread(
             target=run_simulation_live,
-            args=(STATE, config),
+            args=(state, config),
             daemon=True,
         )
         thread.start()
@@ -396,29 +577,103 @@ class SAGEHandler(SimpleHTTPRequestHandler):
 
         self._json_response({
             "status": "started",
-            "session_id": STATE.session_id,
+            "session_id": state.session_id,
             "config": config,
         })
 
     def _handle_intervention(self, data):
         """Inject an intervention mid-simulation."""
-        if not STATE.is_running or not STATE.engine:
+        session_id = _extract_session_id(data=data)
+        state = _get_session(session_id, create=False)
+
+        if not state or not state.is_running or not state.engine:
             self._json_response({"error": "No active simulation"}, status=400)
             return
 
         itype = data.get("type", "poll")
         target = data.get("target_student")
-        minute = STATE.current_minute + 1
+        minute = state.current_minute + 1
 
-        STATE.engine.add_intervention(minute, itype, target)
+        state.engine.add_intervention(minute, itype, target)
         self._json_response({
             "status": "intervention_scheduled",
             "minute": minute,
             "type": itype,
+            "session_id": state.session_id,
         })
 
-    def _handle_sse(self):
+    def _handle_response(self, data):
+        """Record a manual instructor response and optionally schedule an intervention."""
+        session_id = _extract_session_id(data=data)
+        state = _get_session(session_id, create=False)
+
+        if not state:
+            self._json_response({"error": "No active session"}, status=400)
+            return
+
+        category = data.get("response_category") or data.get("category")
+        if category not in VALID_RESPONSE_CATEGORIES:
+            self._json_response({"error": "Invalid response category"}, status=400)
+            return
+
+        recommendation = data.get("recommendation") or {}
+        recommendation_id = data.get("recommendation_id") or recommendation.get("rec_id")
+        recommended_action = (
+            data.get("recommended_action")
+            or recommendation.get("action")
+        )
+        intervention_type = _normalize_intervention_type(
+            data.get("intervention_type") or recommended_action
+        ) if category in {"accept", "modify"} else None
+
+        try:
+            minute = int(data.get("minute") or state.current_minute or 0)
+        except (TypeError, ValueError):
+            minute = state.current_minute or 0
+
+        action = {
+            "minute": minute,
+            "recommendation_id": recommendation_id,
+            "response_category": category,
+            "intervention_type": intervention_type,
+            "rationale": data.get("rationale") or f"Manual instructor chose {category}",
+            "spoken_text": data.get("spoken_text"),
+            "recommendation": data.get("recommendation_message") or recommendation.get("message"),
+            "recommendation_action": recommended_action,
+            "recommendation_priority": data.get("recommendation_priority") or recommendation.get("priority"),
+            "response_source": "manual",
+        }
+
+        existing = None
+        if recommendation_id:
+            for idx, old in enumerate(state.professor_actions):
+                if old.get("response_source") == "manual" and old.get("recommendation_id") == recommendation_id:
+                    existing = idx
+                    break
+
+        if existing is None:
+            state.professor_actions.append(action)
+        else:
+            state.professor_actions[existing] = action
+
+        scheduled_minute = None
+        if intervention_type and state.is_running and state.engine:
+            scheduled_minute = state.current_minute + 1
+            state.engine.add_intervention(scheduled_minute, intervention_type)
+
+        state.touch()
+        self._json_response({
+            "status": "response_logged",
+            "session_id": state.session_id,
+            "scheduled_minute": scheduled_minute,
+            "action": action,
+        })
+
+    def _handle_sse(self, parsed):
         """Server-Sent Events endpoint."""
+        session_id = _extract_session_id(parsed)
+        state = _get_session(session_id, create=False)
+
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache, no-transform")
@@ -427,11 +682,16 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         self.send_header("X-Accel-Buffering", "no")  # Disable Nginx/reverse proxy buffering
         self.end_headers()
 
-        client_queue = STATE.add_sse_client()
+        if not state:
+            self.wfile.write(b": no-session\n\n")
+            self.wfile.flush()
+            return
+
+        client_queue = state.add_sse_client()
 
         # Send current state if session exists
-        if STATE.session_id:
-            init_msg = f"event: init\ndata: {json.dumps({'session_id': STATE.session_id, 'metadata': STATE.metadata, 'students': STATE.students, 'frames': STATE.all_frames}, default=str)}\n\n"
+        if state.session_id:
+            init_msg = f"event: init\ndata: {json.dumps({'session_id': state.session_id, 'metadata': state.metadata, 'students': state.students, 'frames': state.all_frames}, default=str)}\n\n"
             self.wfile.write(init_msg.encode())
             self.wfile.flush()
 
@@ -448,7 +708,7 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
         finally:
-            STATE.remove_sse_client(client_queue)
+            state.remove_sse_client(client_queue)
 
     def _json_response(self, data, status=200):
         self.send_response(status)
@@ -480,7 +740,8 @@ class SAGEHandler(SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """Suppress default logging for SSE keepalives."""
-        if "/api/stream" not in (args[0] if args else ""):
+        first_arg = str(args[0]) if args else ""
+        if "/api/stream" not in first_arg:
             super().log_message(format, *args)
 
 
@@ -488,11 +749,17 @@ def main():
     parser = argparse.ArgumentParser(description="SAGE v2 Live Server")
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8080)))
     parser.add_argument("--host", type=str, default="0.0.0.0" if os.environ.get("PORT") else "localhost")
+    parser.add_argument("--llm", action="store_true", help="Enable LLM-powered student chat and professor agent (requires GROQ_API_KEY)")
     args = parser.parse_args()
 
-    server = HTTPServer((args.host, args.port), SAGEHandler)
+    # Store LLM flag globally so dashboard runs use it by default
+    SAGEHandler.default_llm = args.llm
+
+    server = ThreadingHTTPServer((args.host, args.port), SAGEHandler)
+    llm_status = "✅ LLM mode (Groq)" if args.llm else "⚡ Template mode (no LLM)"
     print(f"\n  SAGE v2 Server running at http://{args.host}:{args.port}")
     print(f"  Dashboard:  http://{args.host}:{args.port}/")
+    print(f"  Mode:       {llm_status}")
     print(f"  API:        http://{args.host}:{args.port}/api/presets")
     print(f"  SSE Stream: http://{args.host}:{args.port}/api/stream")
     print(f"\n  Press Ctrl+C to stop\n")
