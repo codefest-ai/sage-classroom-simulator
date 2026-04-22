@@ -3153,18 +3153,48 @@ async function runLive(configOverrides) {
   document.getElementById('run-btn').textContent = 'Running...';
   document.getElementById('run-btn').disabled = true;
 
-  // Poll frequently during live mode so the UI feels responsive during demos
-  let lastMinute = -1;
-  while (true) {
-    await new Promise(r => setTimeout(r, 500));
+  await pollSessionUntilDone(config.duration);
 
-    try {
-      const [sessionResp, historyResp] = await Promise.all([
-        fetch(apiUrl('/api/session')),
-        fetch(apiUrl('/api/history')),
-      ]);
-      const session = await sessionResp.json();
-      const history = await historyResp.json();
+  document.getElementById('run-btn').textContent = '▶ Run';
+  document.getElementById('run-btn').disabled = false;
+}
+
+// Poll the attached server session until it stops running.
+// Used both by runLive (after POST /api/start) and by page-load recovery,
+// so a refresh mid-demo reattaches instead of losing the show.
+let _pollingActive = false;
+async function pollSessionUntilDone(fallbackDuration) {
+  if (_pollingActive) return; // guard against double-attachment
+  _pollingActive = true;
+  setConnectionIndicator('live');
+  let lastMinute = -1;
+  let consecutiveErrors = 0;
+  try {
+    while (true) {
+      await new Promise(r => setTimeout(r, 500));
+
+      let session, history;
+      try {
+        const [sessionResp, historyResp] = await Promise.all([
+          fetch(apiUrl('/api/session')),
+          fetch(apiUrl('/api/history')),
+        ]);
+        if (!sessionResp.ok) throw new Error(`session ${sessionResp.status}`);
+        if (!historyResp.ok) throw new Error(`history ${historyResp.status}`);
+        session = await sessionResp.json();
+        history = await historyResp.json();
+        if (consecutiveErrors > 0) setConnectionIndicator('live');
+        consecutiveErrors = 0;
+      } catch(e) {
+        consecutiveErrors++;
+        setConnectionIndicator(consecutiveErrors > 4 ? 'down' : 'degraded');
+        // After ~20s of continuous failure, give up so Run returns to user.
+        if (consecutiveErrors > 40) {
+          setConnectionIndicator('down');
+          break;
+        }
+        continue;
+      }
 
       // Build sessionData from server state
       sessionData = {
@@ -3202,7 +3232,7 @@ async function runLive(configOverrides) {
 
       syncModeBadge(sessionData.metadata);
 
-      const dur = session.metadata?.duration_minutes || history.timeline?.length || config.duration;
+      const dur = session.metadata?.duration_minutes || history.timeline?.length || fallbackDuration || 45;
       const currentMin = session.current_minute || 0;
 
       if (currentMin > lastMinute) {
@@ -3215,16 +3245,38 @@ async function runLive(configOverrides) {
       if (!session.is_running && currentMin > 0) {
         renderAll(dur);
         showMinute(currentMin);
+        setConnectionIndicator('complete');
         break;
       }
-    } catch(e) {
-      // Network glitch — keep trying
-      continue;
     }
+  } finally {
+    _pollingActive = false;
   }
+}
 
-  document.getElementById('run-btn').textContent = '▶ Run';
-  document.getElementById('run-btn').disabled = false;
+// Compact connection indicator rendered next to the Run button.
+function setConnectionIndicator(state) {
+  let el = document.getElementById('connection-indicator');
+  if (!el) {
+    el = document.createElement('span');
+    el.id = 'connection-indicator';
+    el.style.cssText = 'margin-left:8px;font-size:11px;padding:2px 6px;border-radius:3px;vertical-align:middle;display:inline-block';
+    const runBtn = document.getElementById('run-btn');
+    if (runBtn && runBtn.parentNode) runBtn.parentNode.insertBefore(el, runBtn.nextSibling);
+    else return;
+  }
+  const styles = {
+    live:      { text: '● live',     bg: 'rgba(34,197,94,0.18)',  color: '#22c55e' },
+    degraded:  { text: '● reconnecting', bg: 'rgba(245,158,11,0.18)', color: '#f59e0b' },
+    down:      { text: '● server unreachable', bg: 'rgba(239,68,68,0.18)', color: '#ef4444' },
+    complete:  { text: '● run complete', bg: 'rgba(59,130,246,0.18)', color: '#3b82f6' },
+    idle:      { text: '',            bg: 'transparent',           color: 'transparent' },
+  };
+  const s = styles[state] || styles.idle;
+  el.textContent = s.text;
+  el.style.background = s.bg;
+  el.style.color = s.color;
+  el.style.display = s.text ? 'inline-block' : 'none';
 }
 
 // Whether server is available (cached after first check)
@@ -4501,7 +4553,37 @@ window.addEventListener('DOMContentLoaded', () => {
     updateWorkflowHints();
   });
   clearSimulation();
+  // Refresh-recovery: if a server session from before the reload is still
+  // running, reattach the poll loop without blowing away state. Silent on
+  // failure so a plain page load with no prior session looks normal.
+  attachActiveSessionIfAny().catch(() => {});
 });
+
+async function attachActiveSessionIfAny() {
+  const sid = getCurrentSessionId();
+  if (!sid) return;
+  const serverUp = await isServerAvailable();
+  if (!serverUp) return;
+  try {
+    const resp = await fetch(apiUrl('/api/session'));
+    if (!resp.ok) { clearCurrentSessionId(); return; }
+    const session = await resp.json();
+    if (!session.is_running || (session.current_minute || 0) <= 0) return;
+    // Reattached: drive the UI from the live poll loop.
+    const runBtn = document.getElementById('run-btn');
+    if (runBtn) {
+      runBtn.textContent = 'Running...';
+      runBtn.disabled = true;
+    }
+    await pollSessionUntilDone(session.metadata?.duration_minutes || 45);
+    if (runBtn) {
+      runBtn.textContent = '▶ Run';
+      runBtn.disabled = false;
+    }
+  } catch (e) {
+    // Best-effort recovery — stay silent on failure.
+  }
+}
 </script>
 </body>
 </html>
