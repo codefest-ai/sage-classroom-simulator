@@ -159,20 +159,14 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 }
 .proxy-caveat {
   font-size: 11.5px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: var(--text-dim);
-  background: rgba(139, 92, 246, 0.10);
+  background: rgba(139, 92, 246, 0.08);
   border-left: 2px solid rgba(139, 92, 246, 0.55);
   border-radius: 3px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   margin-bottom: 10px;
-}
-.proxy-caveat strong {
-  color: var(--text);
-  display: block;
-  margin-bottom: 2px;
-  font-size: 11.5px;
-  letter-spacing: 0.02em;
+  cursor: help;
 }
 .live-debug-summary {
   display: grid;
@@ -547,6 +541,14 @@ body.mode-live .rec-list { max-height: 360px; }
   padding: 8px 10px;
   border-radius: 8px;
   background: rgba(59, 130, 246, 0.12);
+}
+.rec-live-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 6px 10px;
+  border-left: 2px solid var(--text-dim);
+  margin-top: 4px;
 }
 .response-label {
   font-size: 11px;
@@ -1244,11 +1246,8 @@ body.mode-manual .chat-log { max-height: 260px; }
   <div class="panel primary-panel" id="recommendation-panel">
     <h2 id="recommendation-panel-title">Instructional Recommendations</h2>
     <div id="recommendation-helper" class="panel-helper"></div>
-    <div id="rec-proxy-caveat" class="proxy-caveat">
-      <strong>Proxy signal, not engagement truth.</strong>
-      These advisory prompts reflect observable participation (speaking, chat, polls, reactions).
-      Silence may mean focus; chat volume may mean skimming.
-      The instructor interprets and decides.
+    <div id="rec-proxy-caveat" class="proxy-caveat" title="These advisory prompts reflect observable participation (speaking, chat, polls, reactions). Silence may mean focus; chat volume may mean skimming. The instructor interprets and decides.">
+      Observable participation proxy, not engagement truth.
     </div>
     <div class="rec-list" id="rec-list">
       <div class="loading">No recommendations yet</div>
@@ -1748,13 +1747,10 @@ function syncRecommendationViewport(recs) {
     return;
   }
 
-  const topKey = getRecommendationKey(recs[0]);
-  const newestChanged = topKey && topKey !== lastRenderedTopRecommendationKey;
-  lastRenderedTopRecommendationKey = topKey;
-
-  if (newestChanged) {
-    recList.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  // Auto-scroll-to-top on new recs disabled — motion competes with live class view
+  // for instructor attention. Track top key for future controlled-jump UX, but
+  // do not move the scroll position automatically.
+  lastRenderedTopRecommendationKey = getRecommendationKey(recs[0]);
 }
 
 function ensureManualProfessorData() {
@@ -2400,12 +2396,14 @@ function showMinute(min) {
       : '<div style="color:var(--text-dim);padding:20px;text-align:center">No recommendations generated yet</div>';
   } else {
     recList.innerHTML = recs.slice(-10).reverse().map((r, i) => {
-      const manualResponse = isManualMode() ? getLoggedResponseForRecommendation(r) : null;
+      const liveMode = isZoomLiveMode();
+      const manualUiActive = isManualMode() && !liveMode;
+      const manualResponse = manualUiActive ? getLoggedResponseForRecommendation(r) : null;
       const suggestedIntervention = normalizeInterventionType(r.action);
       const selectedIntervention = manualResponse?.intervention_type || suggestedIntervention || 'poll';
       const actionLabel = formatInterventionLabel(suggestedIntervention || r.action);
       const signalText = getRecommendationSignalText(r);
-      const manualForm = isManualMode() ? `
+      const manualForm = manualUiActive ? `
         <details class="manual-response-details" ${manualResponse?.response_category === 'modify' || manualResponse?.rationale ? 'open' : ''}>
           <summary>Adjust intervention / rationale</summary>
           <div class="manual-response-form" data-rec-form-id="${r.rec_id || ''}">
@@ -2427,7 +2425,7 @@ function showMinute(min) {
           </div>
         </details>
       ` : '';
-      const responseButtons = isManualMode() ? `
+      const responseButtons = manualUiActive ? `
         <div class="response-label">Instructor decision</div>
         <div class="response-buttons" data-rec-id="${r.rec_id || ''}">
           <button class="response-btn decision-ignore ${manualResponse?.response_category === 'ignore' ? 'selected' : ''}" onclick="logResponse(${i},'ignore')">Ignore</button>
@@ -2436,6 +2434,9 @@ function showMinute(min) {
           <button class="response-btn decision-modify modify-branch ${manualResponse?.response_category === 'modify' ? 'selected' : ''}" onclick="logResponse(${i},'modify')">Modify</button>
           <button class="response-btn decision-reject ${manualResponse?.response_category === 'reject' ? 'selected' : ''}" onclick="logResponse(${i},'reject')">Reject</button>
         </div>
+      ` : '';
+      const liveModeNote = liveMode ? `
+        <div class="rec-live-note">Live mode is ingestion-only; instructor decisions are exercised in SAGE.</div>
       ` : '';
       const responseStatus = manualResponse ? `
         <div class="response-status">
@@ -2455,6 +2456,7 @@ function showMinute(min) {
         <div class="rec-action">Candidate next move: <strong>${actionLabel}</strong></div>
         ${responseButtons}
         ${manualForm}
+        ${liveModeNote}
         ${responseStatus}
       </div>
     `;
