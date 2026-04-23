@@ -75,7 +75,7 @@ Options:
 ```bash
 # Server-backed dashboard
 python3 server.py
-# Then open http://localhost:8000
+# Then open http://localhost:8080
 
 # Optional AI mode
 python3 server.py --llm
@@ -114,7 +114,7 @@ Synthetic webhook verification after deployment or on localhost:
 
 ```bash
 python3 scripts/send_zoom_fixture.py https://your-app.onrender.com --secret "$ZOOM_WEBHOOK_SECRET"
-python3 scripts/send_zoom_fixture.py http://localhost:8096 --mode rich
+python3 scripts/send_zoom_fixture.py http://localhost:8080 --mode rich
 ```
 
 This pushes a small signed Zoom-like event sequence through `/api/zoom/webhook` so you can verify the live pipeline before relying on a real meeting.

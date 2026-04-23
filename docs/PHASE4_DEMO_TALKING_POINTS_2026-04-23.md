@@ -98,7 +98,7 @@ artifact scope block in the dashboard.
    later recs. Log fills with metadata.
 5. **Show the live Zoom path.** Click **📡 Live**. Show the sticky signal status
    ("no active meeting") is a clean 200 OK, not a 404. Run the fixture from a
-   second terminal (`python3 scripts/send_zoom_fixture.py http://localhost:8000
+   second terminal (`python3 scripts/send_zoom_fixture.py http://localhost:8080
    --mode rich`) and watch the debug trace populate with real ingested events.
 
 ## What NOT to say
@@ -127,7 +127,7 @@ cd /Users/evren/throughline-symbolic-os/Developer/evren-pcp/projects/ist505
 bash scripts/verify_phase4_demo.sh
 python3 server.py                        # leave running
 # in another terminal:
-python3 scripts/send_zoom_fixture.py http://localhost:8000 --mode rich
+python3 scripts/send_zoom_fixture.py http://localhost:8080 --mode rich
 ```
 
 If all three exit clean (verify `phase4-demo-verify-ok`, server boots,

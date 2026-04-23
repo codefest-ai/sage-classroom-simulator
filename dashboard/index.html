@@ -686,6 +686,7 @@ body.mode-manual .chat-log { max-height: 260px; }
 .student-card.drifting { border-color: var(--yellow); }
 .student-card.disengaged { border-color: var(--red); }
 .student-card.confused { border-color: var(--purple); }
+.student-card.no_signal { border-color: var(--text-dim); opacity: 0.75; }
 .student-card .name { font-size: 12px; font-weight: 600; }
 .student-card .score { font-size: 20px; font-weight: 700; margin: 4px 0; }
 .student-card .state { font-size: 10px; text-transform: uppercase; }
@@ -2373,13 +2374,17 @@ function showMinute(min) {
   grid.innerHTML = frame.students.map(s => {
     const stu = sessionData.students.find(st => st.student_id === s.student_id);
     const name = stu ? stu.name.split(' ')[0] : s.student_id;
+    const noSignal = s.state === 'no_signal';
     const cls = s.is_confused ? 'confused' : s.state;
-    const scoreLabel = liveLimitedSignal ? 'BASELINE' : `${(s.engagement * 100).toFixed(0)}%`;
+    const scoreLabel = noSignal ? '—' : (liveLimitedSignal ? 'BASELINE' : `${(s.engagement * 100).toFixed(0)}%`);
     const participationLabel = participationProxyLabel(s.state);
-    const stateLabel = liveLimitedSignal && !s.is_confused ? 'presence only' : (s.is_confused ? 'possible confusion signal' : participationLabel);
+    const stateLabel = noSignal
+      ? 'no observable signal yet'
+      : (liveLimitedSignal && !s.is_confused ? 'presence only' : (s.is_confused ? 'possible confusion signal' : participationLabel));
+    const scoreColor = noSignal ? 'var(--text-dim)' : (liveLimitedSignal ? 'var(--text-dim)' : engColor(s.engagement));
     return `<div class="student-card ${cls}">
       <div class="name">${name}</div>
-      <div class="score" style="color:${liveLimitedSignal ? 'var(--text-dim)' : engColor(s.engagement)}">${scoreLabel}</div>
+      <div class="score" style="color:${scoreColor}">${scoreLabel}</div>
       <div class="state">${stateLabel}</div>
     </div>`;
   }).join('');
@@ -2639,6 +2644,7 @@ function participationProxyLabel(state) {
     case 'engaged': return 'high participation';
     case 'drifting': return 'medium participation';
     case 'disengaged': return 'low participation';
+    case 'no_signal': return 'no observable signal yet';
     default: return state || 'unknown';
   }
 }
@@ -3153,6 +3159,9 @@ function setModeBadge(mode) {
 
 async function runSmart(configOverrides) {
   configOverrides = configOverrides || {};
+  // Fresh Run starts with a clean instructor-decision log so manual responses
+  // from a prior scenario don't render as if they were already answered.
+  responseLog = [];
   const serverUp = await isServerAvailable();
   if (serverUp) {
     // Stop any previous sim first
@@ -4127,8 +4136,6 @@ function clearSimulation() {
 let zoomPolling = null;
 
 async function startZoomLive() {
-  clearSimulation();
-  clearCurrentSessionId();
   const webhookUrl = `${window.location.origin}/api/zoom/webhook`;
   const debugSnapshot = await fetchZoomDebugSnapshot();
   const debug = debugSnapshot?.live_debug || null;
@@ -4136,7 +4143,8 @@ async function startZoomLive() {
     ? 'Recommended for demo reliability: deploy this repo to Render using render.yaml and point Zoom at the hosted /api/zoom/webhook endpoint instead of a temporary local tunnel.\n\n'
     : '';
 
-  // Check if server has an active Zoom meeting
+  // Check if server has an active Zoom meeting BEFORE wiping the current sim.
+  // A mis-clicked Live with no Zoom meeting must not erase a running demo.
   try {
     const resp = await fetch(apiUrl('/api/zoom/state', { includeSession: false }));
     const peek = resp.ok ? await resp.clone().json().catch(() => null) : null;
@@ -4177,12 +4185,16 @@ async function startZoomLive() {
       '     meeting.participant_lowered_hand, meeting.reaction_received\n\n' +
       '   → If chat events do not arrive, Zoom may also require account-level in-meeting chat DLP/support enablement\n\n' +
       '3. Start the server with your webhook secret in the environment:\n' +
-      '   ZOOM_WEBHOOK_SECRET=your_secret python3 server.py --port 8096\n\n' +
+      '   ZOOM_WEBHOOK_SECRET=your_secret python3 server.py --port 8080\n\n' +
       '4. Start a fresh Zoom meeting, then click 📡 Live again.\n\n' +
       'For the main demo: click ▶ Run (uses the simulated classroom workflow)\n' +
       'For AI chat: GROQ_API_KEY=your_key python3 server.py --llm, then click ▶ Run');
     return;
   }
+
+  // Active Zoom meeting confirmed — now safe to clear any prior sim state.
+  clearSimulation();
+  clearCurrentSessionId();
 
   syncModeBadge({ source_mode: 'zoom_live' });
 

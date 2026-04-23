@@ -3,7 +3,7 @@
 
 Usage:
     python3 scripts/check_zoom_live.py https://your-app.onrender.com
-    python3 scripts/check_zoom_live.py http://localhost:8096
+    python3 scripts/check_zoom_live.py http://localhost:8080
 """
 
 from __future__ import annotations

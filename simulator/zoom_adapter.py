@@ -83,7 +83,9 @@ class ZoomMeetingState:
         else:
             self.participants[user_id].is_present = True
             self.participants[user_id].left_at = 0
-        self.participants[user_id].last_active_minute = minute
+        # Presence is not observable participation. last_active_minute only ticks
+        # on actual signals (chat, reaction, hand) so a fresh joiner does not
+        # score as engaged before any observable activity has occurred.
         self._record_event("join", user_id=user_id, name=name, data={"name": name}, raw_event_type="meeting.participant_joined")
 
     def participant_left(self, user_id: str):
@@ -259,15 +261,45 @@ class ZoomMeetingState:
         engagement_sum = 0
         active_speakers = 0
         chat_counts = []
+        signal_count = 0
+        presence_only_count = 0
 
         for p in present:
+            has_observable_signal = (
+                p.chat_count > 0
+                or p.reaction_count > 0
+                or p.hand_raised
+                or p.last_active_minute > 0
+            )
+
+            if not has_observable_signal:
+                # Presence is not engagement. Render explicitly as "no observable
+                # signal yet" rather than scoring presence as participation.
+                presence_only_count += 1
+                students.append({
+                    "student_id": p.user_id,
+                    "name": p.name,
+                    "engagement": 0.0,
+                    "state": "no_signal",
+                    "is_confused": False,
+                    "signals": {
+                        "chat_count": 0,
+                        "reaction_count": 0,
+                        "hand_raised": False,
+                        "minutes_since_active": None,
+                        "presence_only": True,
+                    },
+                })
+                chat_counts.append(0)
+                continue
+
             minutes_since_active = minute - p.last_active_minute if p.last_active_minute > 0 else minute
             minutes_since_chat = minute - p.last_chat_minute if p.last_chat_minute > 0 else minute
 
             # Limited observable-participation heuristic from Zoom signals.
             # Camera state is intentionally not scored: camera-off can reflect
             # privacy, bandwidth, culture, disability, or access constraints.
-            eng = 0.5  # baseline: present
+            eng = 0.5  # baseline once at least one observable signal has fired
             if minutes_since_active <= 2:
                 eng += 0.3  # recently active
             elif minutes_since_active <= 5:
@@ -299,17 +331,19 @@ class ZoomMeetingState:
                     "reaction_count": p.reaction_count,
                     "hand_raised": p.hand_raised,
                     "minutes_since_active": minutes_since_active,
+                    "presence_only": False,
                 },
             })
 
             engagement_sum += eng
             chat_counts.append(p.chat_count)
+            signal_count += 1
             if minutes_since_active <= 1:
                 active_speakers += 1
 
-        class_engagement = engagement_sum / total
+        class_engagement = (engagement_sum / signal_count) if signal_count > 0 else 0.0
 
-        if total < 2:
+        if total < 2 or signal_count == 0:
             return {
                 "minute": minute,
                 "class_engagement": 0.0,
@@ -319,10 +353,16 @@ class ZoomMeetingState:
                 "patterns": [],
                 "students": students,
                 "participant_count": total,
+                "participants_with_signal": signal_count,
+                "presence_only_count": presence_only_count,
                 "source": "zoom_live",
                 "recommendation_mode": "limited_live_heuristic",
                 "insufficient_signal": True,
-                "insufficient_signal_reason": "Need at least 2 participants for stable live observable-participation estimates.",
+                "insufficient_signal_reason": (
+                    "All participants are presence-only — no chat, hand, or reaction signals yet."
+                    if signal_count == 0 and total >= 1
+                    else "Need at least 2 participants for stable live observable-participation estimates."
+                ),
                 "live_debug": self.build_observability_snapshot(),
             }
 
@@ -358,6 +398,8 @@ class ZoomMeetingState:
             "patterns": patterns,
             "students": students,
             "participant_count": total,
+            "participants_with_signal": signal_count,
+            "presence_only_count": presence_only_count,
             "source": "zoom_live",
             "recommendation_mode": "limited_live_heuristic",
             "insufficient_signal": False,

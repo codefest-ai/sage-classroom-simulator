@@ -2,7 +2,7 @@
 """Send a signed synthetic Zoom webhook sequence to a local or hosted SAGE deployment.
 
 Usage:
-    python3 scripts/send_zoom_fixture.py http://localhost:8096
+    python3 scripts/send_zoom_fixture.py http://localhost:8080
     python3 scripts/send_zoom_fixture.py https://your-app.onrender.com --secret "$ZOOM_WEBHOOK_SECRET"
 
 This is for deployment/debug verification only. It does not replace a real Zoom meeting.
@@ -114,7 +114,7 @@ def fixture_sequence(meeting_id: str, rich: bool):
 
 def main():
     parser = argparse.ArgumentParser(description="Send synthetic Zoom webhook events to a SAGE deployment.")
-    parser.add_argument("base_url", help="Deployment base URL, e.g. http://localhost:8096 or https://your-app.onrender.com")
+    parser.add_argument("base_url", help="Deployment base URL, e.g. http://localhost:8080 or https://your-app.onrender.com")
     parser.add_argument("--secret", default="", help="Zoom webhook secret used for signing requests")
     parser.add_argument("--meeting-id", default="fixture-meeting-505", help="Meeting id to reuse for the synthetic sequence")
     parser.add_argument(

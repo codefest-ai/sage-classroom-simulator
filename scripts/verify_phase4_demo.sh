@@ -11,6 +11,9 @@ fi
 
 echo "== IST505 Phase 4 static verification =="
 
+# Don't write __pycache__ during compile-check; sandboxed runs can fail to write.
+export PYTHONDONTWRITEBYTECODE=1
+
 python3 -m py_compile \
   server.py \
   simulator/engine.py \
