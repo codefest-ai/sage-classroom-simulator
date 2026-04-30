@@ -1,6 +1,6 @@
 # Instructional Decision Support Prototype
 
-**Evaluated through SAGE (Simulated Agent-Generated Engagement)**
+**Evaluated through SAGE (Simulated Agent-Generated Evaluation)**
 
 IST 505 – Design Research Methods (DSR)
 Dr. Samir Chatterjee
@@ -12,7 +12,7 @@ Claremont Graduate University — Spring 2026
 
 ## What This Is
 
-This project centers a working instructional decision-support prototype for synchronous online teaching. **SAGE** (Simulated Agent-Generated Engagement) is the classroom simulation and evaluation environment used to generate classroom states, route them through the dashboard, and record instructor-response behavior during formative evaluation.
+This project centers a working instructional decision-support prototype for synchronous online teaching. **SAGE** (Simulated Agent-Generated Evaluation) is the classroom simulation and evaluation environment used to generate classroom states, route them through the dashboard, and record instructor-response behavior during formative evaluation.
 
 ### Current Project Framing
 

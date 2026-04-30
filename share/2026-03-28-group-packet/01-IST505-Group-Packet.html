@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IST 505 Group Packet</title>
+  <style>
+    @page {
+      size: Letter;
+      margin: 0.7in;
+    }
+    :root {
+      --bg: #f7f3eb;
+      --paper: #fffdf8;
+      --ink: #1b1d22;
+      --muted: #5f6470;
+      --line: #d9d0bf;
+      --accent: #1e5aa8;
+      --accent-soft: #e7f0fb;
+      --warm: #a06b2c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      font-size: 11pt;
+    }
+    .page {
+      max-width: 8.5in;
+      margin: 0 auto;
+      background: var(--paper);
+      padding: 0.35in 0.45in 0.45in;
+    }
+    header {
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 0.18in;
+      margin-bottom: 0.24in;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22pt;
+      line-height: 1.15;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    header p {
+      margin: 0.08in 0 0;
+      color: var(--muted);
+      font-size: 10.5pt;
+    }
+    h1, h2, h3 {
+      page-break-after: avoid;
+      break-after: avoid;
+      line-height: 1.2;
+    }
+    h1 {
+      font-size: 18pt;
+      margin: 0.26in 0 0.12in;
+      color: var(--accent);
+    }
+    h2 {
+      font-size: 14pt;
+      margin: 0.24in 0 0.1in;
+      padding-bottom: 0.04in;
+      border-bottom: 1px solid var(--line);
+      color: #24334f;
+    }
+    h3 {
+      font-size: 11.8pt;
+      margin: 0.16in 0 0.05in;
+      color: #463928;
+    }
+    p, ul, ol, table, blockquote {
+      margin: 0.08in 0 0.12in;
+    }
+    ul, ol {
+      padding-left: 0.24in;
+    }
+    li {
+      margin: 0.04in 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.2pt;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 9px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--accent-soft);
+      font-weight: 700;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+      background: #f0ede6;
+      padding: 0 4px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f4efe6;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      overflow: auto;
+      font-size: 9.6pt;
+    }
+    blockquote {
+      border-left: 4px solid var(--warm);
+      padding: 0.02in 0 0.02in 0.16in;
+      color: #4b4f57;
+      background: #fbf7ef;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 0.18in 0;
+    }
+    .footer {
+      margin-top: 0.28in;
+      color: var(--muted);
+      font-size: 9pt;
+      border-top: 1px solid var(--line);
+      padding-top: 0.1in;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>IST 505 Group Packet</h1>
+      <p>Shareable summary for the research group</p>
+    </header>
+    <h1>IST 505 Group Share Packet</h1>
+<h2>Working Artifact Framing For Phase 3</h2>
+<p><strong>Audience:</strong> IST 505 project group</p>
+<p><strong>Purpose:</strong> Provide one clean, shareable summary of the current project framing, the strongest contribution claims supported by the current build, the claims we should avoid overstating, and the practical writing split for Phase 3.</p>
+<h2>1. Project Framing</h2>
+<p>We are building a working instructional decision-support prototype for synchronous online teaching. In the current implementation, that artifact is demonstrated and formatively evaluated through <strong>SAGE</strong>, a classroom simulation and demo environment that lets us test the workflow under controlled scenarios before moving to human-subject or real-class deployment.</p>
+<h2>2. Strongest Novelty Claims</h2>
+<ol>
+<li><p><strong>Institutional context sensitivity</strong>
+The same dashboard and lesson scenario can produce different recommendation patterns across different university contexts, rather than assuming all online classrooms behave the same way.</p>
+</li>
+<li><p><strong>Composition-behavior separation</strong>
+The design explicitly separates demographic composition from behavioral modeling: demographics help describe who is in the room, while engagement behavior is driven by archetypes and institutional context modifiers rather than racialized assumptions.</p>
+</li>
+<li><p><strong>Instructor agency as a construct</strong>
+The Instructor Response Taxonomy treats the instructor as an active decision-maker who can ignore, acknowledge, accept, modify, or reject AI support, rather than as a passive endpoint for recommendations.</p>
+</li>
+</ol>
+<h2>3. Claims We Should Avoid Overstating</h2>
+<ol>
+<li><p><strong>Do not claim full validation</strong>
+The current build supports formative evaluation and proof of concept. It does not yet support a strong claim that the system is fully validated in real classrooms.</p>
+</li>
+<li><p><strong>Do not oversell live Zoom integration</strong>
+There is prototype infrastructure for live integration, but it should not be framed as a finished production deployment or a completed marketplace-ready app.</p>
+</li>
+<li><p><strong>Do not frame novelty as simply “AI recommendations”</strong>
+Some existing systems already provide AI-generated or AI-assisted recommendations. Our stronger differentiation is context sensitivity, bias-aware modeling, and instructor agency.</p>
+</li>
+</ol>
+<h2>4. What Is Already Built And Supported</h2>
+<ul>
+<li><p><strong>Working prototype environment</strong>
+The project already includes a browser-based dashboard, scenario-driven classroom simulation, university presets, recommendation logic, and instructor-response logging.</p>
+</li>
+<li><p><strong>Institutional-context evidence</strong>
+The current build already supports the claim that the same scenario can produce different outputs across different institutional contexts rather than assuming a one-size-fits-all classroom model.</p>
+</li>
+<li><p><strong>Bias-aware design rationale</strong>
+The project has already resolved an important design question by separating demographic composition from behavioral modeling. That decision is part of the artifact story, not just a side note.</p>
+</li>
+<li><p><strong>Evaluation posture</strong>
+The strongest current claim is formative evaluation and proof of concept. The current artifact supports scenario testing, comparison, and prototype demonstration; it does not yet support a strong real-world validation claim.</p>
+</li>
+<li><p><strong>LLM-enhanced simulation</strong>
+The project also includes an AI mode in which students and professor behavior can be driven through an LLM-backed server path. This is best presented as an important methodological and demonstration capability, not as the sole source of novelty.</p>
+</li>
+</ul>
+<h2>5. What The Writing Team Can Build From This</h2>
+<ul>
+<li>A cleaner novelty statement centered on context sensitivity, bias-aware modeling, and instructor agency</li>
+<li>A design-principles section grounded in actual build decisions rather than abstract aspirations</li>
+<li>A safer evaluation section that distinguishes current evidence from future validation</li>
+<li>A Phase 3 draft that already has enough structure to assign and revise collaboratively</li>
+<li>A stable artifact boundary even if the final product name remains provisional for now</li>
+</ul>
+<h2>6. Proposed Division Of Labor For Phase 3</h2>
+<ul>
+<li><p><strong>Evren</strong>
+Own the artifact description, screenshots, dashboard walkthrough, simulation architecture, proof-of-concept section, and short artifact spec.</p>
+</li>
+<li><p><strong>Writing team</strong>
+Own the problem statement, literature gap synthesis, competing-systems positioning, design principles, and kernel-theory-to-feature mapping.</p>
+</li>
+<li><p><strong>Whole group</strong>
+Agree on one honest novelty statement, one evaluation story, and one set of claims the whole team will consistently use.</p>
+</li>
+</ul>
+
+    <div class="footer">Prepared from local IST505 project materials on March 28, 2026.</div>
+  </main>
+</body>
+</html>

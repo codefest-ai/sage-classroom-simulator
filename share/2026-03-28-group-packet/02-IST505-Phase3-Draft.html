@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IST 505 Phase 3 Draft</title>
+  <style>
+    @page {
+      size: Letter;
+      margin: 0.7in;
+    }
+    :root {
+      --bg: #f7f3eb;
+      --paper: #fffdf8;
+      --ink: #1b1d22;
+      --muted: #5f6470;
+      --line: #d9d0bf;
+      --accent: #1e5aa8;
+      --accent-soft: #e7f0fb;
+      --warm: #a06b2c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      font-size: 11pt;
+    }
+    .page {
+      max-width: 8.5in;
+      margin: 0 auto;
+      background: var(--paper);
+      padding: 0.35in 0.45in 0.45in;
+    }
+    header {
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 0.18in;
+      margin-bottom: 0.24in;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22pt;
+      line-height: 1.15;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    header p {
+      margin: 0.08in 0 0;
+      color: var(--muted);
+      font-size: 10.5pt;
+    }
+    h1, h2, h3 {
+      page-break-after: avoid;
+      break-after: avoid;
+      line-height: 1.2;
+    }
+    h1 {
+      font-size: 18pt;
+      margin: 0.26in 0 0.12in;
+      color: var(--accent);
+    }
+    h2 {
+      font-size: 14pt;
+      margin: 0.24in 0 0.1in;
+      padding-bottom: 0.04in;
+      border-bottom: 1px solid var(--line);
+      color: #24334f;
+    }
+    h3 {
+      font-size: 11.8pt;
+      margin: 0.16in 0 0.05in;
+      color: #463928;
+    }
+    p, ul, ol, table, blockquote {
+      margin: 0.08in 0 0.12in;
+    }
+    ul, ol {
+      padding-left: 0.24in;
+    }
+    li {
+      margin: 0.04in 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.2pt;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 9px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--accent-soft);
+      font-weight: 700;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92em;
+      background: #f0ede6;
+      padding: 0 4px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #f4efe6;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      overflow: auto;
+      font-size: 9.6pt;
+    }
+    blockquote {
+      border-left: 4px solid var(--warm);
+      padding: 0.02in 0 0.02in 0.16in;
+      color: #4b4f57;
+      background: #fbf7ef;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 0.18in 0;
+    }
+    .footer {
+      margin-top: 0.28in;
+      color: var(--muted);
+      font-size: 9pt;
+      border-top: 1px solid var(--line);
+      padding-top: 0.1in;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>IST 505 Phase 3 Draft</h1>
+      <p>Submission-shaped draft from current repo materials</p>
+    </header>
+    <h1>Phase 3 Draft</h1>
+<h2>Working Title: Context-Adaptive Instructional Decision Support for Synchronous Online Teaching</h2>
+<p><strong>Working note:</strong> This draft is designed to turn the current repo materials into a submission-shaped document for IST 505 Phase 3. It is intentionally conservative about claims that still need literature citations or stronger validation evidence.</p>
+<h2>1. Problem Statement</h2>
+<p>In synchronous online learning environments, instructors must continuously interpret multiple streams of partial and fast-changing information, including chat activity, participation patterns, silence, confusion signals, and changes in class energy. Existing dashboards and analytics tools can surface behavioral indicators, but instructors still face a cognitive burden in deciding what those indicators mean and whether intervention is warranted. This creates a situation-awareness problem: instructors may perceive signals without fully comprehending their significance or projecting how engagement is likely to evolve. The proposed artifact addresses this problem by supporting instructor sensemaking and intervention selection in real time, while preserving instructor agency rather than replacing it.</p>
+<h2>2. DSR Artifact Description</h2>
+<p>The Phase 3 artifact is a working instructional decision-support prototype for synchronous online teaching. In this draft, the artifact is described functionally rather than through a final product name because the naming decision is still provisional.</p>
+<p>In the current implementation, the artifact is demonstrated and formatively evaluated through <strong>SAGE</strong> (Simulated Agent-Generated Evaluation), a classroom simulation and evaluation environment that generates classroom states, routes them through the dashboard, and records instructor responses before live deployment.</p>
+<p>These artifacts collectively cover multiple DSR artifact types:</p>
+<table>
+<thead>
+<tr>
+<th>DSR artifact type</th>
+<th>Project element</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Construct</td>
+<td>Instructor Response Taxonomy</td>
+</tr>
+<tr>
+<td>Model</td>
+<td>Situation-awareness pipeline from signal perception to comprehension and projection</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Simulation-based formative evaluation using scenario-driven classroom runs</td>
+</tr>
+<tr>
+<td>Instantiation</td>
+<td>Dashboard prototype, simulation engine, university presets, and professor-response loop</td>
+</tr>
+</tbody></table>
+<h2>3. What Is Unique Or Novel</h2>
+<p>The novelty of the project should not be framed as merely adding AI-generated recommendations to an instructor dashboard. A more defensible claim is that the project combines three contributions that are rarely treated together.</p>
+<p>First, the artifact is <strong>institutionally adaptive</strong>: the same dashboard and scenario can produce different recommendation patterns depending on institutional context. Second, the design explicitly separates <strong>demographic composition from behavioral modeling</strong>, allowing classroom composition to reflect real enrollment patterns without claiming that race, ethnicity, gender, or nationality directly determine engagement behavior. Third, the project introduces an <strong>Instructor Response Taxonomy</strong> that treats the instructor as an active decision-maker who may ignore, acknowledge, accept, modify, or reject a recommendation. This reframes instructor-AI interaction as a measurable construct rather than a black box.</p>
+<p>An additional methodological contribution is that SAGE provides a <strong>simulation-based evaluation environment</strong> for the instructional artifact. This supports formative testing of recommendations, intervention effects, and instructor responses before moving to live classroom settings.</p>
+<p>This methodological direction can be situated alongside prior generative-agent work such as Park et al. (2023), which is often summarized through the well-known example of agents in a simulated town spontaneously organizing a Valentine&#39;s Day party. In contrast, the present project applies shared-context agent simulation to classroom engagement and instructional decision support.</p>
+<p>Taken together, the contribution is a context-adaptive instructional decision-support prototype whose novelty lies in how it combines institutional context sensitivity, bias-aware classroom modeling, and a measurable instructor response taxonomy within one artifact and one formative evaluation workflow. SAGE strengthens that contribution by providing a simulation-based environment for testing the artifact across repeatable scenarios before live classroom deployment.</p>
+<h2>4. Design Requirements And Principles</h2>
+<p>The current build implies the following design principles:</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Principle</th>
+<th>Rationale</th>
+<th>Artifact expression</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DP1</td>
+<td>Institutional context sensitivity</td>
+<td>Online classrooms differ structurally across institutions and program formats</td>
+<td>University presets with institutional modifiers</td>
+</tr>
+<tr>
+<td>DP2</td>
+<td>Composition-behavior separation</td>
+<td>Demographic realism should not require demographic stereotyping</td>
+<td>Demographics describe classroom composition, not direct behavior rules</td>
+</tr>
+<tr>
+<td>DP3</td>
+<td>Instructor agency preservation</td>
+<td>Decision support should advise rather than dictate</td>
+<td>Instructor Response Taxonomy and recommendation interface</td>
+</tr>
+<tr>
+<td>DP4</td>
+<td>Cognitive load reduction</td>
+<td>Instructors need aggregated interpretation, not only raw behavioral streams</td>
+<td>Dashboard summaries, alerts, and grouped patterns</td>
+</tr>
+<tr>
+<td>DP5</td>
+<td>Situation awareness escalation</td>
+<td>Perception alone is insufficient for intervention</td>
+<td>Signals feed into pattern detection and forward-looking recommendations</td>
+</tr>
+<tr>
+<td>DP6</td>
+<td>Bias-aware evaluation</td>
+<td>DSR should surface and reduce bias risks during artifact design</td>
+<td>Explicit rejection of demographic-to-behavior mappings</td>
+</tr>
+<tr>
+<td>DP7</td>
+<td>Risk-reduced formative testing</td>
+<td>Early evaluation should be possible without immediate classroom deployment</td>
+<td>SAGE as simulation sandbox for scenario testing</td>
+</tr>
+</tbody></table>
+<h3>Kernel Theory To Feature Mapping</h3>
+<p>One of the main revision needs for Phase 3 is to show more explicitly how kernel theories inform concrete design features. The current project supports the following mapping:</p>
+<table>
+<thead>
+<tr>
+<th>Kernel theory or literature base</th>
+<th>Design implication</th>
+<th>Current feature or artifact element</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Endsley situation awareness</td>
+<td>Move beyond raw signal display toward interpretation and projection</td>
+<td>Signal collection, pattern detection, and intervention recommendations</td>
+</tr>
+<tr>
+<td>Sweller cognitive load theory</td>
+<td>Reduce extraneous cognitive burden on instructors</td>
+<td>Dashboard aggregation, alerts, and summarized recommendation interface</td>
+</tr>
+<tr>
+<td>Advising-mode literature in learning analytics</td>
+<td>Recommendations should support action, not just mirror data</td>
+<td>Intervention suggestions rather than raw metrics alone</td>
+</tr>
+<tr>
+<td>Situated instructional decision-making literature</td>
+<td>Different instructors and contexts require adaptive support</td>
+<td>Multiple professor styles and institutional-context presets</td>
+</tr>
+<tr>
+<td>Bias-aware and equity-oriented design</td>
+<td>Avoid encoding demographic assumptions into learner behavior</td>
+<td>Composition-behavior separation and rejection of demographic behavior rules</td>
+</tr>
+<tr>
+<td>Design science evaluation literature</td>
+<td>Use iterative formative evaluation before naturalistic deployment</td>
+<td>Scenario-driven simulation and staged evaluation roadmap</td>
+</tr>
+</tbody></table>
+<h2>5. Form And Functions</h2>
+<p>The current proof-of-concept includes a dashboard prototype and a simulation engine that work together as a single demonstration environment.</p>
+<p>Key functional elements include:</p>
+<ul>
+<li>A dashboard that displays classroom engagement patterns, alerts, and recommendations</li>
+<li>A simulation engine that generates minute-by-minute classroom states under repeatable scenarios</li>
+<li>University presets that shift classroom conditions across institutional contexts</li>
+<li>A professor-response loop that records how recommendations are accepted, modified, or rejected</li>
+<li>Multiple evaluation scenarios, including energy decay, equity imbalance, confusion clusters, and mixed full-session scenarios</li>
+</ul>
+<p>The interface can be described in terms of a situation-awareness pipeline:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Function</th>
+<th>Example implementation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Perception</td>
+<td>Collect classroom signals</td>
+<td>Chat, speaking, reactions, silence, camera state, participation</td>
+</tr>
+<tr>
+<td>Comprehension</td>
+<td>Detect meaningful patterns</td>
+<td>Confusion cluster, energy decay, speaking imbalance</td>
+</tr>
+<tr>
+<td>Projection</td>
+<td>Recommend possible interventions</td>
+<td>Poll, breakout, pace change, clarification</td>
+</tr>
+</tbody></table>
+<p>For the final Phase 3 submission, this section should include screenshots or diagrams of:</p>
+<ul>
+<li>Main dashboard layout</li>
+<li>Recommendation panel</li>
+<li>Instructor response area</li>
+<li>University preset comparison view</li>
+<li>Simulation-to-dashboard flow</li>
+</ul>
+<h2>6. Proof Of Concept Demonstration</h2>
+<p>The current proof of concept is implemented as a working prototype composed of:</p>
+<ul>
+<li>A Python-based simulator for synthetic classroom sessions</li>
+<li>A browser-based dashboard interface</li>
+<li>Scenario controls and university presets</li>
+<li>Rule-based and LLM-assisted simulation modes</li>
+<li>An optional Zoom/webhook ingestion path for future live testing</li>
+</ul>
+<p>The prototype already supports:</p>
+<ul>
+<li>Scenario-driven runs with seeded reproducibility in rule-based mode</li>
+<li>LLM-powered student chat in server mode</li>
+<li>A professor-decision loop that can react to dashboard recommendations</li>
+<li>Exportable session traces and comparison scenarios</li>
+</ul>
+<p>For the Phase 3 writeup, the proof-of-concept argument should emphasize that the project is already capable of demonstrating the artifact’s intended workflow end to end:</p>
+<ol>
+<li>A classroom state is generated or ingested</li>
+<li>The dashboard interprets the state and identifies patterns</li>
+<li>The system presents interventions to the instructor</li>
+<li>The instructor response is recorded</li>
+<li>The next classroom state reflects that intervention context</li>
+</ol>
+<h2>7. Evaluation Approach And Artifact Impact</h2>
+<p>The evaluation story should distinguish clearly between current formative evidence and future summative evidence.</p>
+<h3>Current formative evidence</h3>
+<ul>
+<li>Design decision traces, especially the demographic design rationale</li>
+<li>Scenario-based simulation runs across multiple classroom conditions</li>
+<li>Comparison across institutional presets</li>
+<li>Observation of recommendation patterns and instructor-response behavior in the prototype</li>
+</ul>
+<h3>Current impact claims we can support</h3>
+<ul>
+<li>The artifact can detect and surface classroom patterns in a coherent dashboard interface</li>
+<li>The artifact can vary its outputs across institutional contexts</li>
+<li>The artifact can represent instructor response as a meaningful part of the evaluation loop</li>
+<li>The project demonstrates technical feasibility for simulation-based formative evaluation</li>
+</ul>
+<h3>Future impact claims that need further study</h3>
+<ul>
+<li>Whether instructors using the artifact make better decisions than those not using it</li>
+<li>Whether the dashboard reduces cognitive load in real teaching contexts</li>
+<li>Whether the recommendations improve student engagement outcomes in live classrooms</li>
+<li>Whether the prototype live-integration path works reliably in real deployment environments</li>
+</ul>
+<p>Accordingly, the current evaluation claim is formative rather than summative. Phase 3 supports technical feasibility, coherence of the signal-to-recommendation workflow, context-sensitive variation across institutional presets, and traceable instructor-response behavior inside a controlled simulation environment. Claims about reduced cognitive load, improved instructional decisions, or better student outcomes require later human-subject or real-classroom studies and should be presented as future validation targets rather than completed findings.</p>
+<h2>8. Competing-Systems Positioning</h2>
+<p>The literature and related-systems section should avoid claiming that current tools are purely descriptive. A safer framing is that some current tools already provide analytics summaries and, in some cases, recommendation-like support. The differentiation argument should therefore focus on what this project combines that those systems typically do not foreground: institutional adaptation, explicit separation of demographic composition from behavior modeling, and a construct for measuring instructor response to AI support.</p>
+<p>Commercial and research-facing systems already address parts of this space. Class Technologies adds instructor controls and engagement indicators to synchronous online teaching workflows, Engageli provides a purpose-built online classroom with participation monitoring and interaction tools, and Kulkarni and Eagle (2021) describe a real-time AI-powered educational dashboard that combines visualization with recommendation logic. The present artifact is therefore not positioned as the first system to surface engagement indicators or even recommendation-like support. Its differentiation is that it combines institutional context sensitivity, explicit separation of demographic composition from behavioral modeling, and a measurable instructor response construct within the same instructional decision-support workflow.</p>
+<p>A useful structure for the final paper is:</p>
+<ol>
+<li>Existing systems can surface behavioral indicators and sometimes suggest actions.</li>
+<li>Those systems are not the central novelty target for this paper.</li>
+<li>The present artifact is differentiated by context sensitivity, bias-aware modeling choices, and instructor agency as a measurable construct.</li>
+</ol>
+<h2>Suggested Closing Paragraph</h2>
+<p>This project contributes an institutionally adaptive instructional decision-support concept and a simulation-based evaluation environment for synchronous online learning. Its main contribution is not simply the addition of AI recommendations, but the combination of context-sensitive recommendation behavior, bias-aware classroom modeling, and an instructor response construct that preserves agency while enabling evaluation. In its current form, the project offers a credible proof of concept and a strong basis for formative design science evaluation, while also identifying a clear path toward more naturalistic future validation.</p>
+<h2>References</h2>
+<p>Amershi, S., Weld, D., Vorvoreanu, M., Fourney, A., Nushi, B., Collisson, P., ... &amp; Horvitz, E. (2019). Guidelines for human-AI interaction. In <em>Proceedings of the 2019 CHI Conference on Human Factors in Computing Systems</em>. <a href="https://doi.org/10.1145/3290605.3300233">https://doi.org/10.1145/3290605.3300233</a></p>
+<p>Dell, C. A., Dell, T. F., &amp; Blackwell, T. L. (2015). Applying universal design for learning in online courses: Pedagogical and practical considerations. <em><a href="https://eric.ed.gov/?id=EJ1068401">https://eric.ed.gov/?id=EJ1068401</a></em></p>
+<p>Endsley, M. R. (1995). Toward a theory of situation awareness in dynamic systems. <em>Human Factors, 37</em>(1), 32–64. <a href="https://doi.org/10.1518/001872095779049543">https://doi.org/10.1518/001872095779049543</a></p>
+<p>Hevner, A. R., March, S. T., Park, J., &amp; Ram, S. (2004). Design science in information systems research. <em>MIS Quarterly, 28</em>(1), 75–105.</p>
+<p>Kulkarni, A., &amp; Eagle, M. (2021). Towards understanding the impact of real-time AI-powered dashboards on instructor decision-making. <em>Proceedings of the International Conference on Learning Analytics &amp; Knowledge</em>.</p>
+<p>Park, J. S., O&#39;Brien, J. C., Cai, C. J., Morris, M. R., Liang, P., &amp; Bernstein, M. S. (2023). Generative agents: Interactive simulacra of human behavior. In <em>Proceedings of the 36th Annual ACM Symposium on User Interface Software and Technology</em>. <a href="https://doi.org/10.1145/3586183.3606763">https://doi.org/10.1145/3586183.3606763</a></p>
+<p>Sweller, J. (1988). Cognitive load during problem solving: Effects on learning. <em>Cognitive Science, 12</em>(2), 257–285.</p>
+<p>Van Leeuwen, A., Janssen, J., Rummel, N., &amp; Brekelmans, M. (2019). Comparing teacher and student perspectives on the use of learning analytics dashboards. <em>British Journal of Educational Technology, 50</em>(6), 3038–3054.</p>
+<p>Venable, J., Pries-Heje, J., &amp; Baskerville, R. (2016). FEDS: A framework for evaluation in design science research. <em>European Journal of Information Systems, 25</em>(1), 77–89.</p>
+<p>Wise, A. F., &amp; Jung, Y. (2019). Teaching with analytics: Towards a situated model of instructional decision-making. <em>Journal of Learning Analytics, 6</em>(2), 53–69.</p>
+<hr>
+<h2>Remaining Packaging Tasks</h2>
+<ul>
+<li>Screenshots, diagrams, or UI sketches</li>
+<li>Group review and approval of the final novelty and evaluation wording</li>
+<li>Final packet refresh so the draft, artifact spec, and demo language stay aligned</li>
+</ul>
+
+    <div class="footer">Prepared from local IST505 project materials on March 28, 2026.</div>
+  </main>
+</body>
+</html>

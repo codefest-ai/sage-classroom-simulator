@@ -8,10 +8,15 @@ and baseline distributions reflect each school's real student body.
 
 IMPORTANT DESIGN DECISION: Demographics affect visual/reportable identity only.
 Behavioral differences come from INSTITUTIONAL CONTEXT, not individual demographics:
-- Working professional % → camera/drift adjustments (multitasking, time-constrained)
+- Working professional % → drift/attention adjustments (multitasking, time-constrained)
 - Cohort size → participation pressure (small seminar vs large lecture)
-- Platform norms → camera-off culture (OMSCS), sync vs async expectations
+- Platform norms → speak/chat balance, async vs sync expectations
 These are institutional-structural factors, not racial or ethnic ones.
+
+NOTE: Camera state is no longer a scored signal (removed from SIGNAL_WEIGHTS in
+the observable-participation reframe). Institutional differentiation lands on
+drift_rate, attention_span, speak_tendency, breakout_response, and chat_frequency,
+which all flow through the five-signal composite.
 
 Data Sources (cited inline):
 - CGU CISAT: Peterson's 2023-24, IPEDS 2024-25 (Unit ID 112251)
@@ -490,45 +495,38 @@ INSTITUTIONAL_MODIFIERS = {
     "cgu": {
         # Small SoCal private grad school. Mix of full-time + part-time.
         # Moderate seminar culture. Baseline/control condition.
-        "camera_on_modifier": 0.0,         # No adjustment (baseline)
         "drift_rate_modifier": 0.0,         # No adjustment
         "attention_span_modifier": 0,       # No adjustment
         "speak_tendency_modifier": 0.0,     # No adjustment
         "breakout_response_modifier": 0.0,  # No adjustment
         "chat_frequency_modifier": 0.0,     # No adjustment
-        "working_pro_camera_penalty": -0.25,  # Working pros have camera off more
         "working_pro_drift_bonus": 0.008,     # Multitasking = faster drift
         "working_pro_attention_penalty": -5,  # Shorter focus blocks
         "description": "Baseline: small graduate seminar, mixed cohort",
     },
     "gatech": {
-        # 87% working professionals (OMSCS). Camera-off is NORMAL culture.
-        # Async-native. Time-constrained. High tech comfort.
-        # These modifiers apply to ALL students because it's the institutional norm.
-        "camera_on_modifier": -0.15,        # Camera-off culture across the board
+        # 87% working professionals (OMSCS). Async-native, time-constrained,
+        # high tech comfort. Modifiers apply to ALL students as the institutional norm.
         "drift_rate_modifier": 0.005,       # Everyone drifts slightly faster (multitasking norm)
         "attention_span_modifier": -3,      # Shorter focused attention (parallel work)
         "speak_tendency_modifier": -0.05,   # Less verbal, more chat-oriented
         "breakout_response_modifier": -0.05, # Breakouts less effective in online-async culture
-        "chat_frequency_modifier": 0.03,    # Compensatory: more chat when camera/mic off
-        "working_pro_camera_penalty": -0.30, # Working pros even more camera-off
+        "chat_frequency_modifier": 0.03,    # Compensatory: more chat in async-native culture
         "working_pro_drift_bonus": 0.012,    # Multitasking between work and class
         "working_pro_attention_penalty": -8,  # Work interruptions shorten focus
-        "description": "Large online program: camera-off culture, working professionals, async norms",
+        "description": "Large online program: working professionals, async norms, chat-oriented",
     },
     "howard": {
         # Small department (21 students). Higher participation pressure.
-        # Everyone is visible. Stronger social accountability.
-        "camera_on_modifier": 0.10,         # Small cohort = higher camera norm
+        # Stronger social accountability.
         "drift_rate_modifier": -0.003,      # Less drift (social accountability)
         "attention_span_modifier": 2,       # Slightly longer focus (seminar intimacy)
         "speak_tendency_modifier": 0.03,    # More verbal participation (small group pressure)
         "breakout_response_modifier": 0.05, # Breakouts effective (already collaborative culture)
         "chat_frequency_modifier": 0.0,     # No adjustment
-        "working_pro_camera_penalty": -0.20,
         "working_pro_drift_bonus": 0.008,
         "working_pro_attention_penalty": -5,
-        "description": "Small department: high visibility, social accountability, intimate seminar",
+        "description": "Small department: social accountability, intimate seminar",
     },
 }
 
@@ -544,8 +542,6 @@ def _apply_institutional_modifiers(profile: Dict, uni_key: str) -> Dict:
     mods = INSTITUTIONAL_MODIFIERS.get(uni_key, INSTITUTIONAL_MODIFIERS["cgu"])
 
     # Base institutional adjustments (apply to everyone in this cohort)
-    profile["camera_on_rate"] = max(0.05, min(0.99,
-        profile["camera_on_rate"] + mods["camera_on_modifier"]))
     profile["drift_rate"] = max(0.001, min(0.08,
         profile["drift_rate"] + mods["drift_rate_modifier"]))
     profile["attention_span_minutes"] = max(10, min(55,
@@ -559,8 +555,6 @@ def _apply_institutional_modifiers(profile: Dict, uni_key: str) -> Dict:
 
     # Working professional adjustments (structural, not demographic)
     if profile["demographic"].get("is_working_professional"):
-        profile["camera_on_rate"] = max(0.05,
-            profile["camera_on_rate"] + mods["working_pro_camera_penalty"])
         profile["drift_rate"] = max(0.001,
             profile["drift_rate"] + mods["working_pro_drift_bonus"])
         profile["attention_span_minutes"] = max(10,

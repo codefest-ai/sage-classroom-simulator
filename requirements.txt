@@ -1,1 +1,4 @@
-# No external dependencies — stdlib only
+# No external dependencies — stdlib only.
+#
+# Optional dev/eval tooling (Playwright-based dashboard screenshot capture for
+# paper figures) lives in requirements-dev.txt — install only when needed.

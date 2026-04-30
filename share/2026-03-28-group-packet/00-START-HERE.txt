@@ -1,0 +1,15 @@
+IST 505 Group Share Folder
+Prepared March 28, 2026
+
+Recommended order:
+
+1. 01-IST505-Group-Packet.pdf
+   Clean group-facing summary of the current project framing, strongest claims, caution points, and reading priorities.
+
+2. 02-IST505-Phase3-Draft.pdf
+   Submission-shaped draft built from the current repo materials.
+
+3. 03-IST505-Asset-Checklist.pdf
+   Short checklist of what still needs screenshots, citations, and final decisions.
+
+HTML versions are included in the same folder as editable/viewable fallbacks.

@@ -883,7 +883,7 @@ class SimulationEngine:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="SAGE — Simulated Agent-Generated Engagement"
+        description="SAGE — Simulated Agent-Generated Evaluation"
     )
     parser.add_argument("--duration", type=int, default=45,
                         help="Session duration in minutes (default: 45)")

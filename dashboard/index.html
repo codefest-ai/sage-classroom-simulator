@@ -534,6 +534,11 @@ body.mode-live .rec-list { max-height: 360px; }
   border-radius: 8px;
   background: rgba(15, 23, 42, 0.36);
 }
+.rec-signal.rec-lit {
+  background: rgba(139, 92, 246, 0.10);
+  border-left: 2px solid rgba(139, 92, 246, 0.55);
+  font-style: italic;
+}
 .rec-action {
   font-size: 12px;
   color: var(--text);
@@ -942,6 +947,85 @@ body.mode-manual .chat-log { max-height: 260px; }
 .zoom-tile .zt-bubble.show { opacity: 1; }
 .zoom-tile.confused .zt-bubble { background: rgba(139,92,246,0.9); }
 
+.camera-caveat {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border-left: 2px solid var(--accent);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  margin: 4px 0;
+  letter-spacing: 0.01em;
+}
+.camera-caveat strong { color: var(--text); }
+
+.engagement-scope {
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--surface);
+  border-left: 2px solid var(--accent);
+  padding: 6px 10px;
+  border-radius: 0 4px 4px 0;
+  margin: 8px 0 12px 0;
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+}
+.engagement-scope strong { color: var(--text); }
+.engagement-scope em { color: var(--text-dim); font-style: normal; text-decoration: underline dotted; }
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.metric-card .metric-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.metric-card .metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 4px 0 6px 0;
+  font-variant-numeric: tabular-nums;
+}
+.metric-card .metric-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.35;
+}
+.taxonomy-bar {
+  display: flex;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.taxonomy-bar .seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  min-width: 1px;
+  letter-spacing: 0.02em;
+}
+.taxonomy-bar .seg.ignore { background: #6b7280; }
+.taxonomy-bar .seg.acknowledge { background: #0ea5e9; }
+.taxonomy-bar .seg.accept { background: #22c55e; }
+.taxonomy-bar .seg.modify { background: #f59e0b; }
+.taxonomy-bar .seg.reject { background: #ef4444; }
+
 .zoom-sidebar {
   width: 300px;
   display: flex;
@@ -1080,7 +1164,7 @@ body.mode-manual .chat-log { max-height: 260px; }
 <header>
   <div>
     <h1>Instructional Decision Support Dashboard</h1>
-    <div class="meta">Evaluated through SAGE (Simulated Agent-Generated Engagement)</div>
+    <div class="meta">Evaluated through SAGE (Simulated Agent-Generated Evaluation)</div>
   </div>
   <div style="display:flex;align-items:center;gap:16px">
     <div class="meta">IST 505 &middot; CGU Spring 2026</div>
@@ -1151,6 +1235,8 @@ body.mode-manual .chat-log { max-height: 260px; }
     </div>
     <button class="secondary" onclick="clearSimulation()" title="Reset">Clear</button>
     <button class="secondary" onclick="exportCurrentSession()" title="Export session data as markdown">📄 Export</button>
+    <button class="secondary" onclick="exportSageRun('json')" title="Download a single-shot SAGE evaluation-run export — JSON with full timeline, recommendations, responses, and performance metrics. Citable artifact for the Phase 4 paper.">📦 SAGE Run (JSON)</button>
+    <button class="secondary" onclick="exportSageRun('csv')" title="Download the per-tick timeline as CSV for analysis">📊 Timeline (CSV)</button>
   </div>
 
   <div class="control-group action-group">
@@ -1190,6 +1276,9 @@ body.mode-manual .chat-log { max-height: 260px; }
   <!-- Row 1: Overview + Students -->
   <div class="panel supporting-panel" id="overview-panel">
     <h2 id="overview-panel-title">Class Participation Overview</h2>
+    <div class="engagement-scope" title="The IDSS surfaces a behavioral slice of engagement plus a thin attention proxy. Emotional, cognitive, and social engagement are not measured by this composite.">
+      <strong>Scope:</strong> behavioral participation (speaking, chat, polls, reactions) + attention proxy (silence-gap). <em>Out of scope:</em> emotional, cognitive, and social engagement &mdash; not measurable from observable Zoom signals.
+    </div>
     <div class="overview-stats">
       <div class="stat-card green" id="stat-engagement">
         <div class="value">--</div>
@@ -1261,6 +1350,35 @@ body.mode-manual .chat-log { max-height: 260px; }
     </div>
   </div>
 
+  <!-- Row 3.5: System Performance Metrics (live) -->
+  <div class="panel supporting-panel full-width" id="metrics-panel">
+    <details class="toolbar-disclosure" id="metrics-disclosure">
+      <summary>System Performance Metrics &mdash; <span id="metrics-summary-line" style="color:var(--text-dim);font-weight:normal">click to expand</span></summary>
+      <div style="font-size:11px;color:var(--text-dim);margin:6px 0 12px 0">
+        Operationalized for an advisory rule-based system, not a classifier. The IDSS measures itself against its own deterministic specification while running.
+      </div>
+      <div class="metrics-grid" id="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Pattern-detection precision</div><div class="metric-value" id="m-precision">&mdash;</div><div class="metric-hint">Triggers with valid evidence ÷ total triggers (deterministic; expected 1.00)</div></div>
+        <div class="metric-card"><div class="metric-label">Throttle effectiveness</div><div class="metric-value" id="m-throttle">&mdash;</div><div class="metric-hint">Throttled ÷ (throttled + emitted). 3-min per-pattern cooldown.</div></div>
+        <div class="metric-card"><div class="metric-label">Latency mean / p95 (ms)</div><div class="metric-value" id="m-latency">&mdash;</div><div class="metric-hint">Per-tick processing time (excludes inter-tick sleep)</div></div>
+        <div class="metric-card"><div class="metric-label">Taxonomy adoption rate</div><div class="metric-value" id="m-adoption">&mdash;</div><div class="metric-hint">Logged responses ÷ recommendations emitted</div></div>
+      </div>
+      <div style="margin-top:14px">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">5-way response distribution</div>
+        <div class="taxonomy-bar" id="m-taxonomy-bar"><div class="loading">No responses yet</div></div>
+      </div>
+      <div style="margin-top:14px">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Pattern detections by type</div>
+        <div id="m-pattern-counts" style="font-size:12px;color:var(--text)"></div>
+      </div>
+      <div style="margin-top:14px">
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">Behavioral-impact deltas (3-min window after each instructor response)</div>
+        <div id="m-impact-aggregate" style="font-size:12px;color:var(--text);margin-bottom:6px"></div>
+        <div id="m-impact-list" style="font-size:11px;color:var(--text-dim);max-height:140px;overflow-y:auto"></div>
+      </div>
+    </details>
+  </div>
+
   <!-- Row 4: Live Instructor Toolbar -->
   <div class="panel secondary-panel full-width" id="instructor-toolbar" style="display:none">
     <details class="toolbar-disclosure">
@@ -1302,7 +1420,10 @@ body.mode-manual .chat-log { max-height: 260px; }
 
 <!-- CLASSROOM VIEW -->
 <div id="classroom-view">
-  <div class="zoom-grid" id="zoom-grid"></div>
+  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+    <div class="camera-caveat"><strong>Camera presence is shown for context only.</strong> Camera state is not part of the observable-participation composite and is not used by any institutional preset (see Methods §camera).</div>
+    <div class="zoom-grid" id="zoom-grid" style="flex:1"></div>
+  </div>
   <div class="zoom-sidebar">
     <div class="zoom-toolbar">
       <button onclick="togglePlayback()"><span id="zoom-play-icon">&#9654;</span> Play</button>
@@ -1538,6 +1659,39 @@ function describeTriggeringSignal(evidence) {
   }
 }
 
+// Pattern-to-literature mapping. Surfaces the kernel-theory grounding of each
+// rule-based pattern detector on the recommendation card, so the lit→artifact
+// mapping is visible during demo without forcing the viewer to read the paper.
+// Update if pattern detectors are added or kernel theory citations change.
+const PATTERN_LITERATURE = {
+  energy_decay: 'Endsley (1995) SA L2–3 (projecting class trajectory); Sweller (1988) cognitive load (declining observable participation under load).',
+  equity_imbalance: 'Van Leeuwen et al. (2019) advising mode (instructor pedagogy on equity); Wise & Jung (2019) instructional decision-making.',
+  confusion_cluster: 'Sweller (1988) cognitive load (confusion as overload signal); Endsley (1995) SA L1 (perception of class state).',
+  silent_majority: 'Endsley (1995) SA L2 (current class state); Lee et al. (2024) real-time instructor monitoring practices.',
+  fade_cascade: 'Sweller cognitive load + Wise & Jung — early intervention before disengagement compounds; Amershi et al. (2019) visible-AI-mistakes principle.',
+};
+
+function getLitGrounding(rec) {
+  const type = rec?.evidence?.type;
+  if (!type) return '';
+  return PATTERN_LITERATURE[type] || '';
+}
+
+// Short institutional context label keyed to the university preset
+// the session was started under. Mirrors INSTITUTIONAL_MODIFIERS in
+// simulator/university_presets.py — keep in sync if presets change.
+const INSTITUTIONAL_CONTEXT_LABELS = {
+  cgu: 'CGU — small graduate seminar, mixed cohort (baseline)',
+  gatech: 'Georgia Tech — large online program, working professionals, async-oriented',
+  howard: 'Howard — small department, social accountability, intimate seminar',
+};
+
+function getInstitutionalContextText(metadata) {
+  const key = metadata?.university;
+  if (!key || key === 'live') return '';
+  return INSTITUTIONAL_CONTEXT_LABELS[key] || '';
+}
+
 function getRecommendationSignalText(rec) {
   const evidence = rec?.evidence;
   if (!evidence) return '';
@@ -1670,9 +1824,9 @@ function renderLiveDebugPanel(frame) {
         <div class="metric-note">${escapeHtml(debug.signal_status_reason || 'Waiting for Zoom activity.')}</div>
       </div>
       <div class="live-signal-card">
-        <div class="metric-label">Meeting ID</div>
-        <div class="metric-value" style="font-size:18px">${escapeHtml(debug.meeting_id || '—')}</div>
-        <div class="metric-note">${debug.active ? 'Active live meeting on the server.' : 'No active live meeting currently attached.'}</div>
+        <div class="metric-label">Meeting</div>
+        <div class="metric-value" style="font-size:16px;line-height:1.25">${escapeHtml(debug.meeting_topic || debug.meeting_id || '—')}</div>
+        <div class="metric-note">${debug.meeting_topic ? `ID ${escapeHtml(debug.meeting_id)} · ` : ''}${debug.active ? 'Active live meeting on the server.' : 'No active live meeting currently attached.'}${debug.host_email ? ` Host: ${escapeHtml(debug.host_email)}.` : ''}</div>
       </div>
       <div class="live-signal-card">
         <div class="metric-label">Participants</div>
@@ -2403,6 +2557,8 @@ function showMinute(min) {
       const selectedIntervention = manualResponse?.intervention_type || suggestedIntervention || 'poll';
       const actionLabel = formatInterventionLabel(suggestedIntervention || r.action);
       const signalText = getRecommendationSignalText(r);
+      const contextText = getInstitutionalContextText(sessionData?.metadata);
+      const litText = getLitGrounding(r);
       const manualForm = manualUiActive ? `
         <details class="manual-response-details" ${manualResponse?.response_category === 'modify' || manualResponse?.rationale ? 'open' : ''}>
           <summary>Adjust intervention / rationale</summary>
@@ -2452,7 +2608,9 @@ function showMinute(min) {
         </div>
         <div class="message">${r.message}</div>
         ${signalText ? `<div class="rec-signal">Signal: ${signalText}</div>` : ''}
+        ${contextText ? `<div class="rec-signal">Context: ${contextText}. Same scenario may surface different patterns under a different preset.</div>` : ''}
         <div class="rec-signal">Method: rule-based pattern mapping from observable participation signals; LLMs may enrich simulation dialogue but do not decide this recommendation.</div>
+        ${litText ? `<div class="rec-signal rec-lit">Grounding: ${litText}</div>` : ''}
         <div class="rec-action">Candidate next move: <strong>${actionLabel}</strong></div>
         ${responseButtons}
         ${manualForm}
@@ -3093,11 +3251,15 @@ function renderClassroom(min) {
   const recs = sessionData.recommendations.filter(r => r.minute <= min).slice(-5).reverse();
   alerts.innerHTML = recs.map(r => {
     const signalText = getRecommendationSignalText(r);
+    const contextText = getInstitutionalContextText(sessionData?.metadata);
+    const litText = getLitGrounding(r);
     return `
     <div class="rec-item ${r.priority}" style="padding:8px;margin-bottom:4px">
       <div class="priority">${r.priority}</div>
       <div class="message">${r.message}</div>
       ${signalText ? `<div class="rec-signal">Signal: ${signalText}</div>` : ''}
+      ${contextText ? `<div class="rec-signal">Context: ${contextText}</div>` : ''}
+      ${litText ? `<div class="rec-signal rec-lit">Grounding: ${litText}</div>` : ''}
       <div class="minute-tag">Min ${r.minute}</div>
     </div>
   `;
@@ -3238,16 +3400,20 @@ async function pollSessionUntilDone(fallbackDuration) {
     while (true) {
       await new Promise(r => setTimeout(r, 500));
 
-      let session, history;
+      let session, history, metrics = null;
       try {
-        const [sessionResp, historyResp] = await Promise.all([
+        const [sessionResp, historyResp, metricsResp] = await Promise.all([
           fetch(apiUrl('/api/session')),
           fetch(apiUrl('/api/history')),
+          fetch(apiUrl('/api/metrics')).catch(() => null),
         ]);
         if (!sessionResp.ok) throw new Error(`session ${sessionResp.status}`);
         if (!historyResp.ok) throw new Error(`history ${historyResp.status}`);
         session = await sessionResp.json();
         history = await historyResp.json();
+        if (metricsResp && metricsResp.ok) {
+          try { metrics = await metricsResp.json(); } catch (_) { metrics = null; }
+        }
         if (consecutiveErrors > 0) setConnectionIndicator('live');
         consecutiveErrors = 0;
       } catch(e) {
@@ -3306,6 +3472,8 @@ async function pollSessionUntilDone(fallbackDuration) {
         lastMinute = currentMin;
       }
 
+      if (metrics) renderMetricsPanel(metrics);
+
       // Check if done
       if (!session.is_running && currentMin > 0) {
         renderAll(dur);
@@ -3316,6 +3484,103 @@ async function pollSessionUntilDone(fallbackDuration) {
     }
   } finally {
     _pollingActive = false;
+  }
+}
+
+// Render the live performance-metrics panel (System Performance Metrics).
+// Driven by /api/metrics; polled inside pollSessionUntilDone alongside
+// session and history. Backs the Phase 4 paper Performance Metrics section.
+function renderMetricsPanel(m) {
+  if (!m || !m.available) return;
+  const fmtPct = (v) => (v === null || v === undefined) ? '—' : `${(v * 100).toFixed(1)}%`;
+  const fmtMs = (v) => (v === null || v === undefined) ? '—' : `${v.toFixed(1)}`;
+
+  const setText = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+
+  setText('m-precision', fmtPct(m.pattern_detection_precision));
+  setText('m-throttle', fmtPct(m.throttle_effectiveness));
+  const meanLat = fmtMs(m.latency_mean_ms);
+  const p95Lat = fmtMs(m.latency_p95_ms);
+  setText('m-latency', `${meanLat} / ${p95Lat}`);
+  setText('m-adoption', fmtPct(m.taxonomy_adoption_rate));
+
+  // Compact summary line shown on the collapsed details summary.
+  const summary = m.tick_count > 0
+    ? `tick ${m.tick_count} · precision ${fmtPct(m.pattern_detection_precision)} · throttle ${fmtPct(m.throttle_effectiveness)} · latency p95 ${p95Lat}ms · adoption ${fmtPct(m.taxonomy_adoption_rate)}`
+    : 'awaiting first tick';
+  setText('metrics-summary-line', summary);
+
+  // 5-way taxonomy bar
+  const dist = m.response_taxonomy_distribution || {};
+  const order = ['ignore', 'acknowledge', 'accept', 'modify', 'reject'];
+  const total = m.response_total || 0;
+  const bar = document.getElementById('m-taxonomy-bar');
+  if (bar) {
+    if (total === 0) {
+      bar.innerHTML = '<div class="loading">No responses yet</div>';
+    } else {
+      bar.innerHTML = order.map(cat => {
+        const seg = dist[cat] || { count: 0, proportion: 0 };
+        const w = (seg.proportion * 100).toFixed(1);
+        if (seg.count === 0) return '';
+        return `<div class="seg ${cat}" style="width:${w}%" title="${cat}: ${seg.count} (${w}%)">${seg.count >= 1 && parseFloat(w) >= 8 ? cat : ''}</div>`;
+      }).join('');
+    }
+  }
+
+  // Pattern detections breakdown
+  const patternDiv = document.getElementById('m-pattern-counts');
+  if (patternDiv) {
+    const counts = m.pattern_counts_by_type || {};
+    const throttled = m.throttle_counts_by_type || {};
+    const types = Object.keys(counts);
+    if (types.length === 0) {
+      patternDiv.innerHTML = '<span style="color:var(--text-dim)">No patterns detected yet</span>';
+    } else {
+      patternDiv.innerHTML = types.map(t => {
+        const c = counts[t] || 0;
+        const th = throttled[t] || 0;
+        return `<div style="margin-bottom:3px"><strong>${t.replace(/_/g, ' ')}</strong>: ${c} detected${th > 0 ? `, ${th} throttled` : ''}</div>`;
+      }).join('');
+    }
+  }
+
+  // Behavioral-impact deltas (C3) — pre/post participation around each
+  // instructor response, plus aggregate means by 5-way category. Backs the
+  // paper's behavioral-impact paragraph claim with on-screen numbers.
+  const impact = m.behavioral_impact || {};
+  const aggDiv = document.getElementById('m-impact-aggregate');
+  const listDiv = document.getElementById('m-impact-list');
+  const fmtSigned = (v) => {
+    if (v === null || v === undefined) return '—';
+    const sign = v >= 0 ? '+' : '';
+    return `${sign}${(v * 100).toFixed(1)}%`;
+  };
+  const means = impact.means_by_category || {};
+  const aggKeys = Object.keys(means);
+  if (aggDiv) {
+    if (aggKeys.length === 0) {
+      aggDiv.innerHTML = '<span style="color:var(--text-dim)">No instructor responses logged yet — deltas appear once a response is captured.</span>';
+    } else {
+      aggDiv.innerHTML = aggKeys.map(cat => {
+        const v = means[cat];
+        return `<span style="margin-right:14px"><strong>${cat}</strong>: ${fmtSigned(v.mean_delta)} mean (n=${v.count})</span>`;
+      }).join('');
+    }
+  }
+  const deltas = (impact.deltas || []).slice().reverse(); // most recent first
+  if (listDiv) {
+    if (deltas.length === 0) {
+      listDiv.innerHTML = '';
+    } else {
+      listDiv.innerHTML = deltas.slice(0, 12).map(d => {
+        const sign = d.delta >= 0 ? 'rgb(34,197,94)' : 'rgb(239,68,68)';
+        return `<div style="margin-bottom:3px">Min ${d.minute} · <strong>${d.response_category}</strong>${d.intervention_type ? ` (${d.intervention_type})` : ''}: ${(d.before*100).toFixed(0)}% → ${(d.after*100).toFixed(0)}% <span style="color:${sign}">${fmtSigned(d.delta)}</span></div>`;
+      }).join('');
+    }
   }
 }
 
@@ -3466,7 +3731,7 @@ async function runGuidedTour() {
 
   card.innerHTML = `
     <div style="font-size:28px;font-weight:800;color:var(--purple);margin-bottom:8px">Instructional Decision Support Dashboard</div>
-    <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px">Evaluated through SAGE (Simulated Agent-Generated Engagement)</div>
+    <div style="font-size:14px;color:var(--text-dim);margin-bottom:16px">Evaluated through SAGE (Simulated Agent-Generated Evaluation)</div>
     <div style="font-size:15px;margin-bottom:12px">This walkthrough shows the classroom signal → recommendation → instructor response workflow.</div>
     <div style="font-size:12px;color:var(--text-dim);margin-bottom:20px">IST 505 · Design Research Methods · CGU Spring 2026</div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
@@ -3752,7 +4017,7 @@ METHODOLOGY
 
 Framework: Design Science Research (Hevner et al., 2004)
 System under study: Instructional Decision Support System (IDSS) for synchronous online teaching
-Evaluation environment: SAGE (Simulated Agent-Generated Engagement)
+Evaluation environment: SAGE (Simulated Agent-Generated Evaluation)
 Evaluation type: Formative — Technical Risk & Efficacy (FEDS: Venable et al., 2016)
 Theoretical grounding: Situational Awareness (Endsley, 1995) Levels 1-3
 
@@ -3895,7 +4160,7 @@ CHAT LOGS — All Test Runs
 
   report += `
 ================================================================================
-Evaluated through SAGE — Simulated Agent-Generated Engagement
+Evaluated through SAGE — Simulated Agent-Generated Evaluation
 IST 505 Group Project — CGU Spring 2026
 ================================================================================
 `;
@@ -3980,6 +4245,39 @@ function showDemoSummary() {
 // CLEAR / RESET
 // ============================================================
 
+// SAGE evaluation-run export. Triggers the server's /api/export endpoint
+// and downloads the result. JSON gets the full structured artifact (citable
+// in the Phase 4 paper Analytical section); CSV gets the per-tick timeline
+// for spreadsheet analysis.
+async function exportSageRun(format) {
+  format = format === 'csv' ? 'csv' : 'json';
+  try {
+    const base = apiUrl('/api/export');
+    const url = new URL(base);
+    url.searchParams.set('format', format);
+    const resp = await fetch(url.toString());
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      alert(`Export failed (${resp.status}): ${errBody.slice(0, 200)}`);
+      return;
+    }
+    const blob = await resp.blob();
+    const cd = resp.headers.get('content-disposition') || '';
+    const m = /filename=([^;]+)/i.exec(cd);
+    const filename = m ? m[1].trim().replace(/^"(.*)"$/, '$1') : `sage_run.${format}`;
+    const a = document.createElement('a');
+    const objUrl = URL.createObjectURL(blob);
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objUrl);
+  } catch (e) {
+    alert(`Export failed: ${e.message || e}`);
+  }
+}
+
 function exportCurrentSession() {
   if (!sessionData) { alert('No simulation data. Run a simulation first.'); return; }
 
@@ -4002,7 +4300,7 @@ function exportCurrentSession() {
   md += `**University:** ${meta.university || 'default'}\n`;
   md += `**Seed:** ${meta.seed || '?'}\n`;
   md += `**Duration:** ${timeline.length} minutes\n\n`;
-  md += `**Evaluation environment:** SAGE (Simulated Agent-Generated Engagement)\n\n`;
+  md += `**Evaluation environment:** SAGE (Simulated Agent-Generated Evaluation)\n\n`;
   md += `## Summary\n`;
   md += `- Avg participation: ${(avgEng*100).toFixed(0)}%\n`;
   md += `- Range: ${(minEng*100).toFixed(0)}% – ${(maxEng*100).toFixed(0)}%\n`;
@@ -4038,10 +4336,14 @@ function exportCurrentSession() {
   // Recommendations
   if (recs.length) {
     md += `\n## Recommendations\n`;
+    const contextText = getInstitutionalContextText(meta);
+    if (contextText) md += `_Institutional context: ${contextText}_\n\n`;
     recs.forEach(r => {
       const signalText = getRecommendationSignalText(r);
+      const litText = getLitGrounding(r);
       md += `- **Min ${r.minute}** [${r.priority}]: ${r.message}`;
       if (signalText) md += ` · Signal: ${signalText}`;
+      if (litText) md += ` · Grounding: ${litText}`;
       md += `\n`;
     });
   }

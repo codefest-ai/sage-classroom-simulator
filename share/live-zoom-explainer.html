@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Zoom Demo Note</title>
+<style>
+  :root {
+    --bg: #09111f;
+    --panel: #111c30;
+    --text: #f8fafc;
+    --muted: #cbd5e1;
+    --accent: #38bdf8;
+    --accent-2: #22c55e;
+    --warn: #f59e0b;
+    --border: rgba(148, 163, 184, 0.24);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 48px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 34%),
+      radial-gradient(circle at bottom right, rgba(34, 197, 94, 0.12), transparent 28%),
+      var(--bg);
+    color: var(--text);
+  }
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .eyebrow {
+    color: var(--accent);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  h1 {
+    margin: 0 0 24px;
+    font-size: clamp(46px, 6vw, 74px);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+  }
+  .deck {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .panel {
+    background: rgba(17, 28, 48, 0.92);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px 30px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+  }
+  .lead {
+    font-size: clamp(24px, 2.5vw, 34px);
+    line-height: 1.35;
+    color: var(--muted);
+    margin: 0;
+  }
+  .big {
+    font-size: clamp(34px, 3.5vw, 50px);
+    line-height: 1.15;
+    font-weight: 750;
+    margin: 0 0 22px;
+  }
+  ul {
+    margin: 0;
+    padding-left: 30px;
+  }
+  li {
+    font-size: clamp(24px, 2.3vw, 32px);
+    line-height: 1.32;
+    margin-bottom: 18px;
+  }
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 24px;
+  }
+  .chip {
+    border-radius: 999px;
+    padding: 12px 18px;
+    font-size: 22px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.64);
+  }
+  .ok { color: var(--accent-2); }
+  .warn { color: var(--warn); }
+  .footer {
+    margin-top: 30px;
+    font-size: 22px;
+    color: var(--muted);
+  }
+  @media (max-width: 900px) {
+    body { padding: 24px; }
+    .deck { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">IST 505 Live Demo</div>
+    <h1>Why is everyone showing 65%?</h1>
+    <p class="lead">The live Zoom path is working. Right now, the prototype is receiving similar live signals for everyone in the room, so it is rendering a shared baseline rather than sharply differentiated individual scores.</p>
+
+    <div class="deck">
+      <section class="panel">
+        <p class="big">What this proves right now</p>
+        <ul>
+          <li>The system is ingesting Zoom meeting activity during the session, not only after class.</li>
+          <li>The live dashboard is producing a real classroom state from current meeting signals.</li>
+          <li>This is a prototype-level live signal view, not a finished production analytics model.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <p class="big">What would create stronger differentiation</p>
+        <ul>
+          <li>More granular live event channels</li>
+          <li>Chat activity, raised hands, reactions, speaking telemetry</li>
+          <li>More time and more varied interaction patterns</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="chip-row">
+      <div class="chip ok">Real-time Zoom ingestion: working</div>
+      <div class="chip warn">Fine-grained live scoring: still heuristic</div>
+      <div class="chip">IDSS under study · SAGE evaluation environment</div>
+    </div>
+
+    <div class="footer">This demo is showing that in-session signals can be routed into the artifact live. Richer per-student interpretation is the next layer.</div>
+  </div>
+</body>
+</html>

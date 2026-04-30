@@ -4,6 +4,11 @@ data/
 transcripts/
 .DS_Store
 .env
+.claude/
 .vercel/
 node_modules/
 *.log
+
+# Raw teammate-shared materials (group chat exports, annotated PDFs, draft .docx)
+# kept local-only; not part of the public artifact
+docs/_raw_*

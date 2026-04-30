@@ -41,6 +41,40 @@ from simulator.zoom_adapter import ZoomWebhookHandler
 # GLOBAL STATE
 # ============================================================
 
+KNOWN_PATTERN_TYPES = frozenset({
+    "energy_decay", "equity_imbalance", "confusion_cluster",
+    "silent_majority", "fade_cascade",
+})
+
+ZOOM_PROBE_FLAG = "ENABLE_ZOOM_API_PROBE"
+
+
+def _empty_metrics():
+    """Performance-metric telemetry container. See _build_metrics_snapshot
+    for derived values.
+
+    Tracks the four metrics defined in the Phase 4 paper Performance Metrics
+    section (pattern-detection precision, throttle effectiveness, latency,
+    5-way taxonomy adoption). Reset alongside session state.
+
+    Note: response distribution and total are derived at query time from
+    state.professor_actions rather than maintained as a counter, so that
+    instructor edits (e.g., changing accept→reject) reflect correctly in
+    the distribution without needing decrement bookkeeping.
+    """
+    return {
+        "session_started_at": None,
+        "tick_count": 0,
+        "tick_latencies_ms": [],          # one entry per simulated minute
+        "pattern_triggers_total": 0,      # patterns the scorer surfaced (pre-throttle)
+        "pattern_triggers_emitted": 0,    # patterns that became recommendations (post-throttle)
+        "pattern_triggers_throttled": 0,  # patterns suppressed by 3-min cooldown
+        "pattern_evidence_valid": 0,      # patterns whose evidence dict was structurally valid AND type is known
+        "pattern_counts_by_type": {},     # detections per pattern type
+        "throttle_counts_by_type": {},    # throttle hits per pattern type
+    }
+
+
 class SessionState:
     """Holds the current simulation state."""
     def __init__(self):
@@ -56,6 +90,7 @@ class SessionState:
         self.professor_actions = []
         self.metadata = {}
         self.students = []
+        self.metrics = _empty_metrics()
         self.sse_queues = []  # List of queue.Queue for SSE clients
         self.lock = threading.Lock()
         self.last_touched = time.time()
@@ -75,6 +110,7 @@ class SessionState:
         self.professor_actions = []
         self.metadata = {}
         self.students = []
+        self.metrics = _empty_metrics()
         self.touch()
 
     def add_sse_client(self):
@@ -170,6 +206,182 @@ def _get_session(session_id=None, create=False):
     return state
 
 
+def _percentile(values, pct):
+    if not values:
+        return 0.0
+    sorted_vals = sorted(values)
+    k = (len(sorted_vals) - 1) * (pct / 100.0)
+    f = int(k)
+    c = min(f + 1, len(sorted_vals) - 1)
+    if f == c:
+        return sorted_vals[f]
+    return sorted_vals[f] + (sorted_vals[c] - sorted_vals[f]) * (k - f)
+
+
+def _build_intervention_deltas(state, window_minutes=3):
+    """Compute per-response participation-index deltas around interventions.
+
+    For each instructor response logged in state.professor_actions, looks up
+    the class_engagement value at the response minute and the value
+    `window_minutes` later, and reports the delta. Used by the Phase 4 paper's
+    behavioral-impact paragraph to back the claim that the artifact produces
+    measurable behavioral change around instructor decisions.
+
+    Returns a list of {minute, response_category, intervention_type, before,
+    after, delta} dicts, plus aggregate means by response_category.
+    """
+    if not state or not state.all_frames:
+        return {"available": False, "window_minutes": window_minutes, "deltas": [], "means_by_category": {}}
+
+    # Build a minute -> frame index for quick lookups. Frames are appended in
+    # order, so the index is monotonic but may have gaps if a tick was skipped.
+    minute_to_frame = {f.get("minute", -1): f for f in state.all_frames}
+
+    deltas = []
+    cat_aggregates = {}  # category -> [delta1, delta2, ...]
+
+    for action in state.professor_actions:
+        if not action:
+            continue
+        m = action.get("minute")
+        if m is None:
+            continue
+        before_frame = minute_to_frame.get(m)
+        after_frame = minute_to_frame.get(m + window_minutes)
+        if not before_frame or not after_frame:
+            continue
+        before = before_frame.get("class_engagement")
+        after = after_frame.get("class_engagement")
+        if before is None or after is None:
+            continue
+        delta = after - before
+        category = action.get("response_category", "unknown")
+        deltas.append({
+            "minute": m,
+            "response_category": category,
+            "intervention_type": action.get("intervention_type"),
+            "before": round(before, 4),
+            "after": round(after, 4),
+            "delta": round(delta, 4),
+        })
+        cat_aggregates.setdefault(category, []).append(delta)
+
+    means = {}
+    for cat, values in cat_aggregates.items():
+        if values:
+            means[cat] = {
+                "mean_delta": round(sum(values) / len(values), 4),
+                "count": len(values),
+            }
+
+    return {
+        "available": True,
+        "window_minutes": window_minutes,
+        "deltas": deltas,
+        "means_by_category": means,
+    }
+
+
+def _build_metrics_snapshot(state):
+    """Compute derived performance metrics from raw counters.
+
+    Operationalizes the four metrics in the Phase 4 paper Performance Metrics
+    section for a rule-based advisory system (not a classifier):
+      - pattern_detection_precision: structurally-valid evidence dicts /
+        total triggers. Deterministic; expected at 1.0.
+      - throttle_effectiveness: throttled / (throttled + emitted).
+      - latency_mean_ms / latency_p95_ms: per-tick processing time excluding
+        the inter-tick sleep.
+      - taxonomy_adoption_rate: total responses logged / total recs emitted.
+      - taxonomy_distribution: counts and proportions of the five categories.
+    """
+    if not state:
+        return {"available": False}
+    m = state.metrics
+    triggers_total = m["pattern_triggers_total"]
+    emitted = m["pattern_triggers_emitted"]
+    throttled = m["pattern_triggers_throttled"]
+
+    if triggers_total > 0:
+        precision = m["pattern_evidence_valid"] / triggers_total
+    else:
+        precision = None
+
+    if (emitted + throttled) > 0:
+        throttle_eff = throttled / (emitted + throttled)
+    else:
+        throttle_eff = None
+
+    latencies = m["tick_latencies_ms"]
+    if latencies:
+        latency_mean = sum(latencies) / len(latencies)
+        latency_p50 = _percentile(latencies, 50)
+        latency_p95 = _percentile(latencies, 95)
+    else:
+        latency_mean = latency_p50 = latency_p95 = None
+
+    # Derive response distribution + total from professor_actions at query
+    # time so that instructor edits (e.g., changing accept→reject on the same
+    # rec) are reflected in the latest distribution. Each rec is counted at
+    # most once: if multiple action rows share a recommendation_id, the
+    # latest wins (later rows overwrite earlier ones in latest_by_rec).
+    # Anonymous rows (no recommendation_id) count individually.
+    response_categories = {cat: 0 for cat in VALID_RESPONSE_CATEGORIES}
+    latest_by_rec = {}
+    anon_counter = 0
+    for action in (state.professor_actions or []):
+        if not action:
+            continue
+        cat = action.get("response_category")
+        if cat not in VALID_RESPONSE_CATEGORIES:
+            continue
+        rec_id = action.get("recommendation_id") or action.get("rec_id")
+        if not rec_id:
+            rec_id = f"__anon_{anon_counter}"
+            anon_counter += 1
+        latest_by_rec[rec_id] = cat
+    response_total = len(latest_by_rec)
+    for cat in latest_by_rec.values():
+        response_categories[cat] += 1
+
+    if emitted > 0:
+        adoption_rate = response_total / emitted
+    else:
+        adoption_rate = None
+
+    distribution = {}
+    for cat, count in response_categories.items():
+        distribution[cat] = {
+            "count": count,
+            "proportion": (count / response_total) if response_total > 0 else 0.0,
+        }
+
+    started = m.get("session_started_at")
+    session_duration_sec = (time.time() - started) if started else 0.0
+
+    return {
+        "available": True,
+        "session_id": state.session_id,
+        "is_running": state.is_running,
+        "tick_count": m["tick_count"],
+        "session_duration_sec": round(session_duration_sec, 2),
+        "pattern_detection_precision": precision,
+        "pattern_triggers_total": triggers_total,
+        "pattern_triggers_emitted": emitted,
+        "pattern_triggers_throttled": throttled,
+        "pattern_counts_by_type": dict(m["pattern_counts_by_type"]),
+        "throttle_counts_by_type": dict(m["throttle_counts_by_type"]),
+        "throttle_effectiveness": throttle_eff,
+        "latency_mean_ms": round(latency_mean, 2) if latency_mean is not None else None,
+        "latency_p50_ms": round(latency_p50, 2) if latency_p50 is not None else None,
+        "latency_p95_ms": round(latency_p95, 2) if latency_p95 is not None else None,
+        "response_taxonomy_distribution": distribution,
+        "response_total": response_total,
+        "taxonomy_adoption_rate": adoption_rate,
+        "behavioral_impact": _build_intervention_deltas(state, window_minutes=3),
+    }
+
+
 def _service_summary():
     with SESSIONS_LOCK:
         total_sessions = len(SESSIONS)
@@ -258,6 +470,7 @@ def run_simulation_live(state, config):
     }
 
     # Broadcast session start
+    state.metrics["session_started_at"] = time.time()
     state.broadcast("session_start", {
         "metadata": state.metadata,
         "students": state.students,
@@ -283,11 +496,14 @@ def run_simulation_live(state, config):
         if not state.is_running:
             break
 
+        tick_start = time.time()
+
         with state.lock:
             state.touch()
             state.current_minute = frame["minute"]
             state.current_frame = frame
             state.all_frames.append(frame)
+            state.metrics["tick_count"] += 1
 
             # Collect events for this minute
             minute_events = [e for e in engine.events if hasattr(e, 'minute') and e.minute == frame["minute"]]
@@ -300,16 +516,34 @@ def run_simulation_live(state, config):
             REC_COOLDOWN_MINUTES = 3
             raw_recs = engine.scorer.get_recommendations(engine._last_class_snapshot) if hasattr(engine, '_last_class_snapshot') and engine._last_class_snapshot else []
             recs = []
+            metrics = state.metrics
             for idx, r in enumerate(raw_recs):
                 pattern_type = (r.get("evidence") or {}).get("type") or r.get("action") or "unknown"
+                metrics["pattern_triggers_total"] += 1
+                metrics["pattern_counts_by_type"][pattern_type] = (
+                    metrics["pattern_counts_by_type"].get(pattern_type, 0) + 1
+                )
+                # Pattern-detection precision sanity-check: scorer-emitted recs
+                # must carry a structurally valid evidence dict whose type is
+                # in the known pattern set. An unknown type counts as invalid
+                # (a regression signal) rather than silently passing.
+                evidence = r.get("evidence") or {}
+                if (isinstance(evidence, dict)
+                        and evidence.get("type") in KNOWN_PATTERN_TYPES):
+                    metrics["pattern_evidence_valid"] += 1
                 last_minute = state.recent_rec_minutes.get(pattern_type, -10**9)
                 if frame["minute"] - last_minute < REC_COOLDOWN_MINUTES:
+                    metrics["pattern_triggers_throttled"] += 1
+                    metrics["throttle_counts_by_type"][pattern_type] = (
+                        metrics["throttle_counts_by_type"].get(pattern_type, 0) + 1
+                    )
                     continue
                 state.recent_rec_minutes[pattern_type] = frame["minute"]
                 r["rec_id"] = r.get("rec_id") or f"{frame['minute']}-{len(state.recommendations) + idx}"
                 r["minute"] = frame["minute"]
                 r["pattern_type"] = pattern_type
                 state.recommendations.append(r)
+                metrics["pattern_triggers_emitted"] += 1
                 recs.append(r)
 
             # Professor decisions
@@ -349,6 +583,16 @@ def run_simulation_live(state, config):
                         frame["minute"] + 1,
                         prof_action["intervention_type"]
                     )
+
+        # Record tick latency (work-only, excludes the speed-sleep below).
+        # Cap retention at 1024 entries so a long session doesn't grow unbounded.
+        # Acquire the lock so a concurrent /api/metrics read sees a consistent
+        # latencies list (avoids torn-read against the reassignment trim).
+        tick_latency_ms = (time.time() - tick_start) * 1000.0
+        with state.lock:
+            state.metrics["tick_latencies_ms"].append(tick_latency_ms)
+            if len(state.metrics["tick_latencies_ms"]) > 1024:
+                state.metrics["tick_latencies_ms"] = state.metrics["tick_latencies_ms"][-1024:]
 
         # Broadcast frame
         state.broadcast("frame", {
@@ -434,6 +678,26 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         elif path == "/api/health":
             self._json_response(_service_summary())
 
+        elif path == "/api/metrics":
+            # Performance-metric telemetry for the active session. Backs the
+            # paper's Performance Metrics section; consumed by the dashboard
+            # live-metrics panel and the SAGE evaluation-run export.
+            # Acquire state.lock to avoid torn reads while a tick is mutating
+            # the metrics dict (latencies list trim + counter increments).
+            if state:
+                with state.lock:
+                    snapshot = _build_metrics_snapshot(state)
+            else:
+                snapshot = _build_metrics_snapshot(state)
+            self._json_response(snapshot)
+
+        elif path == "/api/export":
+            # SAGE evaluation-run export — single-shot citable artifact for
+            # the paper's Analytical (Simulation) section. JSON only; the
+            # CSV view of the timeline is included as a string field so the
+            # whole run is one downloadable file.
+            self._handle_export(parsed, state)
+
         elif path == "/api/presets":
             presets = {}
             for key in list_presets():
@@ -483,6 +747,15 @@ class SAGEHandler(SimpleHTTPRequestHandler):
 
         elif path == "/api/zoom/debug":
             self._json_response(ZOOM.get_debug_snapshot())
+
+        elif path == "/api/zoom/probe":
+            self._handle_zoom_probe(parsed)
+
+        elif path == "/api/zoom/probe/meetings":
+            self._handle_zoom_probe_meetings(parsed)
+
+        elif path == "/api/zoom/probe/participants":
+            self._handle_zoom_probe_participants(parsed)
 
         elif path.startswith("/dashboard/"):
             # Serve static dashboard files
@@ -644,17 +917,22 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             "response_source": "manual",
         }
 
-        existing = None
-        if recommendation_id:
-            for idx, old in enumerate(state.professor_actions):
-                if old.get("response_source") == "manual" and old.get("recommendation_id") == recommendation_id:
-                    existing = idx
-                    break
-
-        if existing is None:
-            state.professor_actions.append(action)
-        else:
-            state.professor_actions[existing] = action
+        with state.lock:
+            existing = None
+            if recommendation_id:
+                for idx, old in enumerate(state.professor_actions):
+                    if old.get("response_source") == "manual" and old.get("recommendation_id") == recommendation_id:
+                        existing = idx
+                        break
+            if existing is None:
+                state.professor_actions.append(action)
+            else:
+                state.professor_actions[existing] = action
+            # Note: response distribution + total are derived from
+            # state.professor_actions at /api/metrics query time (see
+            # _build_metrics_snapshot) so instructor edits are reflected
+            # in the latest distribution without needing decrement
+            # bookkeeping here.
 
         scheduled_minute = None
         if intervention_type and state.is_running and state.engine:
@@ -668,6 +946,151 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             "scheduled_minute": scheduled_minute,
             "action": action,
         })
+
+    def _zoom_client_from_request(self, parsed):
+        """Build a ZoomAPIClient from query-string token override or env."""
+        from simulator.zoom_api_client import ZoomAPIClient
+        if os.environ.get(ZOOM_PROBE_FLAG, "").lower() not in {"1", "true", "yes"}:
+            return None, (
+                f"Zoom API probe endpoints are disabled. Set {ZOOM_PROBE_FLAG}=1 "
+                "for local development only; do not enable on public demo hosts."
+            )
+        qs = parse_qs(parsed.query)
+        token = (qs.get("token") or [None])[0] or os.environ.get("ZOOM_API_TOKEN", "")
+        token = (token or "").strip()
+        if not token:
+            return None, "ZOOM_API_TOKEN not set in env and no ?token= override provided. Paste a Zoom OAuth or JWT bearer to test the integration locally."
+        try:
+            return ZoomAPIClient(token=token), None
+        except ValueError as e:
+            return None, str(e)
+
+    def _handle_zoom_probe(self, parsed):
+        from simulator.zoom_api_client import ZoomAPIError
+        client, err = self._zoom_client_from_request(parsed)
+        if not client:
+            self._json_response({"ok": False, "error": err}, status=400)
+            return
+        try:
+            me = client.get_me()
+            self._json_response({"ok": True, "me": me, "endpoint": "/users/me"})
+        except ZoomAPIError as e:
+            self._json_response({"ok": False, "error": str(e), "status": e.status, "body": e.body[:500]}, status=502)
+
+    def _handle_zoom_probe_meetings(self, parsed):
+        from simulator.zoom_api_client import ZoomAPIError
+        qs = parse_qs(parsed.query)
+        meeting_type = (qs.get("type") or ["scheduled"])[0]
+        client, err = self._zoom_client_from_request(parsed)
+        if not client:
+            self._json_response({"ok": False, "error": err}, status=400)
+            return
+        try:
+            data = client.list_my_meetings(meeting_type=meeting_type)
+            self._json_response({"ok": True, "type": meeting_type, "data": data})
+        except ZoomAPIError as e:
+            self._json_response({"ok": False, "error": str(e), "status": e.status, "body": e.body[:500]}, status=502)
+
+    def _handle_zoom_probe_participants(self, parsed):
+        from simulator.zoom_api_client import ZoomAPIError
+        qs = parse_qs(parsed.query)
+        meeting_id = (qs.get("id") or qs.get("meeting_id") or [""])[0]
+        if not meeting_id:
+            self._json_response({"ok": False, "error": "Missing ?id=<meeting_id>"}, status=400)
+            return
+        client, err = self._zoom_client_from_request(parsed)
+        if not client:
+            self._json_response({"ok": False, "error": err}, status=400)
+            return
+        try:
+            data = client.get_past_meeting_participants(meeting_id)
+            self._json_response({"ok": True, "meeting_id": meeting_id, "data": data})
+        except ZoomAPIError as e:
+            self._json_response({"ok": False, "error": str(e), "status": e.status, "body": e.body[:500]}, status=502)
+
+    def _handle_export(self, parsed, state):
+        """Build a single-shot SAGE evaluation-run export.
+
+        Returns the entire run as a structured artifact so the Phase 4 paper's
+        Analytical (Simulation) section can cite a concrete, reproducible
+        file. Includes metadata, per-tick timeline, events, recommendations
+        with evidence, professor responses, and the performance-metrics
+        snapshot in one payload. Format = json (default).
+        """
+        if not state:
+            self._json_response({"error": "No active session"}, status=404)
+            return
+
+        qs = parse_qs(parsed.query)
+        fmt = (qs.get("format") or ["json"])[0].lower()
+        if fmt not in ("json", "csv"):
+            self._json_response({"error": f"Unsupported format '{fmt}'. Use json or csv."}, status=400)
+            return
+
+        # Snapshot under lock so we don't race with the live tick path that
+        # appends to all_frames / events / recommendations / professor_actions.
+        with state.lock:
+            timeline_snap = list(state.all_frames or [])
+            events_snap = list(state.events)
+            recs_snap = list(state.recommendations)
+            prof_snap = list(state.professor_actions)
+            metrics_snap = _build_metrics_snapshot(state)
+            metadata_snap = dict(state.metadata)
+            students_snap = list(state.students)
+            session_id = state.session_id
+        timeline = timeline_snap
+        # Inline CSV for the per-tick timeline so the paper can reference it
+        # without requiring a separate download path.
+        csv_rows = ["minute,observable_participation,active_speakers,speaking_gini,patterns"]
+        for f in timeline:
+            patterns = "|".join(p.get("type", "") for p in (f.get("patterns") or []))
+            csv_rows.append(
+                f"{f.get('minute', 0)},"
+                f"{f.get('class_engagement', 0):.4f},"
+                f"{f.get('active_speakers', 0)},"
+                f"{f.get('speaking_gini', 0):.4f},"
+                f"{patterns}"
+            )
+        timeline_csv = "\n".join(csv_rows)
+
+        export = {
+            "export_format_version": 1,
+            "export_generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "session_id": session_id,
+            "metadata": metadata_snap,
+            "students": students_snap,
+            "timeline": timeline,
+            "events": events_snap,
+            "recommendations": recs_snap,
+            "professor_actions": prof_snap,
+            "metrics": metrics_snap,
+            "timeline_csv": timeline_csv,
+        }
+
+        if fmt == "csv":
+            # CSV export = the timeline only; metadata header in comments.
+            csv_text = (
+                f"# SAGE evaluation-run export · session={session_id} · "
+                f"university={metadata_snap.get('university', 'cgu')} · "
+                f"scenario={metadata_snap.get('scenario', 'baseline')} · "
+                f"seed={metadata_snap.get('seed', 42)}\n"
+                f"{timeline_csv}\n"
+            )
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv")
+            self.send_header("Content-Disposition", f"attachment; filename=sage_run_{session_id}.csv")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(csv_text.encode("utf-8"))
+            return
+
+        body = json.dumps(export, default=str, indent=2).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Disposition", f"attachment; filename=sage_run_{session_id}.json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _handle_sse(self, parsed):
         """Server-Sent Events endpoint."""

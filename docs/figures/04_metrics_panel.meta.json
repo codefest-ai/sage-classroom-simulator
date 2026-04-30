@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-04-30T07:38:46Z",
+  "git_sha": "fb30643",
+  "base_url": "http://localhost:8765",
+  "scenario": "full_scenario",
+  "university": "cgu",
+  "seed": 42,
+  "duration": 20,
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "name": "04_metrics_panel",
+  "checkpoint": "metrics_panel_open"
+}

@@ -54,6 +54,8 @@ class ZoomMeetingState:
 
     def __init__(self, meeting_id: str):
         self.meeting_id = meeting_id
+        self.meeting_topic: str = ""
+        self.host_email: str = ""
         self.started_at: float = time.time()
         self.participants: Dict[str, ZoomParticipant] = {}
         self.chat_messages: List[Dict] = []
@@ -219,6 +221,8 @@ class ZoomMeetingState:
 
         return {
             "meeting_id": self.meeting_id,
+            "meeting_topic": self.meeting_topic or "",
+            "host_email": self.host_email or "",
             "active": self.is_active,
             "participant_count": len(present),
             "signal_status": signal_status,
@@ -559,6 +563,13 @@ class ZoomWebhookHandler:
                 else:
                     self.meetings[meeting_id] = ZoomMeetingState(meeting_id)
                     meeting = self.meetings[meeting_id]
+                # Capture meeting context for the dashboard live header.
+                topic = payload.get("topic")
+                if topic:
+                    meeting.meeting_topic = str(topic)
+                host_email = payload.get("host_email") or payload.get("host_id")
+                if host_email:
+                    meeting.host_email = str(host_email)
                 meeting.record_meeting_started()
                 return {"status": "meeting_started", "meeting_id": meeting_id}
 

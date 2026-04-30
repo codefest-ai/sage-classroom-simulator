@@ -1,0 +1,21 @@
+# Optional dev/eval dependencies — not required to run the server or simulator.
+#
+# Installs the tooling that supports paper-figure capture and similar evaluation
+# workflows. The base requirements.txt is deliberately stdlib-only so the
+# server itself can be deployed without these.
+#
+# Setup:
+#     python3 -m venv .venv
+#     source .venv/bin/activate
+#     pip install -r requirements-dev.txt
+#     python3 -m playwright install chromium
+#
+# Then, with the SAGE server running on http://localhost:8080:
+#     python3 scripts/capture_dashboard.py --duration 12 --scenario full_scenario \
+#         --university cgu --seed 42 --output-dir docs/figures
+#
+# Output: PNG screenshots + .meta.json sidecars (git SHA, scenario, seed,
+# university, viewport, timestamp) under docs/figures/. Re-runnable with
+# the same seed for reproducible paper figures.
+
+playwright>=1.40

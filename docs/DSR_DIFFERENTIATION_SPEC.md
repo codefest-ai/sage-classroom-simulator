@@ -7,7 +7,7 @@
 
 ## The Claim
 
-SAGE (Simulated Agent-Generated Engagement) is the first application of LLM-powered generative agents to **formative evaluation of a learning analytics artifact**. It combines deep agent profiling, emergent social dynamics, and closed-loop instructor decision support evaluation in a single system.
+SAGE (Simulated Agent-Generated Evaluation) is the first application of LLM-powered generative agents to **formative evaluation of a learning analytics artifact**. It combines deep agent profiling, emergent social dynamics, and closed-loop instructor decision support evaluation in a single system.
 
 No existing tool does this.
 
