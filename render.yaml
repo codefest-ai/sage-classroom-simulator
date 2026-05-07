@@ -10,5 +10,19 @@ services:
         sync: false
       - key: ZOOM_WEBHOOK_SECRET
         sync: false
+      # Zoom OAuth (multi-install) — required to enable Connect Zoom Account.
+      # The redirect URL must exactly match the OAuth Redirect URL registered
+      # in the Zoom Marketplace app, including https + path.
+      - key: ZOOM_OAUTH_CLIENT_ID
+        sync: false
+      - key: ZOOM_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: ZOOM_OAUTH_REDIRECT_URL
+        sync: false
+      # Per-install JSON files live here. Default /tmp/sage_zoom_oauth_installs
+      # is fine for the course demo on Render free tier; for production use a
+      # persistent disk and set this to a path under it.
+      - key: ZOOM_OAUTH_STORE_DIR
+        sync: false
       - key: PORT
         value: 10000

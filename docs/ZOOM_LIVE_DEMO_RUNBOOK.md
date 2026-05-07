@@ -2,7 +2,9 @@
 
 **Purpose:** Step-by-step path for connecting a real Zoom meeting to the IDSS dashboard, so the live ingestion path can be exercised against an actual meeting (rather than only the local fixture).
 
-**Status as of 2026-04-26:** Webhook endpoint exists (`/api/zoom/webhook`), HMAC-SHA256 signature verification implemented in `simulator/zoom_adapter.py:525`, Zoom Marketplace App registered, fixture-tested end-to-end locally. **Blocker for live execution:** `ZOOM_WEBHOOK_SECRET` not yet set on the Render deployment. Once that lands, follow this runbook to validate end-to-end.
+**Status as of 2026-05-07:** Webhook endpoint exists (`/api/zoom/webhook`), HMAC-SHA256 signature verification implemented in `simulator/zoom_adapter.py`, OAuth multi-install layer added (`/api/zoom/connection`, `/api/zoom/connect`, `/api/zoom/oauth/callback`, `/api/zoom/disconnect`, `/api/zoom/oauth/refresh`), Zoom Marketplace App registered, fixture-tested end-to-end. Hosted at `https://sage-simulator-ulsd.onrender.com/`.
+
+**The intended teacher-facing flow** is now OAuth-first: a teacher (or institutional admin) opens the dashboard, clicks **🔌 Connect Zoom Account**, completes Zoom's authorization, and their install is persisted under `ZOOM_OAUTH_STORE_DIR`. Multiple Zoom accounts can be connected to the same dashboard instance — webhook events are routed to the matching install by `account_id` from the event payload. The Webhook-Only path below remains supported for single-account deployments and for app-validation runs.
 
 This runbook is the rehearsal path. Run through it before promising a live demo to the group.
 
@@ -11,11 +13,25 @@ This runbook is the rehearsal path. Run through it before promising a live demo 
 ## Pre-flight
 
 ### Prerequisites
-- Zoom Marketplace App registered (already done; "Webhook Only" type).
-- Zoom Secret Token from the Marketplace App console.
+- Zoom Marketplace App registered. For the OAuth-first teacher flow this should be an OAuth (User-managed or Account-level) app. The legacy "Webhook Only" app type still works for single-account webhook-only operation.
+- Zoom OAuth Client ID, Client Secret, and Redirect URL from the Marketplace App console (OAuth section).
+- Zoom Webhook Secret Token from the Event Subscriptions section of the same app.
 - Render deployment URL (or any public HTTPS endpoint that points at `server.py`).
 - A Zoom account that can host the demo meeting.
-- Server has the secret token configured: `ZOOM_WEBHOOK_SECRET=<token>` in env.
+- Server has the OAuth + webhook envs configured: `ZOOM_OAUTH_CLIENT_ID`, `ZOOM_OAUTH_CLIENT_SECRET`, `ZOOM_OAUTH_REDIRECT_URL`, `ZOOM_OAUTH_STORE_DIR`, and `ZOOM_WEBHOOK_SECRET`.
+
+### OAuth-first teacher flow (preferred)
+
+```text
+Dashboard → 🔌 Connect Zoom Account → /api/zoom/connect
+  → Zoom authorize page (teacher signs in, approves scopes)
+  → /api/zoom/oauth/callback?code=...&state=...
+  → server exchanges code for tokens, fetches /v2/users/me, stores install
+  → redirect to /?zoom_connected=1&install_id=<sanitized-account-id>
+  → dashboard chip flips to "Connected: alice@cgu.edu"
+```
+
+The server stores one JSON file per install under `ZOOM_OAUTH_STORE_DIR`, keyed by sanitized `account_id` (or `user_id` fallback). `/api/zoom/connection` returns the full installs[] array; `/api/zoom/disconnect` accepts a `{"install_id": "..."}` body and removes one install at a time.
 
 ### Local API probe (optional, no public webhook required)
 

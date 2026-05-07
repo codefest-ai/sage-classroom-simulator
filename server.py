@@ -394,7 +394,361 @@ def _service_summary():
         "active_sessions": active_sessions,
         "session_ttl_sec": SESSION_MAX_AGE_SEC,
         "zoom_webhook_configured": bool(os.environ.get("ZOOM_WEBHOOK_SECRET")),
+        "zoom_oauth_configured": _oauth_config() is not None,
         "groq_configured": bool(os.environ.get("GROQ_API_KEY")),
+    }
+
+
+# ============================================================
+# ZOOM OAUTH (stdlib only — urllib + json + secrets + threading.Lock)
+# ============================================================
+#
+# Multi-install OAuth connection layer. Each teacher (or institutional Zoom
+# account admin) clicks "Connect Zoom Account", authorizes the app through
+# Zoom, and the resulting install record is persisted under
+# ZOOM_OAUTH_STORE_DIR keyed by Zoom account_id (or user_id fallback). This
+# allows multiple Zoom accounts to be connected to the same dashboard
+# instance — webhook events arriving from any installed account are matched
+# back to their install record by account_id from the event payload.
+#
+# Storage layout (file per install):
+#   <ZOOM_OAUTH_STORE_DIR>/<install_id>.json
+# where install_id is sanitized account_id (or user_id, or short-uuid).
+#
+# Production hardening (out of scope for the course demo): per-tenant
+# encrypted storage, refresh-token rotation policy, install-level scopes
+# audit, account-removed webhook handling.
+
+import base64
+import re
+import secrets
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+ZOOM_OAUTH_AUTHORIZE_URL = "https://zoom.us/oauth/authorize"
+ZOOM_OAUTH_TOKEN_URL = "https://zoom.us/oauth/token"
+ZOOM_API_USERS_ME_URL = "https://api.zoom.us/v2/users/me"
+ZOOM_OAUTH_DEFAULT_STORE_DIR = "/tmp/sage_zoom_oauth_installs"
+ZOOM_OAUTH_PENDING_TTL_SEC = 600  # 10 min for state round-trip
+ZOOM_OAUTH_INSTALL_ID_RE = re.compile(r"[^A-Za-z0-9._-]")
+
+_oauth_pending_states = {}  # state token -> issued_at epoch
+_oauth_pending_lock = threading.Lock()
+_oauth_install_lock = threading.Lock()
+
+
+def _oauth_config():
+    """Return OAuth env config dict, or None if not fully configured.
+
+    Honors legacy ZOOM_OAUTH_STORE_PATH for back-compat — if present it is
+    treated as a single-file install whose parent directory becomes the
+    multi-install store. Prefer ZOOM_OAUTH_STORE_DIR.
+    """
+    client_id = os.environ.get("ZOOM_OAUTH_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("ZOOM_OAUTH_CLIENT_SECRET", "").strip()
+    redirect_url = os.environ.get("ZOOM_OAUTH_REDIRECT_URL", "").strip()
+    if not (client_id and client_secret and redirect_url):
+        return None
+    store_dir = os.environ.get("ZOOM_OAUTH_STORE_DIR", "").strip()
+    legacy_path = os.environ.get("ZOOM_OAUTH_STORE_PATH", "").strip()
+    if not store_dir and legacy_path:
+        # Treat the legacy single-file path's parent dir as the multi-install
+        # store, so existing deployments keep working.
+        store_dir = os.path.dirname(legacy_path) or ZOOM_OAUTH_DEFAULT_STORE_DIR
+    if not store_dir:
+        store_dir = ZOOM_OAUTH_DEFAULT_STORE_DIR
+    return {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_url": redirect_url,
+        "store_dir": store_dir,
+    }
+
+
+def _oauth_pending_state_put():
+    """Mint a CSRF state token, stash it in-memory with TTL."""
+    token = secrets.token_urlsafe(32)
+    with _oauth_pending_lock:
+        # Garbage-collect expired states
+        now = time.time()
+        for k in list(_oauth_pending_states.keys()):
+            if now - _oauth_pending_states[k] > ZOOM_OAUTH_PENDING_TTL_SEC:
+                del _oauth_pending_states[k]
+        _oauth_pending_states[token] = now
+    return token
+
+
+def _oauth_pending_state_consume(token):
+    """Validate and remove a pending state token. Returns True on success."""
+    if not token:
+        return False
+    with _oauth_pending_lock:
+        issued_at = _oauth_pending_states.pop(token, None)
+    if issued_at is None:
+        return False
+    return (time.time() - issued_at) <= ZOOM_OAUTH_PENDING_TTL_SEC
+
+
+def _oauth_install_id_from_payload(install):
+    """Choose a stable install identifier from a fresh OAuth/me payload.
+
+    Prefers Zoom account_id (lets institutional admins install once for the
+    whole workspace), falls back to user_id (per-teacher installs), then to
+    a short random ID for partial responses.
+    """
+    me = install.get("me") or {}
+    candidate = (
+        me.get("account_id")
+        or install.get("account_id")
+        or me.get("id")
+        or install.get("user_id")
+    )
+    if candidate:
+        return _oauth_safe_install_id(str(candidate))
+    return "anon-" + secrets.token_urlsafe(6)
+
+
+def _oauth_safe_install_id(raw):
+    """Sanitize an install id for safe filesystem use."""
+    cleaned = ZOOM_OAUTH_INSTALL_ID_RE.sub("_", raw or "")
+    return cleaned[:128] or "unknown"
+
+
+def _oauth_install_path(store_dir, install_id):
+    return os.path.join(store_dir, f"{_oauth_safe_install_id(install_id)}.json")
+
+
+def _oauth_ensure_store_dir(store_dir):
+    if not store_dir:
+        return
+    try:
+        os.makedirs(store_dir, exist_ok=True)
+    except OSError as exc:
+        print(f"[zoom oauth] failed to create store dir {store_dir}: {exc}")
+
+
+def _oauth_load_install(store_dir, install_id):
+    """Load a single install by id. Returns dict or None."""
+    if not store_dir or not install_id:
+        return None
+    path = _oauth_install_path(store_dir, install_id)
+    with _oauth_install_lock:
+        if not os.path.isfile(path):
+            return None
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"[zoom oauth] failed to read install at {path}: {exc}")
+            return None
+
+
+def _oauth_load_all_installs(store_dir):
+    """List every install under store_dir. Returns dict {install_id: install}.
+
+    Skips files that fail to parse rather than failing the whole listing.
+    """
+    out = {}
+    if not store_dir or not os.path.isdir(store_dir):
+        return out
+    with _oauth_install_lock:
+        try:
+            names = sorted(os.listdir(store_dir))
+        except OSError as exc:
+            print(f"[zoom oauth] failed to list store dir {store_dir}: {exc}")
+            return out
+        for name in names:
+            if not name.endswith(".json"):
+                continue
+            install_id = name[:-5]
+            path = os.path.join(store_dir, name)
+            try:
+                with open(path) as f:
+                    out[install_id] = json.load(f)
+            except (OSError, json.JSONDecodeError) as exc:
+                print(f"[zoom oauth] skipping unreadable install {path}: {exc}")
+    return out
+
+
+def _oauth_save_install(store_dir, install_id, install):
+    """Persist a single install to disk. Atomic via tmp+rename."""
+    if not store_dir or not install_id:
+        return
+    _oauth_ensure_store_dir(store_dir)
+    path = _oauth_install_path(store_dir, install_id)
+    tmp_path = f"{path}.tmp"
+    with _oauth_install_lock:
+        try:
+            with open(tmp_path, "w") as f:
+                json.dump(install, f, default=str)
+            os.replace(tmp_path, path)
+        except OSError as exc:
+            print(f"[zoom oauth] failed to write install at {path}: {exc}")
+
+
+def _oauth_clear_install(store_dir, install_id):
+    """Remove a single install file. Local-only; does not revoke at Zoom.
+
+    Returns True if a file was removed, False otherwise.
+    """
+    if not store_dir or not install_id:
+        return False
+    path = _oauth_install_path(store_dir, install_id)
+    with _oauth_install_lock:
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+                return True
+        except OSError as exc:
+            print(f"[zoom oauth] failed to delete install at {path}: {exc}")
+    return False
+
+
+def _oauth_find_install_by_account(store_dir, account_id):
+    """Locate an install by its Zoom account_id. Returns (install_id, install)."""
+    if not (store_dir and account_id):
+        return None, None
+    safe = _oauth_safe_install_id(str(account_id))
+    direct = _oauth_load_install(store_dir, safe)
+    if direct:
+        return safe, direct
+    # Fallback: scan all installs (handles user-scoped installs whose
+    # filename came from user_id but whose stored account_id matches).
+    for install_id, install in _oauth_load_all_installs(store_dir).items():
+        me = install.get("me") or {}
+        if str(me.get("account_id") or install.get("account_id") or "") == str(account_id):
+            return install_id, install
+    return None, None
+
+
+def _oauth_basic_auth(client_id, client_secret):
+    raw = f"{client_id}:{client_secret}".encode()
+    return "Basic " + base64.b64encode(raw).decode()
+
+
+def _oauth_token_exchange(cfg, code):
+    """Exchange auth code for tokens. Returns dict on success or raises."""
+    body = urlencode({
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": cfg["redirect_url"],
+    }).encode()
+    req = Request(
+        ZOOM_OAUTH_TOKEN_URL,
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": _oauth_basic_auth(cfg["client_id"], cfg["client_secret"]),
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+        },
+    )
+    with urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode())
+
+
+def _oauth_token_refresh(cfg, refresh_token):
+    """Use refresh_token to get a fresh access token. Returns dict or raises."""
+    body = urlencode({
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+    }).encode()
+    req = Request(
+        ZOOM_OAUTH_TOKEN_URL,
+        data=body,
+        method="POST",
+        headers={
+            "Authorization": _oauth_basic_auth(cfg["client_id"], cfg["client_secret"]),
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+        },
+    )
+    with urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode())
+
+
+def _oauth_fetch_me(access_token):
+    """GET /v2/users/me to get authenticated user info. Returns dict or None."""
+    req = Request(
+        ZOOM_API_USERS_ME_URL,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode())
+    except (HTTPError, URLError, json.JSONDecodeError) as exc:
+        print(f"[zoom oauth] /users/me failed: {exc}")
+        return None
+
+
+def _oauth_install_descriptor(install_id, install):
+    """One element of the connection payload's installs[] array."""
+    expires_at = install.get("expires_at") or 0
+    expires_in_sec = max(0, int(expires_at - time.time())) if expires_at else None
+    me = install.get("me") or {}
+    display_name = (
+        (me.get("first_name") or "") + " " + (me.get("last_name") or "")
+    ).strip() or me.get("display_name")
+    return {
+        "install_id": install_id,
+        "user_id": me.get("id") or install.get("user_id"),
+        "account_id": me.get("account_id") or install.get("account_id"),
+        "user_email": me.get("email") or install.get("user_email"),
+        "display_name": display_name,
+        "scopes": install.get("scope"),
+        "expires_at": expires_at,
+        "expires_in_sec": expires_in_sec,
+        "expired": (expires_in_sec is not None and expires_in_sec <= 0),
+        "installed_at": install.get("installed_at"),
+        "refreshed_at": install.get("refreshed_at"),
+    }
+
+
+def _oauth_connection_payload(cfg, webhook_configured):
+    """Build the JSON payload for /api/zoom/connection (multi-install)."""
+    if cfg is None:
+        return {
+            "oauth_configured": False,
+            "connected": False,
+            "installs": [],
+            "install_count": 0,
+            "webhook_configured": webhook_configured,
+            "note": (
+                "Zoom OAuth is not configured on this server. Set "
+                "ZOOM_OAUTH_CLIENT_ID, ZOOM_OAUTH_CLIENT_SECRET, and "
+                "ZOOM_OAUTH_REDIRECT_URL to enable Connect Zoom Account."
+            ),
+        }
+    installs_map = _oauth_load_all_installs(cfg["store_dir"])
+    installs = [
+        _oauth_install_descriptor(install_id, install)
+        for install_id, install in installs_map.items()
+    ]
+    if not installs:
+        note = "No Zoom accounts connected yet. Click Connect Zoom Account to authorize one."
+    elif len(installs) == 1:
+        note = (
+            "1 Zoom account connected. Live mode will pick up meeting events "
+            "from this account once Event Subscriptions are enabled in the Zoom app."
+        )
+    else:
+        note = (
+            f"{len(installs)} Zoom accounts connected. Webhook events are "
+            "routed to the matching install by Zoom account_id."
+        )
+    return {
+        "oauth_configured": True,
+        "connected": bool(installs),
+        "installs": installs,
+        "install_count": len(installs),
+        "webhook_configured": webhook_configured,
+        "callback_url": cfg["redirect_url"],
+        "store_dir": cfg["store_dir"],
+        "note": note,
     }
 
 
@@ -748,6 +1102,15 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         elif path == "/api/zoom/debug":
             self._json_response(ZOOM.get_debug_snapshot())
 
+        elif path == "/api/zoom/connection":
+            self._handle_zoom_connection()
+
+        elif path == "/api/zoom/connect":
+            self._handle_zoom_connect()
+
+        elif path == "/api/zoom/oauth/callback":
+            self._handle_zoom_oauth_callback(parsed)
+
         elif path == "/api/zoom/probe":
             self._handle_zoom_probe(parsed)
 
@@ -796,6 +1159,12 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         elif path == "/api/zoom/response":
             self._handle_zoom_response(data)
 
+        elif path == "/api/zoom/disconnect":
+            self._handle_zoom_disconnect(data)
+
+        elif path == "/api/zoom/oauth/refresh":
+            self._handle_zoom_oauth_refresh(data)
+
         elif path == "/api/zoom/webhook":
             # Zoom sends webhook events here
             event_name = data.get("event", "")
@@ -813,14 +1182,39 @@ class SAGEHandler(SimpleHTTPRequestHandler):
                 print(f"[zoom webhook] signature verification failed event={event_name or 'unknown'}")
                 self._json_response({"error": "Invalid Zoom webhook signature"}, status=401)
                 return
-            payload_obj = data.get("payload", {}).get("object", {}) or {}
+            payload = data.get("payload", {}) or {}
+            payload_obj = payload.get("object", {}) or {}
             meeting_id = payload_obj.get("id", "")
-            print(f"[zoom webhook] event={event_name or 'unknown'} meeting_id={meeting_id or 'n/a'}")
+            # Identify which OAuth install this event belongs to. Zoom puts
+            # account_id at the payload root for account-level webhooks.
+            event_account_id = (
+                payload.get("account_id")
+                or payload_obj.get("account_id")
+                or ""
+            )
+            cfg = _oauth_config()
+            install_id, _install = (
+                _oauth_find_install_by_account(cfg["store_dir"], event_account_id)
+                if (cfg and event_account_id) else (None, None)
+            )
+            print(
+                f"[zoom webhook] event={event_name or 'unknown'} "
+                f"meeting_id={meeting_id or 'n/a'} "
+                f"account_id={event_account_id or 'n/a'} "
+                f"install_id={install_id or 'unmatched'}"
+            )
             result = ZOOM.handle_event(data)
-            if result:
+            if isinstance(result, dict):
+                if install_id:
+                    result.setdefault("install_id", install_id)
+                self._json_response(result)
+            elif result:
                 self._json_response(result)
             else:
-                self._json_response({"status": "ok"})
+                self._json_response({
+                    "status": "ok",
+                    "install_id": install_id,
+                })
 
         else:
             self.send_error(404, "Not found")
@@ -1207,6 +1601,176 @@ class SAGEHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(f.read())
         else:
             self.send_error(404, f"File not found: {rel_path}")
+
+    def _redirect(self, location, status=302):
+        self.send_response(status)
+        self.send_header("Location", location)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    # ============================================================
+    # ZOOM OAUTH HANDLERS
+    # ============================================================
+
+    def _handle_zoom_connection(self):
+        cfg = _oauth_config()
+        webhook_configured = bool(getattr(ZOOM, "secret_token", None))
+        self._json_response(_oauth_connection_payload(cfg, webhook_configured))
+
+    def _handle_zoom_connect(self):
+        cfg = _oauth_config()
+        if cfg is None:
+            self._json_response({
+                "error": "Zoom OAuth is not configured on this server.",
+                "missing_env": [
+                    name for name in (
+                        "ZOOM_OAUTH_CLIENT_ID",
+                        "ZOOM_OAUTH_CLIENT_SECRET",
+                        "ZOOM_OAUTH_REDIRECT_URL",
+                    ) if not os.environ.get(name, "").strip()
+                ],
+            }, status=400)
+            return
+        state = _oauth_pending_state_put()
+        params = urlencode({
+            "response_type": "code",
+            "client_id": cfg["client_id"],
+            "redirect_uri": cfg["redirect_url"],
+            "state": state,
+        })
+        self._redirect(f"{ZOOM_OAUTH_AUTHORIZE_URL}?{params}")
+
+    def _handle_zoom_oauth_callback(self, parsed):
+        cfg = _oauth_config()
+        if cfg is None:
+            self._json_response({"error": "Zoom OAuth not configured."}, status=400)
+            return
+        qs = parse_qs(parsed.query)
+        error = (qs.get("error") or [None])[0]
+        if error:
+            error_desc = (qs.get("error_description") or [""])[0]
+            self._redirect(f"/?zoom_connect_error={error}&zoom_connect_error_desc={error_desc}")
+            return
+        code = (qs.get("code") or [None])[0]
+        state = (qs.get("state") or [None])[0]
+        if not code or not state:
+            self._redirect("/?zoom_connect_error=missing_code_or_state")
+            return
+        if not _oauth_pending_state_consume(state):
+            self._redirect("/?zoom_connect_error=invalid_state")
+            return
+        try:
+            token = _oauth_token_exchange(cfg, code)
+        except HTTPError as exc:
+            body = exc.read().decode(errors="replace") if exc.fp else ""
+            print(f"[zoom oauth] token exchange HTTP {exc.code}: {body[:300]}")
+            self._redirect(f"/?zoom_connect_error=token_exchange_http_{exc.code}")
+            return
+        except (URLError, json.JSONDecodeError) as exc:
+            print(f"[zoom oauth] token exchange failed: {exc}")
+            self._redirect("/?zoom_connect_error=token_exchange_failed")
+            return
+        access_token = token.get("access_token")
+        if not access_token:
+            print(f"[zoom oauth] no access_token in response: {token}")
+            self._redirect("/?zoom_connect_error=no_access_token")
+            return
+        expires_in = int(token.get("expires_in") or 0)
+        install = {
+            "access_token": access_token,
+            "refresh_token": token.get("refresh_token"),
+            "token_type": token.get("token_type"),
+            "scope": token.get("scope"),
+            "expires_in": expires_in,
+            "expires_at": int(time.time()) + expires_in if expires_in else 0,
+            "installed_at": int(time.time()),
+        }
+        me = _oauth_fetch_me(access_token)
+        if me:
+            install["me"] = me
+            install["user_id"] = me.get("id")
+            install["account_id"] = me.get("account_id")
+            install["user_email"] = me.get("email")
+        install_id = _oauth_install_id_from_payload(install)
+        _oauth_save_install(cfg["store_dir"], install_id, install)
+        print(
+            f"[zoom oauth] connected install_id={install_id} "
+            f"user_id={install.get('user_id') or 'unknown'} "
+            f"email={install.get('user_email') or 'unknown'}"
+        )
+        self._redirect(f"/?zoom_connected=1&install_id={install_id}")
+
+    def _handle_zoom_disconnect(self, data):
+        cfg = _oauth_config()
+        if cfg is None:
+            self._json_response({"error": "Zoom OAuth not configured."}, status=400)
+            return
+        install_id = (data or {}).get("install_id") if isinstance(data, dict) else None
+        if not install_id:
+            self._json_response({
+                "error": "Missing install_id. POST {\"install_id\": \"...\"} to disconnect a specific install.",
+            }, status=400)
+            return
+        removed = _oauth_clear_install(cfg["store_dir"], install_id)
+        if not removed:
+            self._json_response({
+                "error": f"Install '{install_id}' not found.",
+            }, status=404)
+            return
+        self._json_response({
+            "status": "disconnected",
+            "install_id": install_id,
+            "note": "Local install removed. To revoke at Zoom, uninstall the app in your Zoom Marketplace account.",
+        })
+
+    def _handle_zoom_oauth_refresh(self, data):
+        cfg = _oauth_config()
+        if cfg is None:
+            self._json_response({"error": "Zoom OAuth not configured."}, status=400)
+            return
+        install_id = (data or {}).get("install_id") if isinstance(data, dict) else None
+        if not install_id:
+            self._json_response({
+                "error": "Missing install_id. POST {\"install_id\": \"...\"} to refresh a specific install.",
+            }, status=400)
+            return
+        install = _oauth_load_install(cfg["store_dir"], install_id)
+        if not install:
+            self._json_response({"error": f"Install '{install_id}' not found."}, status=404)
+            return
+        if not install.get("refresh_token"):
+            self._json_response({"error": "No refresh token available for this install."}, status=400)
+            return
+        try:
+            token = _oauth_token_refresh(cfg, install["refresh_token"])
+        except HTTPError as exc:
+            body = exc.read().decode(errors="replace") if exc.fp else ""
+            print(f"[zoom oauth] refresh HTTP {exc.code}: {body[:300]}")
+            self._json_response({"error": f"token_refresh_http_{exc.code}"}, status=502)
+            return
+        except (URLError, json.JSONDecodeError) as exc:
+            print(f"[zoom oauth] refresh failed: {exc}")
+            self._json_response({"error": "token_refresh_failed"}, status=502)
+            return
+        access_token = token.get("access_token")
+        if not access_token:
+            self._json_response({"error": "no_access_token"}, status=502)
+            return
+        expires_in = int(token.get("expires_in") or 0)
+        install.update({
+            "access_token": access_token,
+            "refresh_token": token.get("refresh_token") or install.get("refresh_token"),
+            "token_type": token.get("token_type") or install.get("token_type"),
+            "scope": token.get("scope") or install.get("scope"),
+            "expires_in": expires_in,
+            "expires_at": int(time.time()) + expires_in if expires_in else 0,
+            "refreshed_at": int(time.time()),
+        })
+        _oauth_save_install(cfg["store_dir"], install_id, install)
+        self._json_response({
+            "status": "refreshed",
+            "install": _oauth_install_descriptor(install_id, install),
+        })
 
     def _guess_type(self, path):
         if path.endswith(".html"): return "text/html"

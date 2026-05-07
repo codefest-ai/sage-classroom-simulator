@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Instructional Decision Support Dashboard — SAGE Evaluation Environment</title>
+<title>Instructional Decision Support Dashboard — SAGE Practice Lab</title>
 <style>
 :root {
   --bg: #0f172a;
@@ -67,6 +67,78 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   background: var(--accent);
   color: white;
 }
+.zoom-connect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+.zoom-connect-chip.connected {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: var(--green);
+}
+.zoom-connect-chip.disabled {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: var(--text-dim);
+  font-style: italic;
+}
+.zoom-connect-chip.error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--red);
+}
+.zoom-install-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  min-width: 320px;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+  display: none;
+  font-size: 12px;
+  color: var(--text);
+}
+.zoom-install-list.open { display: block; }
+.zoom-install-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+.zoom-install-row:last-child { border-bottom: none; }
+.zoom-install-meta { line-height: 1.35; }
+.zoom-install-meta strong { color: var(--text); }
+.zoom-install-meta .small { color: var(--text-dim); font-size: 11px; }
+.zoom-install-disconnect {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: var(--red);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+.zoom-install-disconnect:hover { background: rgba(239, 68, 68, 0.12); }
+.idss-control { position: relative; }
 .controls {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -1224,7 +1296,7 @@ body.mode-manual .chat-log { max-height: 260px; }
     <div class="meta">IST 505 &middot; CGU Spring 2026</div>
     <div class="app-mode-toggle">
       <button class="app-mode-btn active" id="btn-mode-idss" onclick="setAppMode('idss')">Live Class</button>
-      <button class="app-mode-btn" id="btn-mode-sage" onclick="setAppMode('sage')">SAGE Evaluation</button>
+      <button class="app-mode-btn" id="btn-mode-sage" onclick="setAppMode('sage')">Practice Lab</button>
     </div>
     <div class="view-toggle">
       <button class="view-btn active" id="btn-dashboard" onclick="setView('dashboard')">Dashboard</button>
@@ -1235,7 +1307,10 @@ body.mode-manual .chat-log { max-height: 260px; }
 
 <div class="controls">
   <div class="control-group idss-control">
-    <button style="background:var(--green);border:none;color:#000;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:14px" onclick="startZoomLive()" title="Connect to live Zoom meeting data">Connect Zoom Live</button>
+    <button id="zoom-connect-btn" style="background:var(--blue);border:none;color:#fff;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:14px" onclick="connectZoomAccount()" title="Sign in with your Zoom account so live class events flow into the dashboard">🔌 Connect Zoom Account</button>
+    <span id="zoom-connect-chip" class="zoom-connect-chip" title="Zoom OAuth connection status — click to manage" onclick="toggleZoomInstallList()">Checking…</span>
+    <div id="zoom-install-list" class="zoom-install-list" role="dialog" aria-label="Connected Zoom accounts"></div>
+    <button style="background:var(--green);border:none;color:#000;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:14px" onclick="startZoomLive()" title="Open the live Zoom feed for an active meeting">📡 Monitor Live Class</button>
     <button class="secondary" onclick="exportZoomRun()" title="Download the active live Zoom receipt as JSON">Live Receipt (JSON)</button>
     <button class="secondary" onclick="exportCurrentSession()" title="Export the current live or simulated session as markdown">Session Summary</button>
     <button class="secondary" onclick="clearSimulation()" title="Reset the dashboard">Clear</button>
@@ -1323,15 +1398,15 @@ body.mode-manual .chat-log { max-height: 260px; }
       <option value="5000">Slower</option>
       <option value="10000">Very Slow</option>
     </select>
-    <button class="utility-control" style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Run the guided walkthrough and evaluation suite">▶ Evaluation Suite</button>
+    <button class="utility-control" style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Run the guided walkthrough and evaluation suite">▶ Practice + Evaluation Suite</button>
     <button class="secondary utility-control" onclick="document.getElementById('ppt-upload').click()" title="Upload slides (.pptx or .txt outline)">📎 Slides</button>
   </div>
   <input type="file" id="ppt-upload" accept=".pptx,.txt,.md" style="display:none" onchange="handleSlideUpload(event)">
 </div>
 <div id="mode-helper" class="mode-strip">
-  <div id="mode-title" class="mode-title">Simulated Instructor Mode</div>
+  <div id="mode-title" class="mode-title">SAGE Practice Lab</div>
   <div id="mode-description" class="mode-description">Simulated classroom plus simulated instructor responses.</div>
-  <div id="mode-boundary" class="mode-boundary">IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: ingestion + response logging</div>
+  <div id="mode-boundary" class="mode-boundary">IDSS under study &middot; SAGE practice simulation &middot; evaluation evidence trail</div>
 </div>
 
 <!-- Content Timeline Bar -->
@@ -1473,10 +1548,10 @@ body.mode-manual .chat-log { max-height: 260px; }
 
 <!-- ABOUT THIS ARTIFACT -->
 <details class="artifact-details">
-  <summary>Artifact context and scope: IDSS under study, SAGE as the simulation and evaluation environment.</summary>
+  <summary>Artifact context and scope: IDSS live support, SAGE as teacher practice and evaluation environment.</summary>
   <div class="artifact-details-body">
     <h2>About This Artifact</h2>
-    <p><strong>This dashboard is a working instructional decision-support prototype for synchronous online teaching.</strong> <strong>SAGE</strong> is the simulation and formative-evaluation environment: it generates observable-participation proxy signals from 15 agent students, routes them through the dashboard, and records instructor response behavior. SAGE does not measure engagement, attention, or learning outcomes.</p>
+    <p><strong>This dashboard is a working instructional decision-support prototype for synchronous online teaching.</strong> <strong>SAGE</strong> is the teacher practice and formative-evaluation environment: it lets instructors rehearse responses to simulated online-class situations, generates observable-participation proxy signals from 15 agent students, routes them through the dashboard, and records instructor response behavior. SAGE does not measure engagement, attention, or learning outcomes.</p>
     <p style="margin-top:8px"><strong>What it demonstrates:</strong> 15 student agents with distinct behavioral profiles generate observable participation signals in a simulated 45-minute class. The IDSS detects patterns such as participation decline, confusion clusters, equity imbalance, and low-observable-participation conditions, then generates prioritized advisory recommendations. In simulated and live Zoom modes, a human instructor can respond through the inline recommendation cards using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.</p>
     <p style="margin-top:8px"><strong>What is currently in scope:</strong> Pattern detection uses rule-based computed thresholds and recommendations are rule-based and advisory. University presets supply institutional enrollment context, and each run can produce different outcomes. Participation proxies are formula-driven in all modes; when an LLM backend is available it only enriches simulated student chat dialogue, and does not replace rule-based participation signals or recommendation logic. The instructor role can remain simulated or human-controlled.</p>
     <p style="margin-top:8px"><strong>Deployment-oriented extension:</strong> Zoom meeting events can be connected to the dashboard through webhooks as the intended live deployment path. Live mode ingests meeting signals, surfaces rule-based recommendation cards, and records instructor responses for the evaluation receipt; it does not programmatically actuate Zoom actions.</p>
@@ -1583,12 +1658,12 @@ function setAppMode(mode) {
   if (title) {
     title.textContent = appMode === 'idss'
       ? 'Instructional Decision Support Dashboard'
-      : 'SAGE Evaluation Environment';
+      : 'SAGE Practice Lab';
   }
   if (subtitle) {
     subtitle.textContent = appMode === 'idss'
       ? 'Live instructor decision support for synchronous online teaching'
-      : 'Simulation and formative evaluation controls for the IDSS artifact';
+      : 'Practice instructor responses in simulated online-class situations';
   }
   if (appMode === 'idss') setView('dashboard');
   updateInstructorToolbar();
@@ -1669,7 +1744,7 @@ function updateWorkflowHints() {
     modeDescription.textContent = liveMode
       ? 'Real-time Zoom signals are being interpreted while the instructor keeps decision authority.'
       : 'Connect a Zoom meeting to surface live participation signals and advisory recommendations.';
-    modeBoundary.innerHTML = 'IDSS under study &middot; Live class surface &middot; SAGE evaluation controls hidden';
+    modeBoundary.innerHTML = 'IDSS under study &middot; Live class surface &middot; SAGE practice lab hidden';
     if (recommendationTitle) recommendationTitle.textContent = 'Instructional Recommendations';
     if (overviewTitle) overviewTitle.textContent = 'Live Meeting Overview';
     if (studentTitle) studentTitle.textContent = 'Current Participants';
@@ -1686,7 +1761,7 @@ function updateWorkflowHints() {
     return;
   }
 
-  modeBoundary.innerHTML = 'IDSS under study &middot; SAGE simulation and formative evaluation environment';
+  modeBoundary.innerHTML = 'Teacher practice simulation &middot; Formative evaluation trail &middot; IDSS under study';
 
   if (liveMode) {
     modeTitle.textContent = 'Live Zoom Monitoring';
@@ -1706,8 +1781,8 @@ function updateWorkflowHints() {
   }
 
   if (isManualMode()) {
-    modeTitle.textContent = 'Instructor Decision Mode';
-    modeDescription.textContent = 'Simulated students are running while a human instructor responds through the decision queue.';
+    modeTitle.textContent = 'Instructor Practice Mode';
+    modeDescription.textContent = 'Simulated students are running while a human instructor rehearses responses through the decision queue.';
     if (recommendationTitle) recommendationTitle.textContent = 'Instructor Decision Queue';
     if (overviewTitle) overviewTitle.textContent = 'Class State Overview';
     if (studentTitle) studentTitle.textContent = 'Simulated Students';
@@ -1718,12 +1793,12 @@ function updateWorkflowHints() {
     if (giniLabel) giniLabel.textContent = 'Speaking Equity';
     if (giniMetricLabel) giniMetricLabel.textContent = 'Speaking Equity (Gini)';
     if (professorHelper) professorHelper.textContent = 'Chosen responses appear here after you act on recommendations in the decision queue, and they are reflected in the ongoing run.';
-    recHelper.textContent = 'Instructor decision flow: review the rule-based rationale, then choose ignore, acknowledge, accept, modify, or reject. Recommendations are candidate moves, not commands.';
+    recHelper.textContent = 'Practice flow: review the rule-based rationale, then choose ignore, acknowledge, accept, modify, or reject. Recommendations are candidate moves, not commands.';
     return;
   }
 
-  modeTitle.textContent = 'Simulated Instructor Mode';
-  modeDescription.textContent = 'Simulated classroom plus simulated instructor responses.';
+  modeTitle.textContent = 'Autonomous Practice Scenario';
+  modeDescription.textContent = 'Simulated classroom plus simulated instructor responses for walkthrough and comparison.';
   if (recommendationTitle) recommendationTitle.textContent = 'Instructional Recommendations';
   if (overviewTitle) overviewTitle.textContent = 'Class Participation Overview';
   if (studentTitle) studentTitle.textContent = 'Student Status';
@@ -5152,7 +5227,172 @@ window.addEventListener('DOMContentLoaded', () => {
   // running, reattach the poll loop without blowing away state. Silent on
   // failure so a plain page load with no prior session looks normal.
   attachActiveSessionIfAny().catch(() => {});
+  // Surface OAuth round-trip results from the URL, then load connection state.
+  handleZoomConnectRedirect();
+  refreshZoomConnectionStatus().catch(() => {});
+  // Dismiss the install dropdown on outside click.
+  document.addEventListener('click', (event) => {
+    const list = document.getElementById('zoom-install-list');
+    const chip = document.getElementById('zoom-connect-chip');
+    if (!list || !chip) return;
+    if (list.contains(event.target) || chip.contains(event.target)) return;
+    list.classList.remove('open');
+  });
 });
+
+// ============================================================
+// ZOOM OAUTH CONNECTION (multi-install)
+// ============================================================
+
+let _zoomConnectionState = null;
+
+function handleZoomConnectRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const connected = params.get('zoom_connected');
+  const error = params.get('zoom_connect_error');
+  if (!connected && !error) return;
+  if (connected) {
+    const installId = params.get('install_id');
+    const msg = installId
+      ? `Zoom account connected (install ${installId}). Live class events from this account will now flow into the dashboard.`
+      : 'Zoom account connected. Live class events will now flow into the dashboard.';
+    setTimeout(() => alert(`✅ ${msg}`), 50);
+  } else if (error) {
+    const desc = params.get('zoom_connect_error_desc') || '';
+    setTimeout(() => alert(`❌ Zoom OAuth failed: ${error}${desc ? '\n\n' + desc : ''}`), 50);
+  }
+  // Clean the URL so reloading doesn't replay the alert.
+  const cleanUrl = window.location.pathname + window.location.hash;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
+async function refreshZoomConnectionStatus() {
+  const chip = document.getElementById('zoom-connect-chip');
+  const connectBtn = document.getElementById('zoom-connect-btn');
+  if (!chip || !connectBtn) return;
+  try {
+    const resp = await fetch('/api/zoom/connection');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    _zoomConnectionState = data;
+    renderZoomConnectionChip(data);
+    renderZoomInstallList(data);
+  } catch (err) {
+    chip.className = 'zoom-connect-chip error';
+    chip.textContent = 'Connection check failed';
+    chip.title = String(err);
+    connectBtn.disabled = false;
+  }
+}
+
+function renderZoomConnectionChip(data) {
+  const chip = document.getElementById('zoom-connect-chip');
+  const connectBtn = document.getElementById('zoom-connect-btn');
+  if (!chip || !connectBtn) return;
+  if (!data.oauth_configured) {
+    chip.className = 'zoom-connect-chip disabled';
+    chip.textContent = 'OAuth not configured';
+    chip.title = data.note || 'Set ZOOM_OAUTH_CLIENT_ID, ZOOM_OAUTH_CLIENT_SECRET, ZOOM_OAUTH_REDIRECT_URL on the server.';
+    connectBtn.disabled = true;
+    connectBtn.style.opacity = '0.55';
+    connectBtn.style.cursor = 'not-allowed';
+    return;
+  }
+  connectBtn.disabled = false;
+  connectBtn.style.opacity = '';
+  connectBtn.style.cursor = '';
+  if (!data.connected || !data.installs || data.installs.length === 0) {
+    chip.className = 'zoom-connect-chip';
+    chip.textContent = 'Not connected';
+    chip.title = data.note || 'No Zoom accounts connected.';
+    return;
+  }
+  chip.className = 'zoom-connect-chip connected';
+  if (data.installs.length === 1) {
+    const ins = data.installs[0];
+    const label = ins.user_email || ins.display_name || ins.account_id || ins.install_id;
+    chip.textContent = `Connected: ${label}`;
+  } else {
+    chip.textContent = `${data.installs.length} accounts connected`;
+  }
+  chip.title = `${data.note || ''}\nClick to manage installs.`;
+}
+
+function renderZoomInstallList(data) {
+  const list = document.getElementById('zoom-install-list');
+  if (!list) return;
+  if (!data.oauth_configured) {
+    list.innerHTML = `<div class="zoom-install-meta small">${escapeHtmlAttr(data.note || 'OAuth not configured.')}</div>`;
+    return;
+  }
+  if (!data.installs || data.installs.length === 0) {
+    list.innerHTML = `
+      <div class="zoom-install-meta">
+        <strong>No Zoom accounts connected.</strong>
+        <div class="small">Click the Connect Zoom Account button to add one.</div>
+      </div>`;
+    return;
+  }
+  const rows = data.installs.map((ins) => {
+    const primary = ins.user_email || ins.display_name || ins.account_id || ins.install_id;
+    const secondary = [
+      ins.account_id ? `account ${ins.account_id}` : null,
+      ins.user_id ? `user ${ins.user_id}` : null,
+      ins.expired ? 'token expired' : (typeof ins.expires_in_sec === 'number' ? `expires in ${Math.floor(ins.expires_in_sec / 60)} min` : null),
+    ].filter(Boolean).join(' · ');
+    return `
+      <div class="zoom-install-row">
+        <div class="zoom-install-meta">
+          <strong>${escapeHtmlAttr(primary)}</strong>
+          <div class="small">${escapeHtmlAttr(secondary)}</div>
+        </div>
+        <button class="zoom-install-disconnect" onclick="disconnectZoomAccount('${escapeHtmlAttr(ins.install_id)}')">Disconnect</button>
+      </div>`;
+  }).join('');
+  list.innerHTML = `
+    <div class="zoom-install-meta small" style="margin-bottom:6px">${escapeHtmlAttr(data.note || '')}</div>
+    ${rows}
+    <div class="zoom-install-meta small" style="margin-top:8px">
+      Add another account → click <strong>🔌 Connect Zoom Account</strong>.
+    </div>`;
+}
+
+function toggleZoomInstallList() {
+  const list = document.getElementById('zoom-install-list');
+  if (!list) return;
+  list.classList.toggle('open');
+}
+
+function connectZoomAccount() {
+  if (_zoomConnectionState && _zoomConnectionState.oauth_configured === false) {
+    alert('Zoom OAuth is not configured on this server. Ask the deployment owner to set ZOOM_OAUTH_CLIENT_ID, ZOOM_OAUTH_CLIENT_SECRET, and ZOOM_OAUTH_REDIRECT_URL.');
+    return;
+  }
+  window.location.href = '/api/zoom/connect';
+}
+
+async function disconnectZoomAccount(installId) {
+  if (!installId) return;
+  if (!confirm(`Disconnect Zoom install "${installId}" from this server? This removes the local install record. Re-installing requires the teacher to authorize again.`)) {
+    return;
+  }
+  try {
+    const resp = await fetch('/api/zoom/disconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ install_id: installId }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      alert(`Disconnect failed: ${data.error || resp.status}`);
+      return;
+    }
+  } catch (err) {
+    alert(`Disconnect failed: ${err}`);
+    return;
+  }
+  await refreshZoomConnectionStatus();
+}
 
 async function attachActiveSessionIfAny() {
   const sid = getCurrentSessionId();
