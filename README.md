@@ -18,7 +18,7 @@ This project centers a working instructional decision-support prototype for sync
 
 - **Class artifact:** an instructional decision support system for synchronous online teaching
 - **Simulation and evaluation environment:** SAGE
-- **Deployment-oriented live path:** Zoom/webhook ingestion (current implementation still prototype-level)
+- **Deployment-oriented live path:** Zoom/webhook ingestion plus live instructor response logging
 
 ### Components
 

@@ -1267,7 +1267,7 @@ body.mode-manual .chat-log { max-height: 260px; }
 <div id="mode-helper" class="mode-strip">
   <div id="mode-title" class="mode-title">Simulated Instructor Mode</div>
   <div id="mode-description" class="mode-description">Simulated classroom plus simulated instructor responses.</div>
-  <div id="mode-boundary" class="mode-boundary">IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: prototype-level ingestion</div>
+  <div id="mode-boundary" class="mode-boundary">IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: ingestion + response logging</div>
 </div>
 
 <!-- Content Timeline Bar -->
@@ -1413,9 +1413,9 @@ body.mode-manual .chat-log { max-height: 260px; }
   <div class="artifact-details-body">
     <h2>About This Artifact</h2>
     <p><strong>This dashboard is a working instructional decision-support prototype for synchronous online teaching.</strong> <strong>SAGE</strong> is the simulation and formative-evaluation environment: it generates observable-participation proxy signals from 15 agent students, routes them through the dashboard, and records instructor response behavior. SAGE does not measure engagement, attention, or learning outcomes.</p>
-    <p style="margin-top:8px"><strong>What it demonstrates:</strong> 15 student agents with distinct behavioral profiles generate observable participation signals in a simulated 45-minute class. The IDSS detects patterns such as participation decline, confusion clusters, equity imbalance, and low-observable-participation conditions, then generates prioritized advisory recommendations. In one-player mode, a human instructor can respond through the inline recommendation cards using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.</p>
+    <p style="margin-top:8px"><strong>What it demonstrates:</strong> 15 student agents with distinct behavioral profiles generate observable participation signals in a simulated 45-minute class. The IDSS detects patterns such as participation decline, confusion clusters, equity imbalance, and low-observable-participation conditions, then generates prioritized advisory recommendations. In simulated and live Zoom modes, a human instructor can respond through the inline recommendation cards using a 5-category taxonomy: ignore, acknowledge, accept, modify, reject.</p>
     <p style="margin-top:8px"><strong>What is currently in scope:</strong> Pattern detection uses rule-based computed thresholds and recommendations are rule-based and advisory. University presets supply institutional enrollment context, and each run can produce different outcomes. Participation proxies are formula-driven in all modes; when an LLM backend is available it only enriches simulated student chat dialogue, and does not replace rule-based participation signals or recommendation logic. The instructor role can remain simulated or human-controlled.</p>
-    <p style="margin-top:8px"><strong>Deployment-oriented extension:</strong> Zoom meeting events can be connected to the dashboard through webhooks as the intended live deployment path. The current implementation is still prototype-level, so the main Phase 3 evidence lane remains the simulated classroom workflow.</p>
+    <p style="margin-top:8px"><strong>Deployment-oriented extension:</strong> Zoom meeting events can be connected to the dashboard through webhooks as the intended live deployment path. Live mode ingests meeting signals, surfaces rule-based recommendation cards, and records instructor responses for the evaluation receipt; it does not programmatically actuate Zoom actions.</p>
     <p style="margin-top:8px"><strong>Theoretical grounding:</strong> Endsley (1995) situation awareness, Sweller (1988) cognitive load, Hevner et al. (2004) DSR guidelines, Venable et al. (2016) FEDS evaluation framework, Van Leeuwen et al. (2019) advising-oriented learning analytics, and Wise & Jung (2019) instructional decision-making.</p>
   </div>
 </details>
@@ -1565,7 +1565,7 @@ function updateWorkflowHints() {
   const giniMetricLabel = document.getElementById('gini-metric-label');
   if (!modeHelper || !modeTitle || !modeDescription || !modeBoundary || !recHelper) return;
 
-  modeBoundary.innerHTML = 'IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: prototype-level ingestion';
+  modeBoundary.innerHTML = 'IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: ingestion + response logging';
 
   document.body.classList.toggle('mode-live', isZoomLiveMode());
   document.body.classList.toggle('mode-manual', !isZoomLiveMode() && isManualMode());
