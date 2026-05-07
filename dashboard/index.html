@@ -38,6 +38,35 @@ header {
 }
 header h1 { font-size: 18px; font-weight: 600; }
 header .meta { color: var(--text-dim); font-size: 13px; }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.app-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.28);
+}
+.app-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 5px;
+}
+.app-mode-btn.active {
+  background: var(--accent);
+  color: white;
+}
 .controls {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -107,6 +136,10 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 .controls .utility-control:hover,
 .controls .utility-select:hover {
   opacity: 1;
+}
+body.app-idss .sage-control,
+body.app-sage .idss-control {
+  display: none !important;
 }
 .grid {
   display: grid;
@@ -315,6 +348,26 @@ header .meta { color: var(--text-dim); font-size: 13px; }
 #chat-panel { grid-area: chat; }
 #instructor-toolbar { grid-area: toolbar; }
 #professor-panel { grid-area: professor; }
+body.app-idss .grid {
+  grid-template-columns: minmax(320px, 0.92fr) minmax(360px, 1.08fr);
+  grid-template-areas:
+    "overview recommendations"
+    "student recommendations"
+    "professor recommendations"
+    "chat recommendations";
+}
+body.app-idss #timeline-panel,
+body.app-idss #heatmap-panel,
+body.app-idss #metrics-panel,
+body.app-idss .artifact-details {
+  display: none !important;
+}
+body.app-idss .mode-strip {
+  border-color: rgba(34, 197, 94, 0.24);
+}
+body.app-idss .mode-title {
+  color: var(--green);
+}
 body.mode-live .grid {
   grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
   grid-template-areas:
@@ -1070,7 +1123,8 @@ body.mode-manual .chat-log { max-height: 260px; }
 
 @media (max-width: 1100px) {
   .grid,
-  body.mode-live .grid {
+  body.mode-live .grid,
+  body.app-idss .grid {
     grid-template-columns: 1fr;
     grid-template-areas:
       "overview"
@@ -1159,15 +1213,19 @@ body.mode-manual .chat-log { max-height: 260px; }
 .profile-stat .value { font-weight: 600; }
 </style>
 </head>
-<body>
+<body class="app-idss mode-live">
 
 <header>
   <div>
-    <h1>Instructional Decision Support Dashboard</h1>
-    <div class="meta">Evaluated through SAGE (Simulated Agent-Generated Evaluation)</div>
+    <h1 id="app-title">Instructional Decision Support Dashboard</h1>
+    <div class="meta" id="app-subtitle">Live instructor decision support for synchronous online teaching</div>
   </div>
-  <div style="display:flex;align-items:center;gap:16px">
+  <div class="header-actions">
     <div class="meta">IST 505 &middot; CGU Spring 2026</div>
+    <div class="app-mode-toggle">
+      <button class="app-mode-btn active" id="btn-mode-idss" onclick="setAppMode('idss')">Live Class</button>
+      <button class="app-mode-btn" id="btn-mode-sage" onclick="setAppMode('sage')">SAGE Evaluation</button>
+    </div>
     <div class="view-toggle">
       <button class="view-btn active" id="btn-dashboard" onclick="setView('dashboard')">Dashboard</button>
       <button class="view-btn" id="btn-classroom" onclick="setView('classroom')">Classroom</button>
@@ -1176,7 +1234,14 @@ body.mode-manual .chat-log { max-height: 260px; }
 </header>
 
 <div class="controls">
-  <div class="control-group primary-group">
+  <div class="control-group idss-control">
+    <button style="background:var(--green);border:none;color:#000;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:14px" onclick="startZoomLive()" title="Connect to live Zoom meeting data">Connect Zoom Live</button>
+    <button class="secondary" onclick="exportZoomRun()" title="Download the active live Zoom receipt as JSON">Live Receipt (JSON)</button>
+    <button class="secondary" onclick="exportCurrentSession()" title="Export the current live or simulated session as markdown">Session Summary</button>
+    <button class="secondary" onclick="clearSimulation()" title="Reset the dashboard">Clear</button>
+  </div>
+
+  <div class="control-group primary-group sage-control">
     <div class="control-field">
       <label>Scenario:</label>
       <select id="scenario-select">
@@ -1219,7 +1284,7 @@ body.mode-manual .chat-log { max-height: 260px; }
     </div>
   </div>
 
-  <div class="control-group">
+  <div class="control-group sage-control">
     <div class="control-field tight">
       <label>Duration:</label>
       <input type="number" id="duration-input" value="45" min="10" max="90" style="width:60px">
@@ -1239,9 +1304,8 @@ body.mode-manual .chat-log { max-height: 260px; }
     <button class="secondary" onclick="exportSageRun('csv')" title="Download the per-tick timeline as CSV for analysis">📊 Timeline (CSV)</button>
   </div>
 
-  <div class="control-group action-group">
+  <div class="control-group action-group sage-control">
     <button style="background:var(--accent);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" id="run-btn" onclick="runSmart()" title="Run simulation — uses AI students if server is running, otherwise rule-based">▶ Run</button>
-    <button style="background:var(--green);border:none;color:#000;font-weight:600;padding:6px 16px;border-radius:4px;cursor:pointer;font-size:13px" onclick="startZoomLive()" title="Connect to live Zoom meeting data">📡 Live</button>
   </div>
 
   <div class="control-status">
@@ -1249,7 +1313,7 @@ body.mode-manual .chat-log { max-height: 260px; }
     <span id="mode-badge" style="font-size:11px;padding:3px 8px;border-radius:10px;font-weight:600;background:var(--surface2);color:var(--text-dim)"></span>
   </div>
 
-  <div class="control-group utility-group">
+  <div class="control-group utility-group sage-control">
     <button class="secondary utility-control" id="voice-btn" onclick="toggleVoice()" title="Read student chat aloud">🔇</button>
     <button class="secondary utility-control" id="play-btn" onclick="togglePlayback()">Play</button>
     <select id="speed-select" class="utility-select">
@@ -1462,6 +1526,7 @@ let currentMinute = 0;
 let playbackInterval = null;
 let responseLog = [];
 let lastRenderedTopRecommendationKey = null;
+let appMode = 'idss';
 const SESSION_STORAGE_KEY = 'sageSessionId';
 const MANUAL_INTERVENTION_OPTIONS = ['breakout', 'poll', 'cold_call', 'pace_change', 'think_pair_share', 'clarification'];
 const RECOMMENDATION_ACTION_MAP = {
@@ -1501,6 +1566,33 @@ function apiUrl(path, opts = {}) {
 
 function isZoomLiveMode() {
   return sessionData?.metadata?.source_mode === 'zoom_live';
+}
+
+function isIdssMode() {
+  return appMode === 'idss';
+}
+
+function setAppMode(mode) {
+  appMode = mode === 'sage' ? 'sage' : 'idss';
+  document.body.classList.toggle('app-idss', appMode === 'idss');
+  document.body.classList.toggle('app-sage', appMode === 'sage');
+  document.getElementById('btn-mode-idss')?.classList.toggle('active', appMode === 'idss');
+  document.getElementById('btn-mode-sage')?.classList.toggle('active', appMode === 'sage');
+  const title = document.getElementById('app-title');
+  const subtitle = document.getElementById('app-subtitle');
+  if (title) {
+    title.textContent = appMode === 'idss'
+      ? 'Instructional Decision Support Dashboard'
+      : 'SAGE Evaluation Environment';
+  }
+  if (subtitle) {
+    subtitle.textContent = appMode === 'idss'
+      ? 'Live instructor decision support for synchronous online teaching'
+      : 'Simulation and formative evaluation controls for the IDSS artifact';
+  }
+  if (appMode === 'idss') setView('dashboard');
+  updateInstructorToolbar();
+  updateWorkflowHints();
 }
 
 function setModeBadgePending(text = 'Starting…') {
@@ -1565,13 +1657,38 @@ function updateWorkflowHints() {
   const giniMetricLabel = document.getElementById('gini-metric-label');
   if (!modeHelper || !modeTitle || !modeDescription || !modeBoundary || !recHelper) return;
 
-  modeBoundary.innerHTML = 'IDSS under study &middot; SAGE evaluation environment &middot; Zoom live path: ingestion + response logging';
+  const idssMode = isIdssMode();
+  const liveMode = isZoomLiveMode();
 
-  document.body.classList.toggle('mode-live', isZoomLiveMode());
-  document.body.classList.toggle('mode-manual', !isZoomLiveMode() && isManualMode());
-  document.body.classList.toggle('mode-simulated', !isZoomLiveMode() && !isManualMode());
+  document.body.classList.toggle('mode-live', liveMode || idssMode);
+  document.body.classList.toggle('mode-manual', !idssMode && !liveMode && isManualMode());
+  document.body.classList.toggle('mode-simulated', !idssMode && !liveMode && !isManualMode());
 
-  if (isZoomLiveMode()) {
+  if (idssMode) {
+    modeTitle.textContent = liveMode ? 'Live Zoom Monitoring' : 'Live Class Mode';
+    modeDescription.textContent = liveMode
+      ? 'Real-time Zoom signals are being interpreted while the instructor keeps decision authority.'
+      : 'Connect a Zoom meeting to surface live participation signals and advisory recommendations.';
+    modeBoundary.innerHTML = 'IDSS under study &middot; Live class surface &middot; SAGE evaluation controls hidden';
+    if (recommendationTitle) recommendationTitle.textContent = 'Instructional Recommendations';
+    if (overviewTitle) overviewTitle.textContent = 'Live Meeting Overview';
+    if (studentTitle) studentTitle.textContent = 'Current Participants';
+    if (timelineTitle) timelineTitle.textContent = 'Live Signal Timeline';
+    if (chatTitle) chatTitle.textContent = 'Live Chat Signals';
+    if (engagementLabel) engagementLabel.textContent = 'Live Participation';
+    if (speakersLabel) speakersLabel.textContent = 'Recently Active';
+    if (giniLabel) giniLabel.textContent = 'Chat Equity';
+    if (giniMetricLabel) giniMetricLabel.textContent = 'Chat Equity (Gini)';
+    if (professorHelper) professorHelper.textContent = 'Live signal trace and recorded instructor responses appear here once Zoom events arrive.';
+    recHelper.textContent = liveMode
+      ? 'Review the live evidence, then choose ignore, acknowledge, accept, modify, or reject. Recommendations are advisory, not automatic actions.'
+      : 'Start a Zoom meeting, click Connect Zoom Live, then use chat, reactions, and raised hands to produce observable participation signals.';
+    return;
+  }
+
+  modeBoundary.innerHTML = 'IDSS under study &middot; SAGE simulation and formative evaluation environment';
+
+  if (liveMode) {
     modeTitle.textContent = 'Live Zoom Monitoring';
     modeDescription.textContent = 'Real-time meeting signals are being interpreted in session through the current Zoom deployment prototype.';
     if (recommendationTitle) recommendationTitle.textContent = 'Live Recommendation Alerts';
@@ -1763,6 +1880,7 @@ function formatLiveEventTypeLabel(eventType) {
     hand_raise: 'Hand Raised',
     hand_lower: 'Hand Lowered',
     reaction: 'Reaction',
+    professor_action: 'Instructor Response',
     other: 'Other Event',
   };
   return labels[eventType] || formatPatternLabel(eventType);
@@ -1788,6 +1906,8 @@ function describeLiveEvent(event) {
       return `${name} lowered a hand in Zoom.`;
     case 'reaction':
       return `${name} sent a ${formatLiveSignalLabel(data.type || 'reaction').toLowerCase()} event.`;
+    case 'professor_action':
+      return `Instructor recorded ${escapeHtml(data.response_category || 'a response')}${data.intervention_type ? ` using ${escapeHtml(data.intervention_type)}` : ''}.`;
     default:
       return event?.raw_event_type
         ? `Zoom delivered ${event.raw_event_type}.`
@@ -1811,6 +1931,26 @@ function renderLiveDebugPanel(frame) {
   const signalCounts = debug.signal_counts || {};
   const signalCoverage = debug.signal_coverage || {};
   const recentEvents = debug.recent_events || [];
+  const instructorActions = sessionData?.professor?.actions || [];
+  const instructorResponseHtml = instructorActions.length
+    ? `<div class="live-debug-meta" style="margin-top:12px">
+        <strong>Instructor responses recorded:</strong>
+        <div class="live-event-list" style="margin-top:8px">
+          ${instructorActions.slice(-6).reverse().map(action => `
+            <div class="live-event-item">
+              <div class="live-event-top">
+                <span class="live-event-type">${escapeHtml(action.response_category || 'response')}</span>
+                <span class="live-event-minute">Min ${action.minute ?? '--'}</span>
+              </div>
+              <div class="live-event-body">${escapeHtml(action.recommendation || 'Instructor response logged for the live evaluation receipt.')}</div>
+              <div class="live-event-meta">
+                ${action.intervention_type ? `Action: ${escapeHtml(action.intervention_type)}` : 'Action: n/a'}${action.rationale ? ` · Rationale: ${escapeHtml(action.rationale)}` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`
+    : '';
 
   panel.style.display = 'block';
   title.textContent = 'Live Signal Trace';
@@ -1857,7 +1997,7 @@ function renderLiveDebugPanel(frame) {
     </div>
   `;
 
-  actions.innerHTML = recentEvents.length
+  const recentEventHtml = recentEvents.length
     ? `<div class="live-event-list">${recentEvents.slice().reverse().map(event => `
         <div class="live-event-item">
           <div class="live-event-top">
@@ -1871,6 +2011,7 @@ function renderLiveDebugPanel(frame) {
         </div>
       `).join('')}</div>`
     : '<div class="live-debug-meta">No Zoom webhook events have been recorded yet. Once a meeting starts and Zoom delivers events, the trace will appear here.</div>';
+  actions.innerHTML = recentEventHtml + instructorResponseHtml;
 }
 
 function getRecommendationFormValues(rec) {
@@ -3366,6 +3507,7 @@ function setModeBadge(mode) {
 }
 
 async function runSmart(configOverrides) {
+  setAppMode('sage');
   configOverrides = configOverrides || {};
   // Fresh Run starts with a clean instructor-decision log so manual responses
   // from a prior scenario don't render as if they were already answered.
@@ -4305,8 +4447,53 @@ async function exportSageRun(format) {
   }
 }
 
+async function exportZoomRun() {
+  try {
+    const resp = await fetch(apiUrl('/api/zoom/history', { includeSession: false }));
+    if (!resp.ok) {
+      const errBody = await resp.text();
+      alert(`Live receipt export failed (${resp.status}): ${errBody.slice(0, 200)}`);
+      return;
+    }
+    const history = await resp.json();
+    const hasLiveEvidence = history && (
+      history.active ||
+      (history.participants || []).length ||
+      (history.events || []).length ||
+      (history.chat_messages || []).length ||
+      (history.professor_actions || []).length
+    );
+    if (!hasLiveEvidence) {
+      alert('No live Zoom receipt is available yet. Start a Zoom meeting, connect Live Class mode, and generate at least one participant/chat/reaction signal first.');
+      return;
+    }
+    const payload = {
+      export_format_version: 1,
+      export_generated_at: new Date().toISOString(),
+      source_mode: 'zoom_live',
+      artifact: 'IDSS live class receipt',
+      note: 'Instructor decisions are recorded for evaluation; the prototype does not actuate actions inside Zoom.',
+      history,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `IDSS_Zoom_Live_Receipt_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(`Live receipt export failed: ${e.message || e}`);
+  }
+}
+
 function exportCurrentSession() {
-  if (!sessionData) { alert('No simulation data. Run a simulation first.'); return; }
+  if (!sessionData) {
+    alert(isIdssMode()
+      ? 'No live session data yet. Connect Zoom Live first.'
+      : 'No simulation data. Run a simulation first.');
+    return;
+  }
 
   const meta = sessionData.metadata || {};
   const timeline = sessionData.timeline || [];
@@ -4443,12 +4630,18 @@ function clearSimulation() {
   document.getElementById('patterns-area').innerHTML = '';
   document.getElementById('gini-value').textContent = '--';
   document.getElementById('gini-fill').style.width = '0%';
-  document.getElementById('student-grid').innerHTML = '<div class="loading">Click ▶ Run to start a simulation</div>';
+  document.getElementById('student-grid').innerHTML = isIdssMode()
+    ? '<div class="loading">Connect Zoom Live to see current participants</div>'
+    : '<div class="loading">Click ▶ Run to start a simulation</div>';
   document.getElementById('timeline-chart').innerHTML = '';
   document.getElementById('heatmap').innerHTML = '<div class="loading">No simulation data</div>';
   document.getElementById('heatmap').classList.add('loading');
-  document.getElementById('rec-list').innerHTML = '<div class="loading">No recommendations yet</div>';
-  document.getElementById('chat-log').innerHTML = '<div class="loading">No chat messages yet</div>';
+  document.getElementById('rec-list').innerHTML = isIdssMode()
+    ? '<div class="loading">Connect Zoom Live to start receiving advisory recommendations</div>'
+    : '<div class="loading">No recommendations yet</div>';
+  document.getElementById('chat-log').innerHTML = isIdssMode()
+    ? '<div class="loading">Live chat signals will appear after Zoom events arrive</div>'
+    : '<div class="loading">No chat messages yet</div>';
   document.getElementById('professor-panel').style.display = 'none';
   document.getElementById('timeline-end').textContent = 'Minute --';
   document.getElementById('play-btn').textContent = 'Play';
@@ -4467,6 +4660,7 @@ function clearSimulation() {
 let zoomPolling = null;
 
 async function startZoomLive() {
+  setAppMode('idss');
   const webhookUrl = `${window.location.origin}/api/zoom/webhook`;
   const debugSnapshot = await fetchZoomDebugSnapshot();
   const debug = debugSnapshot?.live_debug || null;
@@ -4497,7 +4691,7 @@ async function startZoomLive() {
         '2. Start a fresh Zoom meeting\n' +
         '3. Have at least one participant join\n' +
         '4. Click 📡 Live again\n\n' +
-        'For the main simulation workflow: click ▶ Run instead');
+        'For SAGE simulation: switch to SAGE Evaluation and click Run instead');
       return;
     }
   } catch(e) {
@@ -4518,7 +4712,7 @@ async function startZoomLive() {
       '3. Start the server with your webhook secret in the environment:\n' +
       '   ZOOM_WEBHOOK_SECRET=your_secret python3 server.py --port 8080\n\n' +
       '4. Start a fresh Zoom meeting, then click 📡 Live again.\n\n' +
-      'For the main demo: click ▶ Run (uses the simulated classroom workflow)\n' +
+      'For SAGE simulation: switch to SAGE Evaluation and click Run (uses the simulated classroom workflow)\n' +
       'For AI chat: GROQ_API_KEY=your_key python3 server.py --llm, then click ▶ Run');
     return;
   }
@@ -4645,7 +4839,7 @@ function updateInstructorToolbar() {
   const toolbar = document.getElementById('instructor-toolbar');
   const profSelect = document.getElementById('professor-select');
   // Show when professor is "none" (manual mode) and simulation has data
-  if (profSelect.value === 'none' && sessionData && sessionData.timeline.length > 0 && !isZoomLiveMode()) {
+  if (!isIdssMode() && profSelect.value === 'none' && sessionData && sessionData.timeline.length > 0 && !isZoomLiveMode()) {
     toolbar.style.display = 'block';
   } else {
     toolbar.style.display = 'none';
@@ -4952,6 +5146,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateInstructorToolbar();
     updateWorkflowHints();
   });
+  setAppMode('idss');
   clearSimulation();
   // Refresh-recovery: if a server session from before the reload is still
   // running, reattach the poll loop without blowing away state. Silent on
