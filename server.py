@@ -1073,34 +1073,56 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             })
 
         elif path == "/api/zoom/state":
-            # Live Zoom meeting state as dashboard frame.
-            # Return 200 with an explicit inactive payload so the dashboard can
-            # distinguish "no meeting yet" from a live-path failure.
-            frame = ZOOM.get_active_frame()
+            # Live Zoom meeting state as dashboard frame, optionally scoped to
+            # one OAuth install via ?install_id= so multi-tenant deployments
+            # show only the requesting teacher's meeting.
+            qs = parse_qs(parsed.query)
+            install_id = (qs.get("install_id") or [""])[0]
+            frame = ZOOM.get_active_frame(install_id=install_id)
             if frame:
+                if install_id:
+                    frame.setdefault("scoped_to_install", install_id)
                 self._json_response(frame)
             else:
+                reason = (
+                    f"No active Zoom meeting for install '{install_id}' on this server yet."
+                    if install_id else
+                    "No active Zoom meeting has been seen on this server yet."
+                )
                 self._json_response({
                     "active": False,
-                    "reason": "No active Zoom meeting has been seen on this server yet.",
+                    "reason": reason,
                     "students": [],
                     "patterns": [],
+                    "scoped_to_install": install_id or None,
                 })
 
         elif path == "/api/zoom/history":
-            history = ZOOM.get_active_history()
+            qs = parse_qs(parsed.query)
+            install_id = (qs.get("install_id") or [""])[0]
+            history = ZOOM.get_active_history(install_id=install_id)
             if history:
+                if install_id:
+                    history.setdefault("scoped_to_install", install_id)
                 self._json_response(history)
             else:
+                reason = (
+                    f"No active Zoom meeting history for install '{install_id}' is available."
+                    if install_id else
+                    "No active Zoom meeting history is available."
+                )
                 self._json_response({
                     "active": False,
-                    "reason": "No active Zoom meeting history is available.",
+                    "reason": reason,
                     "participants": [],
                     "chat_messages": [],
+                    "scoped_to_install": install_id or None,
                 })
 
         elif path == "/api/zoom/debug":
-            self._json_response(ZOOM.get_debug_snapshot())
+            qs = parse_qs(parsed.query)
+            install_id = (qs.get("install_id") or [""])[0]
+            self._json_response(ZOOM.get_debug_snapshot(install_id=install_id))
 
         elif path == "/api/zoom/connection":
             self._handle_zoom_connection()
@@ -1203,7 +1225,9 @@ class SAGEHandler(SimpleHTTPRequestHandler):
                 f"account_id={event_account_id or 'n/a'} "
                 f"install_id={install_id or 'unmatched'}"
             )
-            result = ZOOM.handle_event(data)
+            # Pass install_id through so the meeting state is tagged with its
+            # owning install for per-install dashboard scoping.
+            result = ZOOM.handle_event(data, install_id=install_id or "")
             if isinstance(result, dict):
                 if install_id:
                     result.setdefault("install_id", install_id)
@@ -1345,10 +1369,16 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         })
 
     def _handle_zoom_response(self, data):
-        """Record a manual instructor response against the active live Zoom meeting."""
-        frame = ZOOM.get_active_frame()
+        """Record a manual instructor response against the active live Zoom meeting,
+        optionally scoped to a specific OAuth install via data['install_id']."""
+        scope_install = (data or {}).get("install_id") or "" if isinstance(data, dict) else ""
+        frame = ZOOM.get_active_frame(install_id=scope_install)
         if not frame or frame.get("active") is False:
-            self._json_response({"error": "No active Zoom meeting"}, status=400)
+            err = (
+                f"No active Zoom meeting for install '{scope_install}'"
+                if scope_install else "No active Zoom meeting"
+            )
+            self._json_response({"error": err}, status=400)
             return
 
         category = data.get("response_category") or data.get("category")
@@ -1384,14 +1414,19 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             "response_source": "live_manual",
         }
 
-        result = ZOOM.record_active_professor_action(action)
+        result = ZOOM.record_active_professor_action(action, install_id=scope_install)
         if not result:
-            self._json_response({"error": "No active Zoom meeting"}, status=400)
+            err = (
+                f"No active Zoom meeting for install '{scope_install}'"
+                if scope_install else "No active Zoom meeting"
+            )
+            self._json_response({"error": err}, status=400)
             return
 
         self._json_response({
             "status": "response_logged",
             "meeting_id": result["meeting_id"],
+            "install_id": result.get("install_id"),
             "scheduled_minute": None,
             "action": result["action"],
             "note": "Decision recorded for the live evaluation receipt. Execute any chosen instructional move directly in Zoom.",

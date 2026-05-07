@@ -52,8 +52,10 @@ class ZoomParticipant:
 class ZoomMeetingState:
     """Tracks live state of a Zoom meeting mapped to SAGE dashboard format."""
 
-    def __init__(self, meeting_id: str):
+    def __init__(self, meeting_id: str, install_id: str = "", account_id: str = ""):
         self.meeting_id = meeting_id
+        self.install_id: str = install_id  # OAuth install owning this meeting
+        self.account_id: str = account_id  # Zoom account_id for fallback matching
         self.meeting_topic: str = ""
         self.host_email: str = ""
         self.started_at: float = time.time()
@@ -570,14 +572,22 @@ class ZoomWebhookHandler:
         ).hexdigest()
         return hmac.compare_digest(expected, signature)
 
-    def handle_event(self, event: Dict) -> Optional[Dict]:
-        """Process a Zoom webhook event, return dashboard update if applicable."""
+    def handle_event(self, event: Dict, install_id: str = "") -> Optional[Dict]:
+        """Process a Zoom webhook event, return dashboard update if applicable.
+
+        install_id (optional): identifier of the OAuth install this event was
+        matched to by the server. Stored on the ZoomMeetingState so per-install
+        runtime queries can scope the dashboard view to one teacher's meetings.
+        Pass "" when no install context is available (legacy webhook-only path);
+        all per-install queries fall back to the global behavior in that case.
+        """
         event_type = event.get("event", "")
-        payload = event.get("payload", {}).get("object", {})
+        outer_payload = event.get("payload", {}) or {}
+        payload = outer_payload.get("object", {}) or {}
 
         # Handle validation challenge (Zoom sends this on app setup)
         if event_type == "endpoint.url_validation":
-            plain_token = event.get("payload", {}).get("plainToken", "")
+            plain_token = outer_payload.get("plainToken", "")
             encrypted = hmac.new(
                 self.secret_token.encode(), plain_token.encode(), hashlib.sha256
             ).hexdigest()
@@ -587,6 +597,13 @@ class ZoomWebhookHandler:
         if not meeting_id:
             return None
 
+        # Capture account_id from payload for fallback install matching.
+        event_account_id = str(
+            outer_payload.get("account_id")
+            or payload.get("account_id")
+            or ""
+        )
+
         with self._lock:
             if event_type == "meeting.started":
                 meeting = self.meetings.get(meeting_id)
@@ -594,8 +611,17 @@ class ZoomWebhookHandler:
                     meeting.is_active = True
                     if not meeting.started_at:
                         meeting.started_at = time.time()
+                    # Update install/account on the existing record if we now know more.
+                    if install_id and not meeting.install_id:
+                        meeting.install_id = install_id
+                    if event_account_id and not meeting.account_id:
+                        meeting.account_id = event_account_id
                 else:
-                    self.meetings[meeting_id] = ZoomMeetingState(meeting_id)
+                    self.meetings[meeting_id] = ZoomMeetingState(
+                        meeting_id,
+                        install_id=install_id,
+                        account_id=event_account_id,
+                    )
                     meeting = self.meetings[meeting_id]
                 # Capture meeting context for the dashboard live header.
                 topic = payload.get("topic")
@@ -615,8 +641,18 @@ class ZoomWebhookHandler:
             meeting = self.meetings.get(meeting_id)
             if not meeting:
                 # Meeting started before server — create retroactively
-                meeting = ZoomMeetingState(meeting_id)
+                meeting = ZoomMeetingState(
+                    meeting_id,
+                    install_id=install_id,
+                    account_id=event_account_id,
+                )
                 self.meetings[meeting_id] = meeting
+            else:
+                # Late install/account info from a follow-on event.
+                if install_id and not meeting.install_id:
+                    meeting.install_id = install_id
+                if event_account_id and not meeting.account_id:
+                    meeting.account_id = event_account_id
 
             participant = payload.get("participant", {}) or {}
             user_id, name, email = self._extract_identity(payload, prefer_sender=False)
@@ -682,61 +718,85 @@ class ZoomWebhookHandler:
         )
         return ZoomMeetingState("tmp")._normalize_reaction_type(reaction)
 
-    def get_active_meeting(self) -> Optional[ZoomMeetingState]:
-        """Get the most recently active meeting."""
+    def list_install_ids(self) -> List[str]:
+        """Distinct install_ids that own at least one meeting."""
+        with self._lock:
+            seen = []
+            for meeting in self.meetings.values():
+                if meeting.install_id and meeting.install_id not in seen:
+                    seen.append(meeting.install_id)
+            return seen
+
+    def _matches_install(self, meeting: "ZoomMeetingState", install_id: str) -> bool:
+        """Per-install scoping match. Empty install_id means 'no scope, accept all'."""
+        if not install_id:
+            return True
+        return meeting.install_id == install_id
+
+    def get_active_meeting(self, install_id: str = "") -> Optional[ZoomMeetingState]:
+        """Get the most recently active meeting (optionally scoped by install_id)."""
         with self._lock:
             for mid in reversed(list(self.meetings.keys())):
-                if self.meetings[mid].is_active:
-                    return self.meetings[mid]
+                meeting = self.meetings[mid]
+                if meeting.is_active and self._matches_install(meeting, install_id):
+                    return meeting
         return None
 
-    def get_active_frame(self) -> Optional[Dict]:
+    def get_active_frame(self, install_id: str = "") -> Optional[Dict]:
         """Return a thread-safe snapshot of the most recently active meeting."""
         with self._lock:
             for mid in reversed(list(self.meetings.keys())):
                 meeting = self.meetings[mid]
-                if meeting.is_active:
+                if meeting.is_active and self._matches_install(meeting, install_id):
                     return meeting.refresh_live_state()
         return None
 
-    def get_active_history(self) -> Optional[Dict]:
+    def get_active_history(self, install_id: str = "") -> Optional[Dict]:
         """Return a thread-safe history snapshot for the most recently active meeting."""
         with self._lock:
             for mid in reversed(list(self.meetings.keys())):
                 meeting = self.meetings[mid]
-                if meeting.is_active:
+                if meeting.is_active and self._matches_install(meeting, install_id):
                     return self.get_meeting_history(mid)
         return None
 
-    def record_active_professor_action(self, action: Dict) -> Optional[Dict]:
+    def record_active_professor_action(self, action: Dict, install_id: str = "") -> Optional[Dict]:
         """Record an instructor response on the currently active Zoom meeting."""
         with self._lock:
             for mid in reversed(list(self.meetings.keys())):
                 meeting = self.meetings[mid]
-                if meeting.is_active:
+                if meeting.is_active and self._matches_install(meeting, install_id):
                     return {
                         "meeting_id": mid,
+                        "install_id": meeting.install_id or None,
                         "action": meeting.record_professor_action(action),
                     }
         return None
 
-    def get_debug_snapshot(self) -> Dict:
+    def get_debug_snapshot(self, install_id: str = "") -> Dict:
         """Return the latest available live-debug information for UI/debug use."""
         with self._lock:
             active = None
             latest = None
             for mid in reversed(list(self.meetings.keys())):
-                latest = self.meetings[mid]
-                if self.meetings[mid].is_active:
-                    active = self.meetings[mid]
+                meeting = self.meetings[mid]
+                if not self._matches_install(meeting, install_id):
+                    continue
+                latest = meeting
+                if meeting.is_active:
+                    active = meeting
                     break
             subject = active or latest
             return {
                 "webhook_configured": bool(self.secret_token),
-                "known_meetings": len(self.meetings),
+                "known_meetings": sum(
+                    1 for m in self.meetings.values()
+                    if self._matches_install(m, install_id)
+                ) if install_id else len(self.meetings),
                 "has_active_meeting": bool(active),
                 "active_meeting_id": active.meeting_id if active else None,
                 "latest_meeting_id": latest.meeting_id if latest else None,
+                "scoped_to_install": install_id or None,
                 "live_debug": subject.build_observability_snapshot() if subject else None,
             }
 

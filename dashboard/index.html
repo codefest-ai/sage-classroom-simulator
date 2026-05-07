@@ -138,7 +138,68 @@ header .meta { color: var(--text-dim); font-size: 13px; }
   font-weight: 600;
 }
 .zoom-install-disconnect:hover { background: rgba(239, 68, 68, 0.12); }
+.zoom-install-actions { display: flex; gap: 6px; align-items: center; }
+.zoom-install-use {
+  background: transparent;
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  color: var(--blue);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+.zoom-install-use:hover { background: rgba(59, 130, 246, 0.12); }
+.zoom-install-row.is-active {
+  background: rgba(34, 197, 94, 0.05);
+  border-radius: 4px;
+}
+.zoom-install-active-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.18);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
 .idss-control { position: relative; }
+.live-mode-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.28);
+}
+.live-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+.live-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.live-mode-btn:not(.active):hover {
+  color: var(--text);
+}
+/* Monitor Only mode — hide the recommendation panel and the manual instructor
+   toolbar, but keep the heatmap, participation overview, student grid, signal
+   trace, and live receipt export. Pattern detection still runs server-side
+   and is recorded in the receipt. */
+body.live-monitor-only #recommendation-panel,
+body.live-monitor-only #professor-panel {
+  display: none !important;
+}
 .controls {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -1311,6 +1372,10 @@ body.mode-manual .chat-log { max-height: 260px; }
     <span id="zoom-connect-chip" class="zoom-connect-chip" title="Zoom OAuth connection status — click to manage" onclick="toggleZoomInstallList()">Checking…</span>
     <div id="zoom-install-list" class="zoom-install-list" role="dialog" aria-label="Connected Zoom accounts"></div>
     <button style="background:var(--green);border:none;color:#000;font-weight:700;padding:7px 18px;border-radius:4px;cursor:pointer;font-size:14px" onclick="startZoomLive()" title="Open the live Zoom feed for an active meeting">📡 Monitor Live Class</button>
+    <div class="live-mode-toggle" role="group" aria-label="Live class mode" title="Decision Support shows recommendation cards with the 5-way taxonomy. Monitor Only hides the recommendation panel; pattern detection still runs and is logged to the receipt.">
+      <button id="btn-live-mode-decision" class="live-mode-btn active" onclick="setLiveClassMode('decision')">Decision Support</button>
+      <button id="btn-live-mode-monitor" class="live-mode-btn" onclick="setLiveClassMode('monitor')">Monitor Only</button>
+    </div>
     <button class="secondary" onclick="exportZoomRun()" title="Download the active live Zoom receipt as JSON">Live Receipt (JSON)</button>
     <button class="secondary" onclick="exportCurrentSession()" title="Export the current live or simulated session as markdown">Session Summary</button>
     <button class="secondary" onclick="clearSimulation()" title="Reset the dashboard">Clear</button>
@@ -1632,11 +1697,75 @@ function clearCurrentSessionId() {
 }
 
 function apiUrl(path, opts = {}) {
-  const { includeSession = true } = opts;
+  const { includeSession = true, includeInstall = false } = opts;
   const url = new URL(path, window.location.origin);
   const sessionId = includeSession ? getCurrentSessionId() : null;
   if (sessionId) url.searchParams.set('session_id', sessionId);
+  if (includeInstall) {
+    const installId = getSelectedInstallId();
+    if (installId) url.searchParams.set('install_id', installId);
+  }
   return url.toString();
+}
+
+// ============================================================
+// PER-INSTALL DASHBOARD SCOPING
+// ============================================================
+//
+// Single-install setups: auto-select the only install. Live API calls then
+// pass install_id, so the server returns only that teacher's meeting state.
+// Multi-install setups: a picker in the install dropdown lets the teacher
+// say "I am Alice", and the same scoping kicks in.
+// No installs / no oauth: no install_id is sent and the server falls back to
+// the global behavior (whichever meeting is most recently active).
+
+const SELECTED_INSTALL_KEY = 'ist505.selectedInstallId';
+let _selectedInstallId = null;
+
+function loadStoredSelectedInstall() {
+  try { return localStorage.getItem(SELECTED_INSTALL_KEY) || null; }
+  catch (_) { return null; }
+}
+
+function storeSelectedInstall(installId) {
+  try {
+    if (installId) localStorage.setItem(SELECTED_INSTALL_KEY, installId);
+    else localStorage.removeItem(SELECTED_INSTALL_KEY);
+  } catch (_) {}
+}
+
+function getSelectedInstallId() {
+  const installs = (_zoomConnectionState && _zoomConnectionState.installs) || [];
+  if (installs.length === 0) return null;
+  // Validate the cached selection still exists.
+  if (_selectedInstallId && installs.some(i => i.install_id === _selectedInstallId)) {
+    return _selectedInstallId;
+  }
+  // Auto-select the single install when there's only one.
+  if (installs.length === 1) {
+    _selectedInstallId = installs[0].install_id;
+    return _selectedInstallId;
+  }
+  // Otherwise honor stored preference if it's still valid.
+  const stored = loadStoredSelectedInstall();
+  if (stored && installs.some(i => i.install_id === stored)) {
+    _selectedInstallId = stored;
+    return _selectedInstallId;
+  }
+  // Default to the first install in the list.
+  _selectedInstallId = installs[0].install_id;
+  return _selectedInstallId;
+}
+
+function setSelectedInstallId(installId) {
+  _selectedInstallId = installId || null;
+  storeSelectedInstall(_selectedInstallId);
+  // Re-render the install list so the active row is highlighted, and the
+  // chip text updates if the user just switched scoping context.
+  if (_zoomConnectionState) {
+    renderZoomConnectionChip(_zoomConnectionState);
+    renderZoomInstallList(_zoomConnectionState);
+  }
 }
 
 function isZoomLiveMode() {
@@ -1925,9 +2054,10 @@ function isLocalOrigin() {
   return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
 }
 
+// Updated to scope to the selected OAuth install when one is connected.
 async function fetchZoomDebugSnapshot() {
   try {
-    const resp = await fetch(apiUrl('/api/zoom/debug', { includeSession: false }));
+    const resp = await fetch(apiUrl('/api/zoom/debug', { includeSession: false, includeInstall: true }));
     if (!resp.ok) return null;
     return await resp.json();
   } catch (e) {
@@ -3142,6 +3272,7 @@ function logResponse(recIndex, category) {
     recommended_action: rec.action,
     recommendation: rec,
     rationale: action.rationale,
+    install_id: getSelectedInstallId() || undefined,
   };
 
   if (liveMode) {
@@ -4524,7 +4655,7 @@ async function exportSageRun(format) {
 
 async function exportZoomRun() {
   try {
-    const resp = await fetch(apiUrl('/api/zoom/history', { includeSession: false }));
+    const resp = await fetch(apiUrl('/api/zoom/history', { includeSession: false, includeInstall: true }));
     if (!resp.ok) {
       const errBody = await resp.text();
       alert(`Live receipt export failed (${resp.status}): ${errBody.slice(0, 200)}`);
@@ -4746,7 +4877,7 @@ async function startZoomLive() {
   // Check if server has an active Zoom meeting BEFORE wiping the current sim.
   // A mis-clicked Live with no Zoom meeting must not erase a running demo.
   try {
-    const resp = await fetch(apiUrl('/api/zoom/state', { includeSession: false }));
+    const resp = await fetch(apiUrl('/api/zoom/state', { includeSession: false, includeInstall: true }));
     const peek = resp.ok ? await resp.clone().json().catch(() => null) : null;
     const hasActiveMeeting = resp.ok && peek && peek.active !== false;
     if (!hasActiveMeeting) {
@@ -4806,8 +4937,8 @@ async function startZoomLive() {
   zoomPolling = setInterval(async () => {
     try {
       const [stateResp, historyResp] = await Promise.all([
-        fetch(apiUrl('/api/zoom/state', { includeSession: false })),
-        fetch(apiUrl('/api/zoom/history', { includeSession: false })),
+        fetch(apiUrl('/api/zoom/state', { includeSession: false, includeInstall: true })),
+        fetch(apiUrl('/api/zoom/history', { includeSession: false, includeInstall: true })),
       ]);
 
       if (!stateResp.ok) {
@@ -5230,6 +5361,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // Surface OAuth round-trip results from the URL, then load connection state.
   handleZoomConnectRedirect();
   refreshZoomConnectionStatus().catch(() => {});
+  // Restore the teacher's preferred live-class mode (Decision Support / Monitor Only).
+  setLiveClassMode(getStoredLiveClassMode());
   // Dismiss the install dropdown on outside click.
   document.addEventListener('click', (event) => {
     const list = document.getElementById('zoom-install-list');
@@ -5239,6 +5372,35 @@ window.addEventListener('DOMContentLoaded', () => {
     list.classList.remove('open');
   });
 });
+
+// ============================================================
+// LIVE CLASS MODE — Decision Support vs Monitor Only
+// ============================================================
+//
+// Monitor Only hides the recommendation panel + manual instructor toolbar.
+// Pattern detection still runs server-side and is logged to the live
+// evaluation receipt, so flipping back to Decision Support mid-class
+// restores the full decision UI without losing prior pattern history.
+
+const LIVE_CLASS_MODE_KEY = 'ist505.liveClassMode';
+let liveClassMode = 'decision';
+
+function getStoredLiveClassMode() {
+  try {
+    const v = localStorage.getItem(LIVE_CLASS_MODE_KEY);
+    return v === 'monitor' ? 'monitor' : 'decision';
+  } catch (_) { return 'decision'; }
+}
+
+function setLiveClassMode(mode) {
+  liveClassMode = (mode === 'monitor') ? 'monitor' : 'decision';
+  try { localStorage.setItem(LIVE_CLASS_MODE_KEY, liveClassMode); } catch (_) {}
+  document.body.classList.toggle('live-monitor-only', liveClassMode === 'monitor');
+  const decisionBtn = document.getElementById('btn-live-mode-decision');
+  const monitorBtn = document.getElementById('btn-live-mode-monitor');
+  if (decisionBtn) decisionBtn.classList.toggle('active', liveClassMode === 'decision');
+  if (monitorBtn) monitorBtn.classList.toggle('active', liveClassMode === 'monitor');
+}
 
 // ============================================================
 // ZOOM OAUTH CONNECTION (multi-install)
@@ -5333,6 +5495,8 @@ function renderZoomInstallList(data) {
       </div>`;
     return;
   }
+  const selected = getSelectedInstallId();
+  const multiInstall = data.installs.length > 1;
   const rows = data.installs.map((ins) => {
     const primary = ins.user_email || ins.display_name || ins.account_id || ins.install_id;
     const secondary = [
@@ -5340,19 +5504,31 @@ function renderZoomInstallList(data) {
       ins.user_id ? `user ${ins.user_id}` : null,
       ins.expired ? 'token expired' : (typeof ins.expires_in_sec === 'number' ? `expires in ${Math.floor(ins.expires_in_sec / 60)} min` : null),
     ].filter(Boolean).join(' · ');
+    const isSelected = ins.install_id === selected;
+    const selectedBadge = isSelected ? '<span class="zoom-install-active-badge">Active view</span>' : '';
+    const useBtn = (multiInstall && !isSelected)
+      ? `<button class="zoom-install-use" onclick="setSelectedInstallId('${escapeHtmlAttr(ins.install_id)}'); document.getElementById('zoom-install-list').classList.remove('open');">Switch to</button>`
+      : '';
     return `
-      <div class="zoom-install-row">
+      <div class="zoom-install-row ${isSelected ? 'is-active' : ''}">
         <div class="zoom-install-meta">
-          <strong>${escapeHtmlAttr(primary)}</strong>
+          <strong>${escapeHtmlAttr(primary)}</strong> ${selectedBadge}
           <div class="small">${escapeHtmlAttr(secondary)}</div>
         </div>
-        <button class="zoom-install-disconnect" onclick="disconnectZoomAccount('${escapeHtmlAttr(ins.install_id)}')">Disconnect</button>
+        <div class="zoom-install-actions">
+          ${useBtn}
+          <button class="zoom-install-disconnect" onclick="disconnectZoomAccount('${escapeHtmlAttr(ins.install_id)}')">Disconnect</button>
+        </div>
       </div>`;
   }).join('');
+  const scopingNote = multiInstall
+    ? '<div class="zoom-install-meta small" style="margin-top:8px">Live view, recommendations, and decision logging are scoped to the active install. Switch above to view another teacher.</div>'
+    : '<div class="zoom-install-meta small" style="margin-top:8px">Live view, recommendations, and decision logging are scoped to this install.</div>';
   list.innerHTML = `
     <div class="zoom-install-meta small" style="margin-bottom:6px">${escapeHtmlAttr(data.note || '')}</div>
     ${rows}
-    <div class="zoom-install-meta small" style="margin-top:8px">
+    ${scopingNote}
+    <div class="zoom-install-meta small" style="margin-top:6px">
       Add another account → click <strong>🔌 Connect Zoom Account</strong>.
     </div>`;
 }
