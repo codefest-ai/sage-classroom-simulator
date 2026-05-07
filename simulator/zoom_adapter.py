@@ -21,7 +21,7 @@ import hmac
 import json
 import time
 import threading
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
 
@@ -555,12 +555,38 @@ class ZoomMeetingState:
 
 
 class ZoomWebhookHandler:
-    """Processes incoming Zoom webhook events."""
+    """Processes incoming Zoom webhook events.
+
+    Multi-install storage: meetings are keyed by (install_id, meeting_id) so
+    two distinct OAuth installs can host meetings whose Zoom IDs collide
+    without overwriting each other. install_id may be the empty string for
+    legacy webhook-only events that arrive before any OAuth install has
+    been matched; those are still tracked but won't appear in any
+    install-scoped read.
+    """
 
     def __init__(self, secret_token: str = ""):
         self.secret_token = secret_token
-        self.meetings: Dict[str, ZoomMeetingState] = {}
+        self.meetings: Dict[Tuple[str, str], ZoomMeetingState] = {}
         self._lock = threading.RLock()
+
+    @staticmethod
+    def _meeting_key(install_id: str, meeting_id: str) -> Tuple[str, str]:
+        return (install_id or "", meeting_id)
+
+    def _find_meeting(self, install_id: str, meeting_id: str) -> Optional[ZoomMeetingState]:
+        """Look up a meeting by composite key, falling back to a meeting_id-only
+        scan when install_id is empty (legacy callers, get_meeting_history)."""
+        direct = self.meetings.get(self._meeting_key(install_id, meeting_id))
+        if direct:
+            return direct
+        if not install_id:
+            # Empty install_id means caller doesn't know — return any meeting
+            # with this meeting_id.
+            for (_iid, mid), meeting in self.meetings.items():
+                if mid == meeting_id:
+                    return meeting
+        return None
 
     def verify_webhook(self, payload: bytes, signature: str, timestamp: str) -> bool:
         """Verify Zoom webhook signature."""
@@ -604,9 +630,10 @@ class ZoomWebhookHandler:
             or ""
         )
 
+        key = self._meeting_key(install_id, meeting_id)
         with self._lock:
             if event_type == "meeting.started":
-                meeting = self.meetings.get(meeting_id)
+                meeting = self.meetings.get(key) or self._find_meeting(install_id, meeting_id)
                 if meeting:
                     meeting.is_active = True
                     if not meeting.started_at:
@@ -614,15 +641,19 @@ class ZoomWebhookHandler:
                     # Update install/account on the existing record if we now know more.
                     if install_id and not meeting.install_id:
                         meeting.install_id = install_id
+                        # Promote the key now that we know the install.
+                        old_key = self._meeting_key("", meeting_id)
+                        if old_key in self.meetings and old_key != key:
+                            self.meetings[key] = self.meetings.pop(old_key)
                     if event_account_id and not meeting.account_id:
                         meeting.account_id = event_account_id
                 else:
-                    self.meetings[meeting_id] = ZoomMeetingState(
+                    self.meetings[key] = ZoomMeetingState(
                         meeting_id,
                         install_id=install_id,
                         account_id=event_account_id,
                     )
-                    meeting = self.meetings[meeting_id]
+                    meeting = self.meetings[key]
                 # Capture meeting context for the dashboard live header.
                 topic = payload.get("topic")
                 if topic:
@@ -631,14 +662,15 @@ class ZoomWebhookHandler:
                 if host_email:
                     meeting.host_email = str(host_email)
                 meeting.record_meeting_started()
-                return {"status": "meeting_started", "meeting_id": meeting_id}
+                return {"status": "meeting_started", "meeting_id": meeting_id, "install_id": install_id or None}
 
             if event_type == "meeting.ended":
-                if meeting_id in self.meetings:
-                    self.meetings[meeting_id].record_meeting_ended()
-                return {"status": "meeting_ended", "meeting_id": meeting_id}
+                meeting = self._find_meeting(install_id, meeting_id)
+                if meeting:
+                    meeting.record_meeting_ended()
+                return {"status": "meeting_ended", "meeting_id": meeting_id, "install_id": install_id or None}
 
-            meeting = self.meetings.get(meeting_id)
+            meeting = self._find_meeting(install_id, meeting_id)
             if not meeting:
                 # Meeting started before server — create retroactively
                 meeting = ZoomMeetingState(
@@ -646,11 +678,15 @@ class ZoomWebhookHandler:
                     install_id=install_id,
                     account_id=event_account_id,
                 )
-                self.meetings[meeting_id] = meeting
+                self.meetings[key] = meeting
             else:
                 # Late install/account info from a follow-on event.
                 if install_id and not meeting.install_id:
                     meeting.install_id = install_id
+                    # Promote the key now that we know the install.
+                    old_key = self._meeting_key("", meeting_id)
+                    if old_key in self.meetings and old_key != key:
+                        self.meetings[key] = self.meetings.pop(old_key)
                 if event_account_id and not meeting.account_id:
                     meeting.account_id = event_account_id
 
@@ -722,9 +758,10 @@ class ZoomWebhookHandler:
         """Distinct install_ids that own at least one meeting."""
         with self._lock:
             seen = []
-            for meeting in self.meetings.values():
-                if meeting.install_id and meeting.install_id not in seen:
-                    seen.append(meeting.install_id)
+            for (iid, _mid), meeting in self.meetings.items():
+                key_iid = iid or meeting.install_id or ""
+                if key_iid and key_iid not in seen:
+                    seen.append(key_iid)
             return seen
 
     def _matches_install(self, meeting: "ZoomMeetingState", install_id: str) -> bool:
@@ -736,8 +773,8 @@ class ZoomWebhookHandler:
     def get_active_meeting(self, install_id: str = "") -> Optional[ZoomMeetingState]:
         """Get the most recently active meeting (optionally scoped by install_id)."""
         with self._lock:
-            for mid in reversed(list(self.meetings.keys())):
-                meeting = self.meetings[mid]
+            for key in reversed(list(self.meetings.keys())):
+                meeting = self.meetings[key]
                 if meeting.is_active and self._matches_install(meeting, install_id):
                     return meeting
         return None
@@ -745,8 +782,8 @@ class ZoomWebhookHandler:
     def get_active_frame(self, install_id: str = "") -> Optional[Dict]:
         """Return a thread-safe snapshot of the most recently active meeting."""
         with self._lock:
-            for mid in reversed(list(self.meetings.keys())):
-                meeting = self.meetings[mid]
+            for key in reversed(list(self.meetings.keys())):
+                meeting = self.meetings[key]
                 if meeting.is_active and self._matches_install(meeting, install_id):
                     return meeting.refresh_live_state()
         return None
@@ -754,20 +791,20 @@ class ZoomWebhookHandler:
     def get_active_history(self, install_id: str = "") -> Optional[Dict]:
         """Return a thread-safe history snapshot for the most recently active meeting."""
         with self._lock:
-            for mid in reversed(list(self.meetings.keys())):
-                meeting = self.meetings[mid]
+            for key in reversed(list(self.meetings.keys())):
+                meeting = self.meetings[key]
                 if meeting.is_active and self._matches_install(meeting, install_id):
-                    return self.get_meeting_history(mid)
+                    return self.get_meeting_history(meeting.meeting_id, install_id=meeting.install_id)
         return None
 
     def record_active_professor_action(self, action: Dict, install_id: str = "") -> Optional[Dict]:
         """Record an instructor response on the currently active Zoom meeting."""
         with self._lock:
-            for mid in reversed(list(self.meetings.keys())):
-                meeting = self.meetings[mid]
+            for key in reversed(list(self.meetings.keys())):
+                meeting = self.meetings[key]
                 if meeting.is_active and self._matches_install(meeting, install_id):
                     return {
-                        "meeting_id": mid,
+                        "meeting_id": meeting.meeting_id,
                         "install_id": meeting.install_id or None,
                         "action": meeting.record_professor_action(action),
                     }
@@ -778,8 +815,8 @@ class ZoomWebhookHandler:
         with self._lock:
             active = None
             latest = None
-            for mid in reversed(list(self.meetings.keys())):
-                meeting = self.meetings[mid]
+            for key in reversed(list(self.meetings.keys())):
+                meeting = self.meetings[key]
                 if not self._matches_install(meeting, install_id):
                     continue
                 latest = meeting
@@ -800,14 +837,15 @@ class ZoomWebhookHandler:
                 "live_debug": subject.build_observability_snapshot() if subject else None,
             }
 
-    def get_meeting_history(self, meeting_id: str) -> Dict:
+    def get_meeting_history(self, meeting_id: str, install_id: str = "") -> Dict:
         """Get full history for a meeting (for export)."""
         with self._lock:
-            meeting = self.meetings.get(meeting_id)
+            meeting = self._find_meeting(install_id, meeting_id)
             if not meeting:
                 return {}
             return {
                 "meeting_id": meeting_id,
+                "install_id": meeting.install_id or None,
                 "duration_minutes": meeting.elapsed_minutes,
                 "participants": [
                     {

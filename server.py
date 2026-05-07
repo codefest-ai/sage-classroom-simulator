@@ -708,6 +708,24 @@ def _oauth_install_descriptor(install_id, install):
     }
 
 
+def _oauth_storage_warning(store_dir):
+    """If installs are persisted under /tmp, surface a warning. Render free
+    tier wipes /tmp on redeploy, so installs disappear and every teacher has
+    to OAuth-reconnect after each push. Production deployments should mount
+    a persistent disk and point ZOOM_OAUTH_STORE_DIR at it.
+    """
+    if not store_dir:
+        return None
+    normalized = os.path.abspath(store_dir)
+    if normalized.startswith("/tmp/") or normalized == "/tmp":
+        return (
+            "Installs are stored under /tmp, which is wiped on every server "
+            "redeploy. Mount a persistent disk and set ZOOM_OAUTH_STORE_DIR "
+            "to that path before relying on this in production."
+        )
+    return None
+
+
 def _oauth_connection_payload(cfg, webhook_configured):
     """Build the JSON payload for /api/zoom/connection (multi-install)."""
     if cfg is None:
@@ -740,7 +758,7 @@ def _oauth_connection_payload(cfg, webhook_configured):
             f"{len(installs)} Zoom accounts connected. Webhook events are "
             "routed to the matching install by Zoom account_id."
         )
-    return {
+    payload = {
         "oauth_configured": True,
         "connected": bool(installs),
         "installs": installs,
@@ -750,6 +768,10 @@ def _oauth_connection_payload(cfg, webhook_configured):
         "store_dir": cfg["store_dir"],
         "note": note,
     }
+    storage_warning = _oauth_storage_warning(cfg["store_dir"])
+    if storage_warning:
+        payload["storage_warning"] = storage_warning
+    return payload
 
 
 # ============================================================

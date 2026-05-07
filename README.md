@@ -89,16 +89,19 @@ open dashboard/index.html
 
 Use the server-backed surface for the main dashboard workflow, sessionized runs, and the optional Zoom/webhook extension.
 
-### Recommended Live Demo Path
+### Recommended Live Deployment Path
 
-For classroom demos, prefer a hosted endpoint over a temporary localhost tunnel:
+For real classroom use, the dashboard is a hosted web app teachers OAuth-install. Single Zoom **General App** in Marketplace handles both OAuth and Event Subscriptions; teachers click **🔌 Connect Zoom Account** in the dashboard, authorize their Zoom account, and the same app's webhook delivers their meeting events.
 
 1. Deploy the app with `render.yaml`
-2. Configure `ZOOM_WEBHOOK_SECRET` in Render
-3. Point the Zoom webhook app at the hosted `/api/zoom/webhook`
-4. Use `/api/zoom/debug`, `/api/zoom/state`, and `/api/zoom/history` to verify what Zoom is actually sending
+2. Create a Zoom General App (Marketplace → Develop → Build App → General App)
+3. Add scopes (`user:read:user`, `user:read:email`) and an Event Subscription pointed at the hosted `/api/zoom/webhook` with the eight `meeting.*` events
+4. Set on Render: `ZOOM_OAUTH_CLIENT_ID`, `ZOOM_OAUTH_CLIENT_SECRET`, `ZOOM_OAUTH_REDIRECT_URL`, `ZOOM_OAUTH_STORE_DIR`, `ZOOM_WEBHOOK_SECRET`
+5. Verify with `/api/health`, `/api/zoom/connection`, `/api/zoom/debug`, `/api/zoom/state` — see `docs/ZOOM_LIVE_DEMO_RUNBOOK.md` for the step-by-step.
 
-This keeps the real-time Zoom path aligned with the intended deployment context while SAGE remains the primary simulation and evaluation environment.
+The Webhook Only Marketplace app the project briefly used during development is now redundant. Once the General App's webhook is validated and you confirm events arrive (`/api/zoom/debug` shows `known_meetings > 0` from a real meeting), disable the Webhook Only app's subscription so events don't double-deliver.
+
+SAGE Practice Lab remains the simulation and formative-evaluation environment, available regardless of Zoom connection.
 
 Current recommendation logic is rule-based and advisory. The system maps detected patterns such as observable participation decline, participation concentration, confusion signals, and low observable activity to candidate instructional moves. LLMs may enrich simulated dialogue, but they do not replace the core recommendation rules. Camera state is treated as non-scoring context rather than a core engagement signal because camera use can reflect bandwidth, privacy, culture, disability, and access constraints.
 

@@ -2,9 +2,11 @@
 
 **Purpose:** Step-by-step path for connecting a real Zoom meeting to the IDSS dashboard, so the live ingestion path can be exercised against an actual meeting (rather than only the local fixture).
 
-**Status as of 2026-05-07:** Webhook endpoint exists (`/api/zoom/webhook`), HMAC-SHA256 signature verification implemented in `simulator/zoom_adapter.py`, OAuth multi-install layer added (`/api/zoom/connection`, `/api/zoom/connect`, `/api/zoom/oauth/callback`, `/api/zoom/disconnect`, `/api/zoom/oauth/refresh`), Zoom Marketplace App registered, fixture-tested end-to-end. Hosted at `https://sage-simulator-ulsd.onrender.com/`.
+**Status as of 2026-05-07:** Webhook endpoint exists (`/api/zoom/webhook`), HMAC-SHA256 signature verification implemented in `simulator/zoom_adapter.py`, OAuth multi-install layer (`/api/zoom/connection`, `/api/zoom/connect`, `/api/zoom/oauth/callback`, `/api/zoom/disconnect`, `/api/zoom/oauth/refresh`) and per-install runtime scoping live, Zoom General App registered with both OAuth and Event Subscriptions on the same app. Hosted at `https://sage-simulator-ulsd.onrender.com/`.
 
-**The intended teacher-facing flow** is now OAuth-first: a teacher (or institutional admin) opens the dashboard, clicks **🔌 Connect Zoom Account**, completes Zoom's authorization, and their install is persisted under `ZOOM_OAUTH_STORE_DIR`. Multiple Zoom accounts can be connected to the same dashboard instance — webhook events are routed to the matching install by `account_id` from the event payload. The Webhook-Only path below remains supported for single-account deployments and for app-validation runs.
+**The product architecture is a single Zoom General App** that does both OAuth (each teacher OAuth-installs to authorize their Zoom account) and Event Subscriptions (the same app's webhook delivers their meeting events). Multiple Zoom accounts can be connected to the same dashboard instance — webhook events are routed to the matching install by `account_id` from the event payload, and live state, history, recommendations, and decision logging are scoped per install.
+
+> **Migration note:** the project briefly used a separate "Webhook Only" Marketplace app to deliver events while OAuth was being added. The General App now subsumes both responsibilities. Once you've validated the General App's webhook against the hosted URL and confirmed events arrive (`/api/zoom/debug` shows `known_meetings > 0` after a real meeting), disable the legacy Webhook Only app's event subscription so events don't double-deliver.
 
 This runbook is the rehearsal path. Run through it before promising a live demo to the group.
 
@@ -13,7 +15,7 @@ This runbook is the rehearsal path. Run through it before promising a live demo 
 ## Pre-flight
 
 ### Prerequisites
-- Zoom Marketplace App registered. For the OAuth-first teacher flow this should be an OAuth (User-managed or Account-level) app. The legacy "Webhook Only" app type still works for single-account webhook-only operation.
+- Zoom Marketplace **General App** (a.k.a. OAuth app) registered. User-managed unless you specifically need an institutional admin install. This single app handles both OAuth and Event Subscriptions.
 - Zoom OAuth Client ID, Client Secret, and Redirect URL from the Marketplace App console (OAuth section).
 - Zoom Webhook Secret Token from the Event Subscriptions section of the same app.
 - Render deployment URL (or any public HTTPS endpoint that points at `server.py`).
@@ -69,12 +71,21 @@ If fixture path doesn't work locally, **stop here** — fix that before attempti
 
 ---
 
-## Step 1 — Configure the Zoom Marketplace App
+## Step 1 — Configure the Zoom General App (single primary app)
 
-1. Go to [Zoom App Marketplace](https://marketplace.zoom.us/develop/apps) and open the IDSS app.
-2. Under **Feature → Event Subscriptions**, set:
+This is the only Zoom app the deployed product needs. It handles **both** OAuth (teacher Connect Zoom Account) and Event Subscriptions (live meeting webhooks). The legacy Webhook Only app the project used during early exploration is now redundant and should be retired once the General App is validated.
+
+1. Go to [Zoom App Marketplace](https://marketplace.zoom.us/develop/apps) → **Develop → Build App** → **General App**.
+2. Under **App Credentials**, copy the **Client ID** and **Client Secret** (you'll set these as `ZOOM_OAUTH_CLIENT_ID` / `ZOOM_OAUTH_CLIENT_SECRET` on the server).
+3. Under **Basic Information** select **User-managed app** (each teacher OAuth-installs for themselves) unless you want the institutional admin-managed install path.
+4. Set **OAuth Redirect URL** to `https://<your-render-host>/api/zoom/oauth/callback` (this becomes `ZOOM_OAUTH_REDIRECT_URL`).
+5. Under **Scopes**, add:
+   - `user:read:user` (lets the server call `/v2/users/me` once on connect)
+   - `user:read:email` (so the install record stores the connecting teacher's email)
+6. Under **Features → Event Subscriptions**, toggle ON, then add:
+   - **Subscription Name:** `IST505 Live Events`
    - **Event Notification URL:** `https://<your-render-host>/api/zoom/webhook`
-   - **Add events** (subscribe to all of these — see `simulator/zoom_adapter.py:535-`):
+   - **Subscribe to events:**
      - `meeting.started`
      - `meeting.ended`
      - `meeting.participant_joined`
@@ -83,54 +94,67 @@ If fixture path doesn't work locally, **stop here** — fix that before attempti
      - `meeting.participant_raised_hand`
      - `meeting.participant_lowered_hand`
      - `meeting.reaction_received`
-3. Under **App Credentials**, copy the **Secret Token** (this is what becomes `ZOOM_WEBHOOK_SECRET`).
-4. Click **Save**. Zoom will send a `endpoint.url_validation` event to the webhook URL — the server responds with the HMAC challenge automatically (`zoom_adapter.py:541-546`). If validation fails, check that the secret token in env matches what's in the Marketplace console.
+7. Copy the **Secret Token** in the Event Subscriptions section (this becomes `ZOOM_WEBHOOK_SECRET`).
+8. Click **Save**. Zoom posts an `endpoint.url_validation` event to the webhook URL; the server auto-responds with the HMAC challenge using `ZOOM_WEBHOOK_SECRET`. The status flips to validated.
+
+While the General App stays in Local Test mode, only the developer Zoom account (yours) plus explicitly added Test Users can install it. Add teammate emails under **Local Test → Test User Account**.
 
 ---
 
-## Step 2 — Set the secret on the deployed server
+## Step 2 — Set server env vars
 
 ### Render
-1. Open the Render dashboard → IDSS service → Environment.
-2. Add `ZOOM_WEBHOOK_SECRET` with the value from Step 1.3.
-3. Trigger a deploy (Render restarts the service with the new env).
+1. Open the Render dashboard → service → **Environment**.
+2. Add (or update) all of:
+   - `ZOOM_OAUTH_CLIENT_ID`
+   - `ZOOM_OAUTH_CLIENT_SECRET`
+   - `ZOOM_OAUTH_REDIRECT_URL = https://<your-render-host>/api/zoom/oauth/callback`
+   - `ZOOM_OAUTH_STORE_DIR = /tmp/sage_zoom_oauth_installs` (course-demo default; mount a persistent disk for production)
+   - `ZOOM_WEBHOOK_SECRET` (the General App's Event Subscription Secret Token)
+3. Render auto-redeploys on env-var change.
 
-### Local (for end-to-end without Render)
+### Local
 ```bash
-ZOOM_WEBHOOK_SECRET="<token>" python3 server.py
+ZOOM_OAUTH_CLIENT_ID="..." \
+ZOOM_OAUTH_CLIENT_SECRET="..." \
+ZOOM_OAUTH_REDIRECT_URL="http://localhost:8080/api/zoom/oauth/callback" \
+ZOOM_OAUTH_STORE_DIR="/tmp/sage_zoom_oauth_installs" \
+ZOOM_WEBHOOK_SECRET="..." \
+python3 server.py
 ```
-Then expose the local port via a tunnel (e.g., `ngrok http 8080`) and use the tunnel URL as the Marketplace Event Notification URL for the duration of the demo.
+For local OAuth round-trip the redirect URL must be reachable from a browser, so a tunnel (e.g., cloudflared, ngrok with reserved domain) is useful when testing without Render.
 
 ---
 
-## Step 3 — Validate the webhook handshake
+## Step 3 — Validate the webhook handshake and OAuth wiring
 
-Without starting a meeting, hit:
 ```bash
-curl https://<your-render-host>/api/zoom/state | jq .
-```
-Expected: `{"active": false, "reason": "No active Zoom meeting has been seen on this server yet.", ...}` (200 OK, not 404).
+curl https://<your-render-host>/api/health | jq .
+# expect: zoom_webhook_configured: true, zoom_oauth_configured: true
 
-This confirms the server is reachable and the live endpoint is wired.
+curl https://<your-render-host>/api/zoom/connection | jq .
+# expect: oauth_configured: true, install_count: 0 before any teacher connects
+
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" https://<your-render-host>/api/zoom/connect
+# expect: 302 with redirect_url starting with https://zoom.us/oauth/authorize
+```
+
+If `/api/zoom/connection` reports `storage_warning`, installs are persisted under `/tmp` and will be wiped on redeploy. For real classroom use, mount a Render persistent disk and set `ZOOM_OAUTH_STORE_DIR` to that mount.
 
 ---
 
-## Step 4 — Start the meeting
+## Step 4 — Connect a teacher and start a meeting
 
 1. Open the dashboard at `https://<your-render-host>/`.
-2. Click **📡 Live** to switch to live mode. The dashboard will start polling `/api/zoom/state`.
-3. From a separate device, **start a Zoom meeting** with the host account. Server should log:
-   ```
-   [zoom webhook] event=meeting.started meeting_id=<id>
-   ```
-4. Have at least 2 participants join (ideally with chat enabled). Server should log `meeting.participant_joined` per join.
-5. Send a few chat messages. Server should log `meeting.chat_message_sent`.
-6. Trigger a reaction (👍, ✋). Server should log `meeting.reaction_received`.
-7. The dashboard should now render:
-   - "Live participation" index updating
-   - Per-participant tile in the classroom view
-   - Live trace populated in the live-mode debug panel
-   - The **camera-presence caveat** banner above the classroom grid (camera is non-scoring per the meeting decision; this is the visual confirmation)
+2. Click **🔌 Connect Zoom Account**. Zoom redirects to the OAuth authorize page; the teacher signs in and approves the requested scopes; control returns to the dashboard with `?zoom_connected=1` and the chip flips to `Connected: <email>`.
+3. (Multi-install) Other teachers repeat step 2 from their own Zoom logins. The dropdown chip lists every connected install; the teacher viewing the dashboard picks **Switch to** to scope the live view to a different install.
+4. Start a Zoom meeting from the connected account. Have at least one other participant join (a guest joining via incognito browser counts).
+5. Click **📡 Monitor Live Class** on the dashboard. The dashboard polls `/api/zoom/state?install_id=...` and renders:
+   - Live Meeting Overview index updating
+   - Current Participants populated
+   - Live Signal Trace showing recent raw events
+6. (Decision Support mode) Recommendation cards surface as patterns trigger. The 5-way taxonomy (ignore / acknowledge / accept / modify / reject) is active and writes to the live receipt.
+7. (Monitor Only mode) Recommendation panel hidden; everything else still flows. Pattern detections continue server-side and are logged to the receipt regardless of mode.
 
 ---
 

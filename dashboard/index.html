@@ -4867,59 +4867,61 @@ let zoomPolling = null;
 
 async function startZoomLive() {
   setAppMode('idss');
-  const webhookUrl = `${window.location.origin}/api/zoom/webhook`;
   const debugSnapshot = await fetchZoomDebugSnapshot();
   const debug = debugSnapshot?.live_debug || null;
-  const hostedHint = isLocalOrigin()
-    ? 'Recommended for demo reliability: deploy this repo to Render using render.yaml and point Zoom at the hosted /api/zoom/webhook endpoint instead of a temporary local tunnel.\n\n'
-    : '';
+  // Pull connection state so the alert path can guide the teacher into the
+  // OAuth flow rather than re-explain a Webhook Only setup.
+  const oauthConfigured = !!_zoomConnectionState?.oauth_configured;
+  const installCount = _zoomConnectionState?.install_count || 0;
+  const selectedInstall = getSelectedInstallId();
 
-  // Check if server has an active Zoom meeting BEFORE wiping the current sim.
-  // A mis-clicked Live with no Zoom meeting must not erase a running demo.
+  // Check if server has an active Zoom meeting (scoped to selected install)
+  // BEFORE wiping the current sim. A mis-clicked Monitor with no active
+  // meeting must not erase a running practice run.
   try {
     const resp = await fetch(apiUrl('/api/zoom/state', { includeSession: false, includeInstall: true }));
     const peek = resp.ok ? await resp.clone().json().catch(() => null) : null;
     const hasActiveMeeting = resp.ok && peek && peek.active !== false;
     if (!hasActiveMeeting) {
-      const debugLines = debug ? (
-        `Server live status:\n` +
-        `- webhook secret configured: ${debugSnapshot?.webhook_configured ? 'yes' : 'no'}\n` +
-        `- known meetings seen by server: ${debugSnapshot?.known_meetings ?? 0}\n` +
-        `- signal status: ${debug.signal_status_reason || 'no Zoom events yet'}\n` +
-        `- last raw event: ${debug.last_raw_event_type || 'none yet'}\n\n`
-      ) : '';
-      alert('📡 Server is running but no active Zoom meeting is attached right now.\n\n' +
-        debugLines +
-        `Webhook endpoint:\n${webhookUrl}\n\n` +
-        hostedHint +
-        'To connect:\n' +
-        '1. Save the Zoom app with this webhook endpoint\n' +
-        '2. Start a fresh Zoom meeting\n' +
-        '3. Have at least one participant join\n' +
-        '4. Click 📡 Live again\n\n' +
-        'For SAGE simulation: switch to SAGE Evaluation and click Run instead');
+      const lines = [];
+      if (!oauthConfigured) {
+        lines.push(
+          'Zoom OAuth is not configured on this server yet.',
+          'Once OAuth is wired (ZOOM_OAUTH_CLIENT_ID, ZOOM_OAUTH_CLIENT_SECRET, ZOOM_OAUTH_REDIRECT_URL on the server), each teacher can sign in by clicking 🔌 Connect Zoom Account.'
+        );
+      } else if (installCount === 0) {
+        lines.push(
+          'No Zoom account is connected to this dashboard yet.',
+          'Click 🔌 Connect Zoom Account to authorize your Zoom account through OAuth, then start a Zoom meeting from that account.'
+        );
+      } else {
+        lines.push(
+          `Zoom is connected${selectedInstall ? ' (' + selectedInstall + ')' : ''}, but no active meeting has been seen by this server.`,
+          'Start a Zoom meeting from the connected account, have at least one participant join, then click 📡 Monitor Live Class again.',
+          '',
+          'If a meeting is already running and events are not arriving, double-check the General App Event Subscription on Zoom Marketplace is enabled (Features → Event Subscriptions, status not Disabled).'
+        );
+        if (debug) {
+          lines.push(
+            '',
+            'Server live status:',
+            `- webhook secret configured: ${debugSnapshot?.webhook_configured ? 'yes' : 'no'}`,
+            `- known meetings seen by server: ${debugSnapshot?.known_meetings ?? 0}`,
+            `- signal status: ${debug.signal_status_reason || 'no Zoom events yet'}`,
+            `- last raw event: ${debug.last_raw_event_type || 'none yet'}`
+          );
+        }
+      }
+      lines.push('', 'For practice without Zoom: switch to SAGE Practice Lab and click Run.');
+      alert('📡 No active Zoom meeting yet\n\n' + lines.join('\n'));
       return;
     }
   } catch(e) {
-    alert('📡 Zoom Live Setup\n\n' +
-      'This mode connects Zoom meeting events to the dashboard.\n\n' +
-      hostedHint +
-      'To connect a live Zoom meeting:\n\n' +
-      '1. Start the server:\n' +
-      '   python3 server.py --llm\n\n' +
-      '2. Create a Zoom Marketplace App (Webhook Only):\n' +
-      '   → zoom.us/develop → Build App → Webhook Only\n' +
-      `   → Add webhook endpoint: ${webhookUrl}\n` +
-      '   → Subscribe to: meeting.started, meeting.ended,\n' +
-      '     meeting.participant_joined, meeting.participant_left,\n' +
-      '     meeting.chat_message_sent, meeting.participant_raised_hand,\n' +
-      '     meeting.participant_lowered_hand, meeting.reaction_received\n\n' +
-      '   → If chat events do not arrive, Zoom may also require account-level in-meeting chat DLP/support enablement\n\n' +
-      '3. Start the server with your webhook secret in the environment:\n' +
-      '   ZOOM_WEBHOOK_SECRET=your_secret python3 server.py --port 8080\n\n' +
-      '4. Start a fresh Zoom meeting, then click 📡 Live again.\n\n' +
-      'For SAGE simulation: switch to SAGE Evaluation and click Run (uses the simulated classroom workflow)\n' +
-      'For AI chat: GROQ_API_KEY=your_key python3 server.py --llm, then click ▶ Run');
+    alert(
+      '📡 Live mode could not contact the server.\n\n' +
+      'Make sure the dashboard URL is reachable and try again.\n\n' +
+      'For practice without Zoom: switch to SAGE Practice Lab and click Run.'
+    );
     return;
   }
 
@@ -5524,10 +5526,14 @@ function renderZoomInstallList(data) {
   const scopingNote = multiInstall
     ? '<div class="zoom-install-meta small" style="margin-top:8px">Live view, recommendations, and decision logging are scoped to the active install. Switch above to view another teacher.</div>'
     : '<div class="zoom-install-meta small" style="margin-top:8px">Live view, recommendations, and decision logging are scoped to this install.</div>';
+  const storageWarning = data.storage_warning
+    ? `<div class="zoom-install-meta small" style="margin-top:8px;color:var(--yellow);border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.08);padding:6px 8px;border-radius:4px"><strong>Heads up:</strong> ${escapeHtmlAttr(data.storage_warning)}</div>`
+    : '';
   list.innerHTML = `
     <div class="zoom-install-meta small" style="margin-bottom:6px">${escapeHtmlAttr(data.note || '')}</div>
     ${rows}
     ${scopingNote}
+    ${storageWarning}
     <div class="zoom-install-meta small" style="margin-top:6px">
       Add another account → click <strong>🔌 Connect Zoom Account</strong>.
     </div>`;
