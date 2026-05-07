@@ -1256,6 +1256,8 @@ body.mode-manual .chat-log { max-height: 260px; }
       <option value="500">Fast</option>
       <option value="1000" selected>Normal</option>
       <option value="2000">Slow</option>
+      <option value="5000">Slower</option>
+      <option value="10000">Very Slow</option>
     </select>
     <button class="utility-control" style="background:var(--purple);border:none;color:white;font-weight:600;padding:6px 20px;border-radius:4px;cursor:pointer;font-size:14px" onclick="runDemoSuite()" title="Run the guided walkthrough and evaluation suite">▶ Evaluation Suite</button>
     <button class="secondary utility-control" onclick="document.getElementById('ppt-upload').click()" title="Upload slides (.pptx or .txt outline)">📎 Slides</button>
@@ -2551,7 +2553,7 @@ function showMinute(min) {
   } else {
     recList.innerHTML = recs.slice(-10).reverse().map((r, i) => {
       const liveMode = isZoomLiveMode();
-      const manualUiActive = isManualMode() && !liveMode;
+      const manualUiActive = isManualMode() || liveMode;
       const manualResponse = manualUiActive ? getLoggedResponseForRecommendation(r) : null;
       const suggestedIntervention = normalizeInterventionType(r.action);
       const selectedIntervention = manualResponse?.intervention_type || suggestedIntervention || 'poll';
@@ -2592,7 +2594,7 @@ function showMinute(min) {
         </div>
       ` : '';
       const liveModeNote = liveMode ? `
-        <div class="rec-live-note">Live mode is ingestion-only; instructor decisions are exercised in SAGE.</div>
+        <div class="rec-live-note">Decision recorded for the evaluation receipt. The artifact does not programmatically trigger actions in Zoom — execute the chosen action directly in the meeting.</div>
       ` : '';
       const responseStatus = manualResponse ? `
         <div class="response-status">

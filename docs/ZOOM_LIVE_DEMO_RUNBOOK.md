@@ -124,7 +124,7 @@ If the meeting includes a few minutes of asymmetric participation (e.g., one per
 - **Triggered by [pattern]** — observable evidence
 - **Context: [University]** if a university preset was set on the live session
 - **Grounding:** literature reference per pattern
-- **Live mode is ingestion-only** label (5-way decision UI suppressed in live mode)
+- 5-way decision UI active on each recommendation card (decisions are recorded for the evaluation receipt; the artifact does not programmatically trigger actions in Zoom — the instructor executes the chosen action directly in the meeting)
 
 If no recs fire after ~5 minutes of varied participation, check `/api/zoom/debug` for the raw event trace and confirm patterns are being detected by the scorer.
 
@@ -147,7 +147,7 @@ Save this JSON alongside the paper as the live-validation receipt.
 
 ## Known limitations
 
-- **No programmatic intervention.** Zoom's API does not expose "start a poll now" or "create a breakout room mid-meeting" via webhooks. Live mode is **ingestion-only** by design — the 5-way instructor response UI is suppressed in live mode (label visible on each rec card). Decision behavior is exercised in SAGE simulation, not live Zoom.
+- **No programmatic intervention.** Zoom's API does not expose "start a poll now" or "create a breakout room mid-meeting" via webhooks. The 5-way instructor decision UI is available in live mode and records the instructor's response (category, intervention type, rationale) for the evaluation receipt, but the artifact does not actuate the action inside the Zoom meeting — the instructor executes the chosen action directly in Zoom (e.g., launching a Zoom poll using Zoom's native UI).
 - **Webhook reliability.** Zoom's webhook delivery is at-least-once; duplicate events should be tolerated by `zoom_adapter.py` but bursts may briefly desync the index.
 - **Camera state inference.** Zoom webhooks do not consistently emit camera on/off state. The dashboard renders camera-unknown tiles distinctly and **does not infer camera state from participation score** (per the camera-removal decision, commit `c2a36f7`).
 - **No persistence.** Render free-tier session state wipes on redeploy. For a live demo, do not redeploy mid-session.
@@ -171,6 +171,6 @@ Save this JSON alongside the paper as the live-validation receipt.
 This runbook is the operational evidence behind the paper's "Deployment-oriented extension" claim. Acknowledge in the paper:
 
 - Live Zoom path **exists**, is **signature-verified**, **fixture-tested end-to-end**, and **validated against a real Zoom meeting on the hosted deployment** (the resulting per-tick JSON export is the live-validation receipt).
-- Live mode is **ingestion-only**; instructor-decision behavior is exercised via SAGE simulation (which is the Phase 4 analytical evaluation environment).
+- Live mode supports the full instructor decision loop: real-time ingestion from Zoom webhooks, rule-based recommendations surfaced from real participation patterns, and the 5-way response taxonomy with rationale recorded for the evaluation receipt. The artifact records decisions but does not actuate them in Zoom; the instructor executes the chosen action in the meeting directly.
 
 Future work beyond the scope of this course project: programmatic intervention via Zoom REST APIs (start poll, create breakout room, send chat from host), stronger camera-state inference, persistence beyond Render free tier, and multi-tenant deployment.
