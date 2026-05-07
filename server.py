@@ -793,6 +793,9 @@ class SAGEHandler(SimpleHTTPRequestHandler):
         elif path == "/api/response":
             self._handle_response(data)
 
+        elif path == "/api/zoom/response":
+            self._handle_zoom_response(data)
+
         elif path == "/api/zoom/webhook":
             # Zoom sends webhook events here
             event_name = data.get("event", "")
@@ -945,6 +948,59 @@ class SAGEHandler(SimpleHTTPRequestHandler):
             "session_id": state.session_id,
             "scheduled_minute": scheduled_minute,
             "action": action,
+        })
+
+    def _handle_zoom_response(self, data):
+        """Record a manual instructor response against the active live Zoom meeting."""
+        frame = ZOOM.get_active_frame()
+        if not frame or frame.get("active") is False:
+            self._json_response({"error": "No active Zoom meeting"}, status=400)
+            return
+
+        category = data.get("response_category") or data.get("category")
+        if category not in VALID_RESPONSE_CATEGORIES:
+            self._json_response({"error": "Invalid response category"}, status=400)
+            return
+
+        recommendation = data.get("recommendation") or {}
+        recommendation_id = data.get("recommendation_id") or recommendation.get("rec_id")
+        recommended_action = (
+            data.get("recommended_action")
+            or recommendation.get("action")
+        )
+        intervention_type = _normalize_intervention_type(
+            data.get("intervention_type") or recommended_action
+        ) if category in {"accept", "modify"} else None
+
+        try:
+            minute = int(data.get("minute") or frame.get("minute") or 0)
+        except (TypeError, ValueError):
+            minute = frame.get("minute") or 0
+
+        action = {
+            "minute": minute,
+            "recommendation_id": recommendation_id,
+            "response_category": category,
+            "intervention_type": intervention_type,
+            "rationale": data.get("rationale") or f"Live instructor chose {category}",
+            "spoken_text": data.get("spoken_text"),
+            "recommendation": data.get("recommendation_message") or recommendation.get("message"),
+            "recommendation_action": recommended_action,
+            "recommendation_priority": data.get("recommendation_priority") or recommendation.get("priority"),
+            "response_source": "live_manual",
+        }
+
+        result = ZOOM.record_active_professor_action(action)
+        if not result:
+            self._json_response({"error": "No active Zoom meeting"}, status=400)
+            return
+
+        self._json_response({
+            "status": "response_logged",
+            "meeting_id": result["meeting_id"],
+            "scheduled_minute": None,
+            "action": result["action"],
+            "note": "Decision recorded for the live evaluation receipt. Execute any chosen instructional move directly in Zoom.",
         })
 
     def _zoom_client_from_request(self, parsed):

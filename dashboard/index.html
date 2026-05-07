@@ -1948,6 +1948,22 @@ function summarizeProfessorActions(actions) {
   };
 }
 
+function buildProfessorDataFromActions(actions, opts = {}) {
+  const actionList = actions || [];
+  if (!actionList.length) return null;
+  return {
+    style: opts.style || 'none',
+    style_name: opts.styleName || 'Manual Instructor',
+    style_description: opts.styleDescription || 'Human-controlled response logging',
+    actions: actionList,
+    summary: summarizeProfessorActions(actionList),
+  };
+}
+
+function isInstructorResponseSource(source) {
+  return ['manual', 'live_manual'].includes(source || 'manual');
+}
+
 function upsertManualAction(action) {
   const professor = ensureManualProfessorData();
   if (!professor) return;
@@ -1955,15 +1971,17 @@ function upsertManualAction(action) {
   const actionKey = action.recommendation_id || `${action.minute}|${action.recommendation || ''}|${action.response_category}`;
   const existing = professor.actions.findIndex(a =>
     (a.recommendation_id || `${a.minute}|${a.recommendation || ''}|${a.response_category}`) === actionKey &&
-    (a.response_source || 'manual') === 'manual'
+    isInstructorResponseSource(a.response_source)
   );
 
   if (existing >= 0) professor.actions[existing] = action;
   else professor.actions.push(action);
 
   professor.style = 'none';
-  professor.style_name = 'Manual Instructor';
-  professor.style_description = 'Human-controlled response logging';
+  professor.style_name = isZoomLiveMode() ? 'Live Instructor' : 'Manual Instructor';
+  professor.style_description = isZoomLiveMode()
+    ? 'Human-controlled response logging on Zoom live recommendations'
+    : 'Human-controlled response logging';
   professor.summary = summarizeProfessorActions(professor.actions);
 
   const logExisting = responseLog.findIndex(a =>
@@ -1978,7 +1996,7 @@ function getLoggedResponseForRecommendation(rec) {
   const recId = rec.rec_id;
   const actions = sessionData?.professor?.actions || responseLog;
   return [...actions].reverse().find(a =>
-    (a.response_source || 'manual') === 'manual' &&
+    isInstructorResponseSource(a.response_source) &&
     (a.recommendation_id === recId ||
       ((a.recommendation || '') === (rec.message || '') && a.minute === rec.minute))
   ) || null;
@@ -2845,6 +2863,7 @@ function togglePlayback() {
 function logResponse(recIndex, category) {
   const rec = getVisibleRecommendations(currentMinute)[recIndex];
   if (!rec) return;
+  const liveMode = isZoomLiveMode();
   const formValues = getRecommendationFormValues(rec);
   const suggestedIntervention = normalizeInterventionType(rec.action);
 
@@ -2860,8 +2879,8 @@ function logResponse(recIndex, category) {
   }
 
   const defaultRationale = interventionType
-    ? `Manual instructor chose ${category} and selected ${interventionType}`
-    : `Manual instructor chose ${category}`;
+    ? `${liveMode ? 'Live' : 'Manual'} instructor chose ${category} and selected ${interventionType}`
+    : `${liveMode ? 'Live' : 'Manual'} instructor chose ${category}`;
   const rationale = formValues.rationale || defaultRationale;
 
   const action = {
@@ -2873,7 +2892,7 @@ function logResponse(recIndex, category) {
     recommendation: rec.message,
     recommendation_action: rec.action,
     recommendation_priority: rec.priority,
-    response_source: 'manual',
+    response_source: liveMode ? 'live_manual' : 'manual',
     timestamp: new Date().toISOString(),
   };
 
@@ -2897,21 +2916,44 @@ function logResponse(recIndex, category) {
     showMinute(currentMinute || 1);
   };
 
+  const responsePayload = {
+    minute: currentMinute,
+    response_category: category,
+    intervention_type: interventionType,
+    recommendation_id: rec.rec_id,
+    recommendation_message: rec.message,
+    recommendation_priority: rec.priority,
+    recommended_action: rec.action,
+    recommendation: rec,
+    rationale: action.rationale,
+  };
+
+  if (liveMode) {
+    fetch(apiUrl('/api/zoom/response', { includeSession: false }), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(responsePayload),
+    })
+      .then(resp => resp.json().then(data => ({ ok: resp.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.error || 'Failed to record live response');
+        finalizeLocal(data.action || action);
+        updateInterventionLog(`✓ Live response recorded in Zoom evaluation receipt: ${category}`);
+      })
+      .catch(err => {
+        finalizeLocal(action);
+        updateInterventionLog(`✗ ${err.message}; response shown locally only`, true);
+      });
+    return;
+  }
+
   if (getCurrentSessionId()) {
     fetch(apiUrl('/api/response'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: getCurrentSessionId(),
-        minute: currentMinute,
-        response_category: category,
-        intervention_type: interventionType,
-        recommendation_id: rec.rec_id,
-        recommendation_message: rec.message,
-        recommendation_priority: rec.priority,
-        recommended_action: rec.action,
-        recommendation: rec,
-        rationale: action.rationale,
+        ...responsePayload,
       }),
     })
       .then(resp => resp.json().then(data => ({ ok: resp.ok, data })))
@@ -3436,31 +3478,14 @@ async function pollSessionUntilDone(fallbackDuration) {
         timeline: history.timeline || [],
         events: history.events || [],
         recommendations: history.recommendations || [],
-        professor: history.professor_actions?.length > 0
-          ? (() => {
-              const acts = history.professor_actions;
-              const catCounts = {};
-              const ivCounts = {};
-              for (const a of acts) {
-                catCounts[a.response_category] = (catCounts[a.response_category] || 0) + 1;
-                if (a.intervention_type) ivCounts[a.intervention_type] = (ivCounts[a.intervention_type] || 0) + 1;
-              }
-              return {
-                style_name: session.metadata?.professor_style === 'none' ? 'Manual Instructor' : (session.metadata?.professor_style || 'Adaptive'),
-                style_description: session.metadata?.professor_style === 'none'
-                  ? 'Human-controlled response logging'
-                  : 'Simulated Instructor',
-                actions: acts,
-                summary: {
-                  total_actions: acts.length,
-                  category_distribution: catCounts,
-                  interventions_used: ivCounts,
-                  interventions_total: Object.values(ivCounts).reduce((a, b) => a + b, 0),
-                  acceptance_rate: Math.round(((catCounts['accept'] || 0) + (catCounts['modify'] || 0)) / Math.max(1, acts.length) * 100),
-                }
-              };
-            })()
-          : null,
+        professor: buildProfessorDataFromActions(history.professor_actions || [], {
+          styleName: session.metadata?.professor_style === 'none'
+            ? 'Manual Instructor'
+            : (session.metadata?.professor_style || 'Adaptive'),
+          styleDescription: session.metadata?.professor_style === 'none'
+            ? 'Human-controlled response logging'
+            : 'Simulated Instructor',
+        }),
       };
 
       syncModeBadge(sessionData.metadata);
@@ -4557,7 +4582,10 @@ async function startZoomLive() {
         timeline: sessionData?.timeline || [],
         events: history.events || [],
         recommendations: history.recommendations || [],
-        professor: null,
+        professor: buildProfessorDataFromActions(history.professor_actions || [], {
+          styleName: 'Live Instructor',
+          styleDescription: 'Human-controlled response logging on Zoom live recommendations',
+        }),
         live_debug: history.live_debug || frame.live_debug || null,
       };
 

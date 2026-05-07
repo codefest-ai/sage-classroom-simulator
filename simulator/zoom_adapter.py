@@ -152,6 +152,40 @@ class ZoomMeetingState:
         self._record_event("meeting_ended", data={}, raw_event_type="meeting.ended")
         self.is_active = False
 
+    def record_professor_action(self, action: Dict) -> Dict:
+        """Record a human instructor response against a live recommendation."""
+        stored = dict(action or {})
+        stored["minute"] = int(stored.get("minute") or self.elapsed_minutes)
+        stored["response_source"] = stored.get("response_source") or "live_manual"
+        stored["source"] = stored.get("source") or "zoom_live"
+        stored["recorded_at"] = stored.get("recorded_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+        rec_id = stored.get("recommendation_id") or stored.get("rec_id")
+        existing = None
+        if rec_id:
+            for idx, old in enumerate(self.professor_actions):
+                if old.get("response_source") == stored["response_source"] and (
+                    old.get("recommendation_id") == rec_id or old.get("rec_id") == rec_id
+                ):
+                    existing = idx
+                    break
+        if existing is None:
+            self.professor_actions.append(stored)
+        else:
+            self.professor_actions[existing] = stored
+
+        self._record_event(
+            "professor_action",
+            data={
+                "response_category": stored.get("response_category"),
+                "intervention_type": stored.get("intervention_type"),
+                "recommendation_id": rec_id,
+                "rationale": stored.get("rationale", ""),
+            },
+            raw_event_type="sage.instructor_response",
+        )
+        return stored
+
     def _normalize_reaction_type(self, reaction_type: str) -> str:
         raw = str(reaction_type or "").strip().lower().replace(" ", "_")
         if raw in {"raised_hand", "participant_raised_hand", "raise_hand"}:
@@ -672,6 +706,18 @@ class ZoomWebhookHandler:
                 meeting = self.meetings[mid]
                 if meeting.is_active:
                     return self.get_meeting_history(mid)
+        return None
+
+    def record_active_professor_action(self, action: Dict) -> Optional[Dict]:
+        """Record an instructor response on the currently active Zoom meeting."""
+        with self._lock:
+            for mid in reversed(list(self.meetings.keys())):
+                meeting = self.meetings[mid]
+                if meeting.is_active:
+                    return {
+                        "meeting_id": mid,
+                        "action": meeting.record_professor_action(action),
+                    }
         return None
 
     def get_debug_snapshot(self) -> Dict:

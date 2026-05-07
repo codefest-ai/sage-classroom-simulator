@@ -139,6 +139,7 @@ If no recs fire after ~5 minutes of varied participation, check `/api/zoom/debug
    - Reaction events
    - Computed observable-participation index per minute
    - Recommendations surfaced (with evidence)
+   - Instructor responses recorded through the live 5-way decision UI
    - Performance metrics snapshot
 
 Save this JSON alongside the paper as the live-validation receipt.
